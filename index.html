@@ -1021,7 +1021,9 @@ document.head.appendChild(_sbScript);
 // Fallback: render public site even without Supabase
 function renderPublicFallback(){
   if(typeof goTo==='function'){
-    goTo('home'); renderPublicJobs(); buildCareersFilterBar(); applyFaqToPage();
+    const hashPage=(location.hash||'').replace('#','');
+    const target=(hashPage&&hashPage!=='portal'&&typeof ROUTABLE_PAGES!=='undefined'&&ROUTABLE_PAGES.includes(hashPage))?hashPage:'home';
+    goTo(target,{fromHistory:true}); renderPublicJobs(); buildCareersFilterBar(); applyFaqToPage();
   }
 }
 // Safety net: if nothing rendered within 2.5s, force home
@@ -1110,7 +1112,9 @@ function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.cla
 function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;setTimeout(()=>{const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','ARIA handles 40-60% of queries automatically, with South African agents covering the rest.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(r)}</div>`;msgs.scrollTop=msgs.scrollHeight;},800);}
 
 // ROUTER
-function goTo(page){
+const ROUTABLE_PAGES=['home','about','services','careers','contact','login','portal'];
+function goTo(page,opts){
+  opts=opts||{};
   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
   const el=document.getElementById('page-'+page);if(!el)return;
   if(page==='portal')el.style.display='flex';else if(page==='login')el.style.display='flex';else el.style.display='block';
@@ -1125,7 +1129,22 @@ function goTo(page){
   applyFaqToPage();
   tagReveals(el);
   runAnimations(el);
+  currentPage=page;
+  if(!opts.fromHistory&&ROUTABLE_PAGES.includes(page)){
+    const newHash='#'+page;
+    if(location.hash!==newHash)history.pushState({page},'',newHash);
+  }
 }
+let currentPage='home';
+function handleRouteChange(){
+  const hashPage=(location.hash||'').replace('#','');
+  let target=ROUTABLE_PAGES.includes(hashPage)?hashPage:'home';
+  if(target==='portal'&&!currentUser)target='login';
+  if(target===currentPage)return;
+  goTo(target,{fromHistory:true});
+}
+window.addEventListener('popstate',handleRouteChange);
+window.addEventListener('hashchange',handleRouteChange);
 
 // AUTH — Supabase
 async function doLogin(){
@@ -2383,7 +2402,9 @@ function openEmployeeDetail(sid){
 
 // ─── INIT ─────────────────────────────────────────────────
 async function initApp(){
-  goTo('home');
+  const initialHashPage=(location.hash||'').replace('#','');
+  const canRestore=initialHashPage!=='portal'&&ROUTABLE_PAGES.includes(initialHashPage);
+  goTo(canRestore?initialHashPage:'home',{fromHistory:true});
   // Check for existing session
   const {data:{session}}=await window._sb.auth.getSession();
   if(session){
