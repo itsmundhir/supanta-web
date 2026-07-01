@@ -93,3 +93,35 @@ framework, or file-split refactor, and did not touch production Supabase Auth
 settings — those are all real, larger decisions (visual identity, hosting
 model, auth policy) that should be confirmed with you first rather than
 pushed silently in an automated audit pass.
+
+## Round 2 — post-ARIA audit follow-up (this pass)
+
+Scope: everything added since the first pass — the ARIA assistant (chat,
+attachments, tools), the `client-assistant`, `report-issue`, and `admin-users`
+Edge Functions, the presence heartbeat, and the report/download chat menu —
+plus a fresh look at RLS now that more tables are read/written from the client.
+
+### Critical — fixed
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | **Privilege escalation via `user_profiles` self-update.** RLS's `"Users update own profile"` policy only checked `auth.uid() = id`, with no restriction on *which* columns a user could change on their own row, and `authenticated` had column-level `UPDATE` grants on `role`, `client_id`, `assigned_clients`, `position_id`, and `status`. Any logged-in client could call `supabase.from('user_profiles').update({role:'super_admin'}).eq('id', myId)` directly (bypassing the app's UI entirely) and grant themselves admin/super-admin access — which every Edge Function (`admin-users`, `client-assistant`, `report-issue`) trusts as the source of truth for role checks. | Added a `BEFORE UPDATE` trigger (`protect_user_profile_privileged_columns`) that blocks changes to `role`, `client_id`, `assigned_clients`, `position_id`, or `status` unless the caller is already an admin or the change comes from a service-role context (`auth.uid() IS NULL`, i.e. an Edge Function). Verified logically against the existing `is_admin()` helper and confirmed the function has no public `EXECUTE` grant (revoked from `anon`/`authenticated`). Ordinary self-updates (name, avatar, and the new `last_seen_at` heartbeat) are unaffected. |
+
+### Low — fixed
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 2 | `client-assistant`'s plain-text attachment handling used `atob()` to decode `.txt` uploads, which corrupts any non-ASCII UTF-8 content (accents, non-Latin scripts, emoji) into mojibake before it reaches Claude. | Switched to `decodeBase64()` + `TextDecoder("utf-8")` for correct multi-byte decoding. Deployed as `client-assistant` v6. |
+
+### Flagged, not changed (judgment calls / low practical risk)
+
+- **Report/Slack/HubSpot abuse potential.** `report-issue` trusts the client-supplied `flagged_reply`/`user_message`/`reason` text as-is (only length-capped) and, once `SLACK_WEBHOOK_URL`/`HUBSPOT_API_KEY` are set, posts it to Slack and creates a real HubSpot ticket on every call with no rate limiting. An authenticated client user could script repeated calls to flood your Slack channel or HubSpot with arbitrary short messages. This is a policy/cost question (add rate limiting? require the reply to match something actually rendered in-session?) more than a code bug — flagging for a decision rather than fixing unilaterally.
+- **Global search self-reflection.** `runGlobalSearch()`'s "no matches" empty state interpolates the raw search query into `innerHTML` unescaped (`index.html:2573`). It only reflects back into the same user's own browser (not stored, not shared), so it's a self-XSS at worst — a user pasting a crafted string into their own search box. Left as-is given the very narrow blast radius, but a one-line `escapeHtml(q)` would close it if you want zero remaining unescaped interpolations.
+- **Pre-existing `SECURITY DEFINER` advisor warnings** (`get_my_role`, `handle_new_user`, `is_admin`, `my_client_id`) and **leaked-password-protection disabled** — unchanged from the first audit pass; these were reviewed again and are still believed intentional/awaiting your Pro-plan upgrade respectively. Confirmed no *new* advisor warnings from this round beyond the trigger function itself (which has since had its public `EXECUTE` revoked).
+- **Performance advisors** (pre-existing, not new this round): 136 `multiple_permissive_policies` warnings and 48 `unused_index` notices across the schema, plus 2 unindexed foreign keys and 1 `auth_rls_initplan` warning. These are informational/performance, not security, and predate this session's changes — worth a cleanup pass if query latency becomes a concern, but out of scope for a bug/security audit.
+
+### Verified working (no regressions)
+
+- ARIA ticket/team-awareness context, tone rewrite, and the ⋮ Report / Download Conversation menu (from the immediately preceding round) — re-read end to end, logic is sound: `report-issue` and `client-assistant` both re-derive `client_id`/`role` server-side from the caller's own JWT-verified profile and never trust client-supplied scoping.
+- `admin-users` invite/reset flow — re-reviewed, still correctly gates on `role in (admin, super_admin)` via the service-role client, still rolls back the auth user if the profile update fails.
+- Presence heartbeat only runs for `currentUser.isEmployee`, so clients never write `last_seen_at`, and the update now flows through the new trigger's early branch harmlessly (no privileged columns touched).
