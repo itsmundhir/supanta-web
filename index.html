@@ -285,9 +285,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .aria-chip:hover{background:rgba(0,194,255,.1);transform:translateY(-1px)}
 @keyframes ariaWiggle{0%,100%{transform:rotate(0) scale(1)}20%{transform:rotate(-8deg) scale(1.05)}40%{transform:rotate(7deg) scale(1.05)}60%{transform:rotate(-5deg) scale(1.02)}80%{transform:rotate(3deg) scale(1.02)}}
 .aria-trigger-btn.wiggle{animation:ariaWiggle .6s ease-in-out}
-.aria-trigger-emoji{display:inline-block;animation:ariaWave 2.2s ease-in-out infinite}
-@keyframes ariaWave{0%,100%{transform:rotate(0deg)}10%{transform:rotate(14deg)}20%{transform:rotate(-8deg)}30%{transform:rotate(14deg)}40%{transform:rotate(-4deg)}50%{transform:rotate(10deg)}60%,100%{transform:rotate(0deg)}}
-@media (prefers-reduced-motion:reduce){.aria-msg,.aria-typing span,.aria-trigger-btn.wiggle,.aria-trigger-emoji{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.aria-msg,.aria-typing span,.aria-trigger-btn.wiggle{animation:none!important}}
 .aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--dark-3)}
 .aria-chat-input{flex:1;background:var(--dark-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--white);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
 .aria-chat-input:focus{border-color:rgba(0,194,255,.4)}
@@ -996,9 +994,9 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       <div class="aria-msg aria-msg-bot">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
     </div>
     <div class="aria-chips" id="aria-chips">
-      <button class="aria-chip" onclick="sendQuickReply('💰 What does pricing look like?')">💰 Pricing</button>
-      <button class="aria-chip" onclick="sendQuickReply('📅 I\'d like to book a call')">📅 Book a call</button>
-      <button class="aria-chip" onclick="sendQuickReply('🤔 Just looking around for now')">🤔 Just looking</button>
+      <button class="aria-chip" onclick="sendQuickReply('What does pricing look like?')">Pricing</button>
+      <button class="aria-chip" onclick="sendQuickReply('I\'d like to book a call')">Book a call</button>
+      <button class="aria-chip" onclick="sendQuickReply('Just looking around for now')">Just looking</button>
     </div>
     <div class="aria-chat-input-row">
       <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." aria-label="Chat message" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
@@ -1007,7 +1005,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
   </div>
   <button class="aria-trigger-btn" id="aria-trigger-btn" onclick="toggleAriaChat()" aria-label="Open chat with ARIA">
     <span class="aria-trigger-pulse"></span>
-    <span class="aria-trigger-emoji">👋</span> Ask ARIA
+    Ask ARIA
   </button>
 </div>
 <script>
@@ -2438,7 +2436,7 @@ function renderConvoMsg(m,agentName){
   const who=m.role==='customer'?'Customer':m.role==='assistant'?'ARIA':m.role==='agent'?(m.agentName||agentName||'Support Agent'):m.role;
   const side=m.role==='customer'?'left':'right';
   const cls=m.role==='customer'?'cm-customer':m.role==='assistant'?'cm-aria':'cm-agent';
-  const chan=m.channel==='voice_in'?'<span class="cm-chan">🎙 voice → text</span>':m.channel==='voice_out'?'<span class="cm-chan">🔊 text → voice</span>':'';
+  const chan=m.channel==='voice_in'?'<span class="cm-chan">voice → text</span>':m.channel==='voice_out'?'<span class="cm-chan">text → voice</span>':'';
   const conf=(m.confidence!=null)?`<span class="cm-conf ${m.confidence<0.45?'low':''}">conf ${Math.round(m.confidence*100)}%</span>`:'';
   const flag=m.flagged?'<span class="cm-flag">escalated</span>':'';
   return `<div class="cm ${side}">
