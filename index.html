@@ -271,9 +271,23 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .aria-chat-close{background:none;border:none;color:var(--grey);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .2s;line-height:1}
 .aria-chat-close:hover{color:var(--white)}
 .aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;min-height:200px;max-height:320px;overflow-y:auto}
-.aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55}
+.aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55;animation:ariaPop .3s var(--ease-out,ease) both}
+@keyframes ariaPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
 .aria-msg-bot{background:var(--dark-3);color:var(--grey-2);align-self:flex-start;border-bottom-left-radius:3px}
 .aria-msg-user{background:rgba(0,194,255,.12);color:var(--white);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid rgba(0,194,255,.2)}
+.aria-typing{display:flex;gap:4px;align-items:center;padding:.7rem .9rem}
+.aria-typing span{width:6px;height:6px;border-radius:50%;background:var(--grey-2);opacity:.5;animation:ariaTypingBounce 1.1s ease-in-out infinite}
+.aria-typing span:nth-child(2){animation-delay:.15s}
+.aria-typing span:nth-child(3){animation-delay:.3s}
+@keyframes ariaTypingBounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+.aria-chips{display:flex;flex-wrap:wrap;gap:.4rem;padding:0 1rem .85rem}
+.aria-chip{background:transparent;border:1px solid rgba(0,194,255,.3);color:var(--accent);font-size:.72rem;font-weight:500;padding:.35rem .75rem;border-radius:100px;cursor:pointer;transition:background .2s,transform .2s;font-family:var(--fb)}
+.aria-chip:hover{background:rgba(0,194,255,.1);transform:translateY(-1px)}
+@keyframes ariaWiggle{0%,100%{transform:rotate(0) scale(1)}20%{transform:rotate(-8deg) scale(1.05)}40%{transform:rotate(7deg) scale(1.05)}60%{transform:rotate(-5deg) scale(1.02)}80%{transform:rotate(3deg) scale(1.02)}}
+.aria-trigger-btn.wiggle{animation:ariaWiggle .6s ease-in-out}
+.aria-trigger-emoji{display:inline-block;animation:ariaWave 2.2s ease-in-out infinite}
+@keyframes ariaWave{0%,100%{transform:rotate(0deg)}10%{transform:rotate(14deg)}20%{transform:rotate(-8deg)}30%{transform:rotate(14deg)}40%{transform:rotate(-4deg)}50%{transform:rotate(10deg)}60%,100%{transform:rotate(0deg)}}
+@media (prefers-reduced-motion:reduce){.aria-msg,.aria-typing span,.aria-trigger-btn.wiggle,.aria-trigger-emoji{animation:none!important}}
 .aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--dark-3)}
 .aria-chat-input{flex:1;background:var(--dark-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--white);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
 .aria-chat-input:focus{border-color:rgba(0,194,255,.4)}
@@ -981,14 +995,19 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div class="aria-chat-msgs" id="aria-msgs">
       <div class="aria-msg aria-msg-bot">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
     </div>
+    <div class="aria-chips" id="aria-chips">
+      <button class="aria-chip" onclick="sendQuickReply('💰 What does pricing look like?')">💰 Pricing</button>
+      <button class="aria-chip" onclick="sendQuickReply('📅 I\'d like to book a call')">📅 Book a call</button>
+      <button class="aria-chip" onclick="sendQuickReply('🤔 Just looking around for now')">🤔 Just looking</button>
+    </div>
     <div class="aria-chat-input-row">
       <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." aria-label="Chat message" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     </div>
   </div>
-  <button class="aria-trigger-btn" onclick="toggleAriaChat()" aria-label="Open chat with ARIA">
+  <button class="aria-trigger-btn" id="aria-trigger-btn" onclick="toggleAriaChat()" aria-label="Open chat with ARIA">
     <span class="aria-trigger-pulse"></span>
-    Talk to us
+    <span class="aria-trigger-emoji">👋</span> Ask ARIA
   </button>
 </div>
 <script>
@@ -1100,8 +1119,23 @@ let currentUser=null,currentSection='dashboard',editingJobId=null,editingContent
 // ARIA WIDGET
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function idArg(id){return typeof id==='number'?String(id):"'"+String(id).replace(/'/g,"\\'")+"'";}
-function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('aria-input').focus();}
-function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;setTimeout(()=>{const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','Your dedicated agents handle every real conversation — I just clear the routine stuff before it reaches them.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(r)}</div>`;msgs.scrollTop=msgs.scrollHeight;},800);}
+function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.classList.toggle('open');const btn=document.getElementById('aria-trigger-btn');if(btn)btn.classList.remove('wiggle');if(b.classList.contains('open'))document.getElementById('aria-input').focus();}
+function ariaBotReply(){
+  const msgs=document.getElementById('aria-msgs');
+  const typing=document.createElement('div');
+  typing.className='aria-msg aria-msg-bot aria-typing';
+  typing.innerHTML='<span></span><span></span><span></span>';
+  msgs.appendChild(typing);
+  msgs.scrollTop=msgs.scrollHeight;
+  setTimeout(()=>{
+    const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','Your dedicated agents handle every real conversation — I just clear the routine stuff before it reaches them.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];
+    typing.remove();
+    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(r)}</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+  },900+Math.random()*500);
+}
+function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';ariaBotReply();}
+function sendQuickReply(text){const inp=document.getElementById('aria-input');inp.value=text;sendAriaMsg();}
 
 // ROUTER
 const ROUTABLE_PAGES=['home','about','services','careers','contact','login','portal'];
@@ -2054,6 +2088,13 @@ function toast(msg,color='var(--accent)'){const t=document.getElementById('toast
 // NAV HAMBURGER
 document.getElementById('hamburger').addEventListener('click',function(){const open=document.getElementById('mobile-menu').classList.toggle('open');this.setAttribute('aria-expanded',open?'true':'false');});
 function closeMob(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').setAttribute('aria-expanded','false');}
+
+// A playful one-time nudge toward the chat trigger, so it isn't just a static pill
+setTimeout(()=>{
+  const btn=document.getElementById('aria-trigger-btn');
+  const box=document.getElementById('aria-chat-box');
+  if(btn&&box&&!box.classList.contains('open')){btn.classList.add('wiggle');setTimeout(()=>btn.classList.remove('wiggle'),700);}
+},4000);
 
 // KEYBOARD ACCESS: activate role="link"/role="button" elements with Enter or Space
 document.addEventListener('keydown',e=>{
