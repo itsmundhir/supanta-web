@@ -997,7 +997,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       <button class="aria-chat-close" onclick="toggleAriaChat()" aria-label="Close chat">&#10005;</button>
     </div>
     <div class="aria-chat-msgs" id="aria-msgs">
-      <div class="aria-msg aria-msg-bot">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
+      <div class="aria-msg aria-msg-bot" id="aria-greeting">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
     </div>
     <div class="aria-chips" id="aria-chips">
       <button class="aria-chip" onclick="sendQuickReply('What does pricing look like?')">Pricing</button>
@@ -1123,22 +1123,62 @@ let currentUser=null,currentSection='dashboard',editingJobId=null,editingContent
 // ARIA WIDGET
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function idArg(id){return typeof id==='number'?String(id):"'"+String(id).replace(/'/g,"\\'")+"'";}
-function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.classList.toggle('open');const btn=document.getElementById('aria-trigger-btn');if(btn)btn.classList.remove('wiggle');if(b.classList.contains('open'))document.getElementById('aria-input').focus();}
-function ariaBotReply(){
+let ARIA_PORTAL_HISTORY=[];
+function toggleAriaChat(){
+  const b=document.getElementById('aria-chat-box');b.classList.toggle('open');
+  const btn=document.getElementById('aria-trigger-btn');if(btn)btn.classList.remove('wiggle');
+  if(b.classList.contains('open')){
+    document.getElementById('aria-input').focus();
+    const greeting=document.getElementById('aria-greeting');
+    if(greeting&&currentUser){
+      greeting.textContent=`Hi ${currentUser.name.split(' ')[0]}, I'm ARIA. Ask me anything about your account — I can see your account's own metrics and knowledge base, but I can't create tickets or alerts, and I can't discuss any other client's account.`;
+      const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';
+    }
+  }
+}
+function ariaTypingStart(){
   const msgs=document.getElementById('aria-msgs');
   const typing=document.createElement('div');
   typing.className='aria-msg aria-msg-bot aria-typing';
   typing.innerHTML='<span></span><span></span><span></span>';
   msgs.appendChild(typing);
   msgs.scrollTop=msgs.scrollHeight;
+  return typing;
+}
+function ariaBotReply(){
+  const typing=ariaTypingStart();
   setTimeout(()=>{
     const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','Your dedicated agents handle every real conversation — I just clear the routine stuff before it reaches them.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];
+    const msgs=document.getElementById('aria-msgs');
     typing.remove();
     msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(r)}</div>`;
     msgs.scrollTop=msgs.scrollHeight;
   },900+Math.random()*500);
 }
-function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';ariaBotReply();}
+async function ariaAssistantReply(userMsg){
+  const typing=ariaTypingStart();
+  const msgs=document.getElementById('aria-msgs');
+  if(!window._sb){typing.remove();msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Connection unavailable right now — please try again in a moment.</div>`;msgs.scrollTop=msgs.scrollHeight;return;}
+  const{data,error}=await window._sb.functions.invoke('client-assistant',{body:{message:userMsg,history:ARIA_PORTAL_HISTORY}});
+  typing.remove();
+  if(error||!data||data.error){
+    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml((data&&data.error)||'Something went wrong reaching ARIA. Please try again.')}</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+    console.warn('client-assistant failed:',error||data);
+    return;
+  }
+  ARIA_PORTAL_HISTORY.push({role:'user',content:userMsg},{role:'assistant',content:data.reply});
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(data.reply)}</div>`;
+  msgs.scrollTop=msgs.scrollHeight;
+}
+function sendAriaMsg(){
+  const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
+  const msgs=document.getElementById('aria-msgs');
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;
+  inp.value='';msgs.scrollTop=msgs.scrollHeight;
+  const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';
+  if(currentUser)ariaAssistantReply(msg);else ariaBotReply();
+}
 function sendQuickReply(text){const inp=document.getElementById('aria-input');inp.value=text;sendAriaMsg();}
 
 // ROUTER
@@ -1151,7 +1191,7 @@ function goTo(page,opts){
   el.classList.add('active');
   const nav=document.getElementById('main-nav'),mm=document.getElementById('mobile-menu');
   if(page==='login'||page==='portal'){nav.style.display='none';if(mm)mm.style.display='none';}else nav.style.display='flex';
-  const w=document.getElementById('aria-widget');if(w)w.style.display=(page==='login'||page==='portal')?'none':'flex';
+  const w=document.getElementById('aria-widget');if(w)w.style.display=(page==='login')?'none':'flex';
   document.querySelectorAll('.nav-links a').forEach(a=>a.classList.remove('active'));
   const nl=document.getElementById('nl-'+page);if(nl)nl.classList.add('active');
   window.scrollTo(0,0);
@@ -1225,6 +1265,11 @@ async function doLogin(){
 async function doLogout(){
   await window._sb.auth.signOut();
   sbUser=null;currentUser=null;
+  ARIA_PORTAL_HISTORY=[];
+  const msgs=document.getElementById('aria-msgs');
+  if(msgs)msgs.innerHTML='<div class="aria-msg aria-msg-bot" id="aria-greeting">Hello, I\'m ARIA — Supanta\'s AI assistant. How can I help you today?</div>';
+  const chips=document.getElementById('aria-chips');if(chips)chips.style.display='flex';
+  const box=document.getElementById('aria-chat-box');if(box)box.classList.remove('open');
   goTo('home');
 }
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
