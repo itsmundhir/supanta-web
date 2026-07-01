@@ -1035,7 +1035,7 @@ const AL_LABELS={none:'None',read:'Read Only',edit:'Edit',admin:'Admin'};
 const AL_CLASS={none:'al-none',read:'al-read',edit:'al-edit',admin:'al-admin'};
 const AL_DOT={none:'al-dot-none',read:'al-dot-read',edit:'al-dot-edit',admin:'al-dot-admin'};
 function alBadge(l){l=l||'none';return`<span class="al-badge ${AL_CLASS[l]}"><span class="al-dot ${AL_DOT[l]}"></span>${AL_LABELS[l]}</span>`;}
-function alSelect(uid,mk,cur,dis){if(dis)return alBadge(cur);return`<div class="al-cell">${alBadge(cur)}<select class="al-select" onchange="setModuleLevel(${uid},'${mk}',this.value)" style="background:transparent;border:none;color:var(--grey-2);font-size:.68rem;cursor:pointer;margin-left:4px"><option value="none" ${cur==='none'?'selected':''}>None</option><option value="read" ${cur==='read'?'selected':''}>Read</option><option value="edit" ${cur==='edit'?'selected':''}>Edit</option><option value="admin" ${cur==='admin'?'selected':''}>Admin</option></select></div>`;}
+function alSelect(uid,mk,cur,dis){if(dis)return alBadge(cur);return`<div class="al-cell">${alBadge(cur)}<select class="al-select" onchange="setModuleLevel(${idArg(uid)},'${mk}',this.value)" style="background:transparent;border:none;color:var(--grey-2);font-size:.68rem;cursor:pointer;margin-left:4px"><option value="none" ${cur==='none'?'selected':''}>None</option><option value="read" ${cur==='read'?'selected':''}>Read</option><option value="edit" ${cur==='edit'?'selected':''}>Edit</option><option value="admin" ${cur==='admin'?'selected':''}>Admin</option></select></div>`;}
 
 // USERS managed by Supabase Auth + user_profiles table
 let sbUser = null; // current Supabase auth user
@@ -1108,6 +1108,7 @@ let currentUser=null,currentSection='dashboard',editingJobId=null,editingContent
 
 // ARIA WIDGET
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function idArg(id){return typeof id==='number'?String(id):"'"+String(id).replace(/'/g,"\\'")+"'";}
 function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('aria-input').focus();}
 function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;setTimeout(()=>{const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','ARIA handles 40-60% of queries automatically, with South African agents covering the rest.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(r)}</div>`;msgs.scrollTop=msgs.scrollHeight;},800);}
 
@@ -1223,7 +1224,7 @@ async function submitPwd(){
     saveContent:execSaveContent,saveFaq:execSaveFaq,savePosition:execSavePosition,addEmployee:execAddEmployee,
     toggleStatus:()=>execToggleStatus(pendingPayload),savePerms:()=>execSavePerms(pendingPayload),
     deleteFaq:()=>{if(pendingPayload===null)return;const removed=FAQ_DATA[pendingPayload];logAudit(`Deleted FAQ: "${removed.q.slice(0,40)}"`,'success');FAQ_DATA.splice(pendingPayload,1);applyFaqToPage();toast('FAQ removed','var(--danger)');document.getElementById('admin-tab-content').innerHTML=renderAdminTab('faq');if(window._sb&&removed.id){window._sb.from('content_blocks').delete().eq('id',removed.id).then(({error})=>{if(error)console.warn('FAQ delete failed:',error);});}},
-    deletePosition:()=>{const p=POSITIONS.find(x=>x.id===pendingPayload);if(!p)return;if(STAFF.filter(s=>s.positionId===p.id).length>0){toast('Cannot remove — employees assigned','var(--danger)');return;}POSITIONS=POSITIONS.filter(x=>x.id!==pendingPayload);logAudit(`Deleted position: ${p.title}`,'success');toast('Position removed','var(--green)');renderSection('positions');}
+    deletePosition:()=>{const p=POSITIONS.find(x=>x.id===pendingPayload);if(!p)return;if(STAFF.filter(s=>s.positionId===p.id).length>0){toast('Cannot remove — employees assigned','var(--danger)');return;}POSITIONS=POSITIONS.filter(x=>x.id!==pendingPayload);logAudit(`Deleted position: ${p.title}`,'success');toast('Position removed','var(--green)');renderSection('positions');if(window._sb){window._sb.from('positions').delete().eq('id',p.id).then(({error})=>{if(error)console.warn('deletePosition failed:',error);});}}
   };
   if(acts[pendingAction])acts[pendingAction]();pendingAction=null;pendingPayload=null;
 }
@@ -1257,55 +1258,72 @@ function logAudit(action,type){
 function chunkArray(arr,size){const r=[];for(let i=0;i<arr.length;i+=size)r.push(arr.slice(i,i+size));return r;}
 
 // CLIENT COMPANY/USER MANAGEMENT
-function saveClientCompany(){const name=document.getElementById('nc-name').value.trim();if(!name){toast('Company name required','var(--danger)');return;}const nid=Math.max(...CLIENT_COMPANIES.map(c=>c.id),0)+1;CLIENT_COMPANIES.push({id:nid,name,prefix:genTicketPrefix(name),seq:0,industry:document.getElementById('nc-industry').value,plan:document.getElementById('nc-plan').value,arr:document.getElementById('nc-arr').value||'TBD',csat:0,deflection:0,tickets:0,open:0,health:'green'});logAudit(`Created client company: ${name}`,'success');closeModal('new-client-company-modal');toast(`${name} created`,'var(--green)');renderSection('clients');}
+async function saveClientCompany(){
+  const name=document.getElementById('nc-name').value.trim();
+  if(!name){toast('Company name required','var(--danger)');return;}
+  const industry=document.getElementById('nc-industry').value;
+  const plan=document.getElementById('nc-plan').value;
+  const arrRaw=document.getElementById('nc-arr').value||'';
+  const monthlyValue=parseInt(arrRaw.replace(/[^0-9]/g,''),10)||null;
+  const btn=document.querySelector('#new-client-company-modal .btn-sm-acc');
+  if(!window._sb){toast('Connection unavailable','var(--danger)');return;}
+  if(btn){btn.textContent='Creating…';btn.disabled=true;}
+  const{data,error}=await window._sb.from('clients').insert({
+    company_name:name,industry,plan,monthly_value:monthlyValue,currency:'USD',status:'onboarding'
+  }).select('id,company_name,industry,plan,monthly_value,currency,ticket_prefix,ticket_seq,health').single();
+  if(btn){btn.textContent='Create Company';btn.disabled=false;}
+  if(error||!data){toast('Could not create company','var(--danger)');console.warn('saveClientCompany failed:',error);return;}
+  CLIENT_COMPANIES.push({id:data.id,name:data.company_name,prefix:data.ticket_prefix,seq:data.ticket_seq||0,industry:data.industry,plan:data.plan,arr:data.monthly_value?'$'+data.monthly_value.toLocaleString():'TBD',csat:0,deflection:0,tickets:0,open:0,health:data.health||'green'});
+  logAudit(`Created client company: ${name}`,'success');closeModal('new-client-company-modal');toast(`${name} created`,'var(--green)');renderSection('clients');
+}
 function openAddClientUser(cid){addingClientCompanyId=cid;const co=CLIENT_COMPANIES.find(c=>c.id===cid);document.getElementById('acu-company-name').textContent=`Adding user to ${co?co.name:'company'}`;['acu-fname','acu-lname','acu-email','acu-jobtitle'].forEach(id=>document.getElementById(id).value='');openModal('add-client-user-modal');}
 async function saveClientUser(){
   const fname=document.getElementById('acu-fname').value.trim(),lname=document.getElementById('acu-lname').value.trim(),email=document.getElementById('acu-email').value.trim().toLowerCase(),jobtitle=document.getElementById('acu-jobtitle').value.trim();
   if(!fname||!email){toast('Name and email required','var(--danger)');return;}
   const fullName=`${fname} ${lname}`.trim();
-  const initials=(fname[0]+(lname[0]||'')).toUpperCase();
-  const colors=['#00c2ff','#a99cff','#00d4aa','#f59e0b','#ff4d6d'];
-  const color=colors[CLIENT_USERS.length%colors.length];
   const co=CLIENT_COMPANIES.find(c=>c.id===addingClientCompanyId);
-  const btn=document.querySelector('#add-client-user-modal .btn-primary');
+  const btn=document.querySelector('#add-client-user-modal .btn-sm-acc');
+  if(!window._sb){toast('Connection unavailable','var(--danger)');return;}
   if(btn){btn.textContent='Sending invite…';btn.disabled=true;}
-  // Send the invite via the backend (which uses Supabase inviteUserByEmail with the service key)
-  let invited=false;
-  try{
-    const res=await fetch('https://api.supanta.com/invite-client',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,full_name:fullName,job_title:jobtitle,client_id:addingClientCompanyId,company_name:co?co.name:''})
-    });
-    invited=res.ok;
-  }catch(e){ invited=false; }
+  const{data,error}=await window._sb.functions.invoke('admin-users',{body:{
+    action:'invite',email,full_name:fullName,role:'client',job_title:jobtitle,client_id:addingClientCompanyId
+  }});
   if(btn){btn.textContent='Create Account';btn.disabled=false;}
-  // Record locally regardless (so the UI updates in preview)
-  const nid=Math.max(0,...CLIENT_USERS.map(u=>u.id))+1;
-  CLIENT_USERS.push({id:nid,companyId:addingClientCompanyId,name:fullName,email,jobtitle,lastLogin:'Never',active:true,pendingInvite:!invited});
+  if(error||!data||data.error){
+    toast(data&&data.error?data.error:'Could not create account','var(--danger)');
+    console.warn('saveClientUser failed:',error||data);
+    return;
+  }
+  CLIENT_USERS.push({id:data.user_id,companyId:addingClientCompanyId,name:fullName,email,jobtitle,lastLogin:'Never',active:true});
   logAudit(`Invited client user: ${fullName} (${email})${co?' — '+co.name:''}`,'success');
   closeModal('add-client-user-modal');
-  if(invited){
-    toast(`Invite sent to ${email}`,'var(--green)');
-  }else{
-    // Preview / backend not live yet — show the email that WILL be sent
-    currentLoginDetailsUser={name:fullName,email,companyId:addingClientCompanyId,jobtitle};
-    openInvitePreviewModal(currentLoginDetailsUser);
-  }
+  currentLoginDetailsUser={name:fullName,email,companyId:addingClientCompanyId,jobtitle,tmpPass:data.temp_password};
+  openSendLoginModal(currentLoginDetailsUser);
   renderSection('clients');
-}
-function openInvitePreviewModal(user){
-  const co=CLIENT_COMPANIES.find(c=>c.id===user.companyId);
-  const link='https://portal.supanta.com/set-password?token=___unique_token___';
-  const body=`Hi ${user.name.split(' ')[0]},\n\nYou've been invited to the Supanta client portal for ${co?co.name:'your company'}.\n\nClick the link below to set your password and log in:\n${link}\n\nThis link is unique to you and expires in 7 days.\n\nOnce inside, you'll see your live PULSE dashboard — CSAT, ARIA deflection, ticket volume and more, updated in real time.\n\nIf you have any questions, just reply to this email.\n\nThe Supanta Team\nhello@supanta.com`;
-  const sld=document.getElementById('sld-preview');
-  if(sld){sld.textContent=body;document.getElementById('sld-user-name').textContent=`${user.name} — ${co?co.name:''}`;openModal('send-login-modal');}
-  else{toast('Invite queued (backend not live yet)','var(--warning)');}
 }
 function openSendLoginModal(user){const co=CLIENT_COMPANIES.find(c=>c.id===user.companyId);document.getElementById('sld-user-name').textContent=`${user.name} - ${co?co.name:''}`;document.getElementById('sld-preview').textContent=`Hi ${user.name.split(' ')[0]},\n\nWelcome to Supanta. Your client portal (PULSE) is ready.\n\nLogin URL: https://portal.supanta.com\nEmail: ${user.email}\nTemporary Password: ${user.tmpPass}\n\nPlease log in and set a new password on your first visit.\n\nIf you have any issues, contact us at hello@supanta.com\n\nThe Supanta Team`;openModal('send-login-modal');}
 function copyLoginDetails(){navigator.clipboard.writeText(document.getElementById('sld-preview').textContent).then(()=>toast('Copied','var(--green)')).catch(()=>toast('Select text manually','var(--warning)'));}
 function openEmailClient(){if(!currentLoginDetailsUser)return;window.open(`mailto:${currentLoginDetailsUser.email}?subject=${encodeURIComponent('Your Supanta Portal Access')}&body=${encodeURIComponent(document.getElementById('sld-preview').textContent)}`);}
-function resendLoginDetails(uid){const cu=CLIENT_USERS.find(u=>u.id===uid);if(!cu)return;const tmpPass=genTempPass();currentLoginDetailsUser={name:cu.name,email:cu.email,tmpPass,companyId:cu.companyId};openSendLoginModal(currentLoginDetailsUser);logAudit(`Regenerated password for: ${cu.name}`,'success');}
-function toggleClientUser(uid){const cu=CLIENT_USERS.find(u=>u.id===uid);if(!cu)return;cu.active=!cu.active;logAudit(`${cu.active?'Activated':'Deactivated'} client user: ${cu.name}`,'success');toast(`${cu.name} ${cu.active?'activated':'deactivated'}`,'var(--accent)');renderSection('clients');}
+async function resendLoginDetails(uid){
+  const cu=CLIENT_USERS.find(u=>String(u.id)===String(uid));if(!cu)return;
+  if(!window._sb){toast('Connection unavailable','var(--danger)');return;}
+  const{data,error}=await window._sb.functions.invoke('admin-users',{body:{action:'reset_password',user_id:cu.id}});
+  if(error||!data||data.error){toast(data&&data.error?data.error:'Could not reset password','var(--danger)');console.warn('resendLoginDetails failed:',error||data);return;}
+  currentLoginDetailsUser={name:cu.name,email:cu.email,tmpPass:data.temp_password,companyId:cu.companyId};
+  openSendLoginModal(currentLoginDetailsUser);
+  logAudit(`Regenerated password for: ${cu.name}`,'success');
+}
+async function toggleClientUser(uid){
+  const cu=CLIENT_USERS.find(u=>String(u.id)===String(uid));if(!cu)return;
+  const newActive=!cu.active;
+  cu.active=newActive;
+  logAudit(`${cu.active?'Activated':'Deactivated'} client user: ${cu.name}`,'success');
+  toast(`${cu.name} ${cu.active?'activated':'deactivated'}`,'var(--accent)');renderSection('clients');
+  if(window._sb){
+    const{error}=await window._sb.from('user_profiles').update({status:newActive?'active':'inactive'}).eq('id',cu.id);
+    if(error){console.warn('toggleClientUser persist failed:',error);}
+  }
+}
 
 // PORTAL BUILD
 function buildPortal(){const u=currentUser,av=document.getElementById('sb-av');av.textContent=u.initials;av.style.background=u.color+'22';av.style.color=u.color;av.style.border='1px solid '+u.color+'44';document.getElementById('sb-name').textContent=u.name;if(u.isEmployee){const s=getMyStaff();document.getElementById('sb-jobtitle').textContent=s?s.jobTitle:'Employee';}else{const co=CLIENT_COMPANIES.find(c=>c.id===u.companyId);document.getElementById('sb-jobtitle').textContent=co?co.name:'Client';}buildSidebar();renderSection('dashboard');}
@@ -1455,7 +1473,7 @@ function buildClientAria(){
   <div class="card" style="margin-bottom:1rem">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">Your Knowledge Base <button class="btn-sm btn-sm-acc" onclick="openClientKBEditor(null)">+ Add Article</button></div>
     <p style="font-size:.78rem;color:var(--grey);margin:-.3rem 0 1rem">Articles you add here teach ARIA about your business. Each is reviewed by the Supanta team before going live.</p>
-    ${myKB.length?myKB.map(k=>`<div class="kb-row"><div class="kb-row-main" onclick="openClientKBArticle(${k.id})"><div class="kb-row-title">${k.title}</div><div class="kb-row-meta"><span class="kb-cat">${k.category}</span> · ${k.updated} ${k.status==='approved'?'<span class=\'mpill done\'>live</span>':k.status==='pending'?'<span class=\'mpill working\'>in review</span>':'<span class=\'mpill stuck\'>needs changes</span>'}</div></div><div class="kb-row-actions"><button class="btn-sm btn-sm-ghost" onclick="openClientKBArticle(${k.id})">Open</button><button class="btn-sm btn-sm-ghost" onclick="openClientKBEditor(${k.id})">Edit</button></div></div>`).join(''):'<p style="color:var(--grey);font-size:.84rem;padding:.5rem 0">No articles yet. Add your first to start training ARIA.</p>'}
+    ${myKB.length?myKB.map(k=>`<div class="kb-row"><div class="kb-row-main" onclick="openClientKBArticle(${idArg(k.id)})"><div class="kb-row-title">${k.title}</div><div class="kb-row-meta"><span class="kb-cat">${k.category}</span> · ${k.updated} ${k.status==='approved'?'<span class=\'mpill done\'>live</span>':k.status==='pending'?'<span class=\'mpill working\'>in review</span>':'<span class=\'mpill stuck\'>needs changes</span>'}</div></div><div class="kb-row-actions"><button class="btn-sm btn-sm-ghost" onclick="openClientKBArticle(${idArg(k.id)})">Open</button><button class="btn-sm btn-sm-ghost" onclick="openClientKBEditor(${idArg(k.id)})">Edit</button></div></div>`).join(''):'<p style="color:var(--grey);font-size:.84rem;padding:.5rem 0">No articles yet. Add your first to start training ARIA.</p>'}
   </div>
 
   <!-- Safe preferences -->
@@ -1506,7 +1524,7 @@ let CLIENT_PREFS={};
 function openClientKBArticle(id){
   const k=CLIENT_KB.find(x=>x.id===id);if(!k)return;
   const pill=k.status==='approved'?'<span class="mpill done">live</span>':k.status==='pending'?'<span class="mpill working">in review</span>':'<span class="mpill stuck">needs changes</span>';
-  openDetailOverlay(`<div class="dv-head"><div><span class="dv-eyebrow">${k.category} · Updated ${k.updated}</span><h2 class="dv-title">${k.title}</h2></div><button class="dv-close" onclick="closeDetail()">✕</button></div><div class="dv-pills">${pill}</div><div class="kb-article-content">${k.content}</div><div style="margin-top:1.5rem"><button class="btn-sm btn-sm-acc" onclick="closeDetail();openClientKBEditor(${k.id})">Edit Article</button></div>`);
+  openDetailOverlay(`<div class="dv-head"><div><span class="dv-eyebrow">${k.category} · Updated ${k.updated}</span><h2 class="dv-title">${k.title}</h2></div><button class="dv-close" onclick="closeDetail()">✕</button></div><div class="dv-pills">${pill}</div><div class="kb-article-content">${k.content}</div><div style="margin-top:1.5rem"><button class="btn-sm btn-sm-acc" onclick="closeDetail();openClientKBEditor(${idArg(k.id)})">Edit Article</button></div>`);
 }
 let _ckbEditId=null;
 function openClientKBEditor(id){
@@ -1559,8 +1577,8 @@ function buildClientTeam(){
           <div style="flex:1"><div style="font-weight:600;color:var(--white);font-size:.88rem">${u.name}${u.email===currentUser.email?' <span style=\'font-size:.66rem;color:var(--accent)\'>(you)</span>':''}</div><div style="font-size:.74rem;color:var(--grey)">${u.email}${u.jobtitle?' · '+u.jobtitle:''}</div></div>
           ${u.pendingInvite?'<span class="mpill working">invite sent</span>':archived?'<span class="mpill stuck">removed</span>':'<span class="mpill done">active</span>'}
           ${u.email!==currentUser.email?(archived
-              ? `<button class="btn-sm btn-sm-green" onclick="restoreClientUser(${u.id})">Restore</button>`
-              : `<button class="btn-sm btn-sm-danger" onclick="removeClientUser(${u.id})">Remove</button>`):''}
+              ? `<button class="btn-sm btn-sm-green" onclick="restoreClientUser(${idArg(u.id)})">Restore</button>`
+              : `<button class="btn-sm btn-sm-danger" onclick="removeClientUser(${idArg(u.id)})">Remove</button>`):''}
         </div>`;
       }).join(''):'<div style="padding:2.5rem;text-align:center;color:var(--grey);font-size:.85rem">No team members yet. Invite your first user.</div>'
     }</div>`;
@@ -1605,7 +1623,7 @@ function setHealthFilter(h,btn){
   if(btn)btn.classList.add('active');
   filterClientAccounts(document.getElementById('ca-search')?document.getElementById('ca-search').value:'');
 }
-function renderClientAccountCards(list){if(!list.length)return '<div style="text-align:center;padding:3rem;color:var(--grey);font-size:.88rem">No companies match your search.</div>';return list.map(co=>{const users=CLIENT_USERS.filter(u=>u.companyId===co.id);return`<div class="company-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.85rem"><div><div class="company-name-link" onclick="openCompanyDetail(${co.id})" style="font-family:var(--fd);font-size:1rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem">${co.name}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></div><div style="font-size:.75rem;color:var(--grey);margin-top:.2rem">${co.industry} - ${co.plan} Plan - ${co.arr} - <span style="color:${co.health==='green'?'var(--green)':co.health==='amber'?'var(--warning)':'var(--danger)'}">${co.health==='green'?'Healthy':co.health==='amber'?'At Risk':'Critical'}</span></div></div><button class="btn-sm btn-sm-acc" onclick="openAddClientUser(${co.id})">+ Add User</button></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:1rem">${[['CSAT',co.csat+'%','var(--green)'],['ARIA Defl.',co.deflection+'%','var(--accent)'],['Open',co.open+'',''],['MTD',co.tickets.toLocaleString(),'']].map(([l,v,c])=>`<div style="background:var(--dark-4);border-radius:8px;padding:.6rem .75rem;text-align:center"><div style="font-size:.68rem;color:var(--grey);margin-bottom:.2rem">${l}</div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:${c||'var(--white)'}">${v}</div></div>`).join('')}</div>${users.length?`<div style="font-size:.7rem;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Portal Users (${users.length})</div><div>${users.map(u=>`<div class="company-user-row"><div><div style="font-weight:500;color:var(--white)">${u.name}</div><div style="font-size:.72rem;color:var(--grey)">${u.email} - ${u.jobtitle||'Client'} - Last login: ${u.lastLogin}</div></div><div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-blue" onclick="resendLoginDetails(${u.id})">Resend Login</button><button class="btn-sm btn-sm-${u.active?'danger':'green'}" onclick="toggleClientUser(${u.id})">${u.active?'Deactivate':'Activate'}</button></div></div>`).join('')}</div>`:`<div style="font-size:.82rem;color:var(--grey);padding:.35rem 0">No portal users yet - <button class="btn-sm btn-sm-ghost" onclick="openAddClientUser(${co.id})" style="margin-left:.35rem">Add first user</button></div>`}</div>`;}).join('');}
+function renderClientAccountCards(list){if(!list.length)return '<div style="text-align:center;padding:3rem;color:var(--grey);font-size:.88rem">No companies match your search.</div>';return list.map(co=>{const users=CLIENT_USERS.filter(u=>u.companyId===co.id);return`<div class="company-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.85rem"><div><div class="company-name-link" onclick="openCompanyDetail(${idArg(co.id)})" style="font-family:var(--fd);font-size:1rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem">${co.name}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.5"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></div><div style="font-size:.75rem;color:var(--grey);margin-top:.2rem">${co.industry} - ${co.plan} Plan - ${co.arr} - <span style="color:${co.health==='green'?'var(--green)':co.health==='amber'?'var(--warning)':'var(--danger)'}">${co.health==='green'?'Healthy':co.health==='amber'?'At Risk':'Critical'}</span></div></div><button class="btn-sm btn-sm-acc" onclick="openAddClientUser(${idArg(co.id)})">+ Add User</button></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:1rem">${[['CSAT',co.csat+'%','var(--green)'],['ARIA Defl.',co.deflection+'%','var(--accent)'],['Open',co.open+'',''],['MTD',co.tickets.toLocaleString(),'']].map(([l,v,c])=>`<div style="background:var(--dark-4);border-radius:8px;padding:.6rem .75rem;text-align:center"><div style="font-size:.68rem;color:var(--grey);margin-bottom:.2rem">${l}</div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:${c||'var(--white)'}">${v}</div></div>`).join('')}</div>${users.length?`<div style="font-size:.7rem;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Portal Users (${users.length})</div><div>${users.map(u=>`<div class="company-user-row"><div><div style="font-weight:500;color:var(--white)">${u.name}</div><div style="font-size:.72rem;color:var(--grey)">${u.email} - ${u.jobtitle||'Client'} - Last login: ${u.lastLogin}</div></div><div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-blue" onclick="resendLoginDetails(${idArg(u.id)})">Resend Login</button><button class="btn-sm btn-sm-${u.active?'danger':'green'}" onclick="toggleClientUser(${idArg(u.id)})">${u.active?'Deactivate':'Activate'}</button></div></div>`).join('')}</div>`:`<div style="font-size:.82rem;color:var(--grey);padding:.35rem 0">No portal users yet - <button class="btn-sm btn-sm-ghost" onclick="openAddClientUser(${idArg(co.id)})" style="margin-left:.35rem">Add first user</button></div>`}</div>`;}).join('');}
 function filterClientAccounts(q){
   q=(q||'').trim().toLowerCase();
   const list=document.getElementById('ca-list');if(!list)return;
@@ -1666,14 +1684,14 @@ function buildKB(){
 function kbRow(a,isPending){
   const statusPill=a.status==='approved'?'<span class="mpill done">approved</span>':a.status==='pending'?'<span class="mpill working">pending</span>':'<span class="mpill stuck">rejected</span>';
   return `<div class="kb-row">
-    <div class="kb-row-main" onclick="openKBArticle(${a.id})">
+    <div class="kb-row-main" onclick="openKBArticle(${idArg(a.id)})">
       <div class="kb-row-title">${a.title}</div>
       <div class="kb-row-meta"><span class="kb-cat">${a.category}</span> · ${a.author} · ${a.updated} ${statusPill}</div>
     </div>
     <div class="kb-row-actions">
-      <button class="btn-sm btn-sm-ghost" onclick="openKBArticle(${a.id})">Open</button>
-      ${canEditKB()?`<button class="btn-sm btn-sm-ghost" onclick="openKBEditor(${a.id})">Edit</button>`:''}
-      ${isPending&&canApproveKB()?`<button class="btn-sm btn-sm-green" onclick="approveKB(${a.id})">Approve</button><button class="btn-sm btn-sm-danger" onclick="rejectKB(${a.id})">Reject</button>`:''}
+      <button class="btn-sm btn-sm-ghost" onclick="openKBArticle(${idArg(a.id)})">Open</button>
+      ${canEditKB()?`<button class="btn-sm btn-sm-ghost" onclick="openKBEditor(${idArg(a.id)})">Edit</button>`:''}
+      ${isPending&&canApproveKB()?`<button class="btn-sm btn-sm-green" onclick="approveKB(${idArg(a.id)})">Approve</button><button class="btn-sm btn-sm-danger" onclick="rejectKB(${idArg(a.id)})">Reject</button>`:''}
     </div>
   </div>`;
 }
@@ -1684,7 +1702,7 @@ function openKBArticle(id){
     <div class="dv-head"><div><span class="dv-eyebrow">${a.category} · Updated ${a.updated}</span><h2 class="dv-title">${a.title}</h2></div><button class="dv-close" onclick="closeDetail()">✕</button></div>
     <div class="dv-pills">${statusPill}<span class="dv-meta-pill">By ${a.author}</span>${a.approvedBy?`<span class="dv-meta-pill">Approved by ${a.approvedBy}</span>`:''}</div>
     <div class="kb-article-content">${a.content}</div>
-    ${canEditKB()?`<div style="margin-top:1.5rem;display:flex;gap:.6rem"><button class="btn-sm btn-sm-acc" onclick="closeDetail();openKBEditor(${a.id})">Edit Article</button>${a.status==='pending'&&canApproveKB()?`<button class="btn-sm btn-sm-green" onclick="approveKB(${a.id});closeDetail()">Approve</button><button class="btn-sm btn-sm-danger" onclick="rejectKB(${a.id});closeDetail()">Reject</button>`:''}</div>`:''}
+    ${canEditKB()?`<div style="margin-top:1.5rem;display:flex;gap:.6rem"><button class="btn-sm btn-sm-acc" onclick="closeDetail();openKBEditor(${idArg(a.id)})">Edit Article</button>${a.status==='pending'&&canApproveKB()?`<button class="btn-sm btn-sm-green" onclick="approveKB(${idArg(a.id)});closeDetail()">Approve</button><button class="btn-sm btn-sm-danger" onclick="rejectKB(${idArg(a.id)});closeDetail()">Reject</button>`:''}</div>`:''}
   `);
 }
 function openKBEditor(id){
@@ -1879,26 +1897,99 @@ function exportAudit(){
 
 // PERMISSIONS
 function buildPermissions(){return phdr('Permissions & Roles','Manage staff access and client assignments',isCEO()?`<div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-acc" onclick="openModal('add-emp-modal');populatePositionSelect()">+ Add Employee</button><button class="btn-sm btn-sm-ghost" onclick="renderSection('positions')">Manage Positions</button></div>`:'')+`<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.25rem;font-size:.78rem;color:var(--grey-2);align-items:center"><span style="font-weight:600">Access Levels:</span>${Object.entries(AL_LABELS).map(([k])=>alBadge(k)).join('')}</div><div id="perms-list">${renderPerms()}</div>`;}
-function renderPerms(){return STAFF.map(s=>{const isCeoS=s.email==='mundhiradams@supanta.com'||s.role==='super_admin';const canEdit=isCEO()&&!isCeoS;const pos=positionById(s.positionId);const clientIds=s.clients.includes('all')?CLIENT_COMPANIES.map(c=>c.id):s.clients;return`<div class="card" style="margin-bottom:1rem"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem"><div><div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.3rem;flex-wrap:wrap"><div style="font-family:var(--fd);font-size:.92rem;font-weight:600">${s.name}</div>${pos?`<span style="font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:100px;background:${pos.color}22;color:${pos.color};border:1px solid ${pos.color}44">${pos.title}</span>`:''}<span class="badge badge-${s.status}">${s.status}</span></div><div style="font-size:.73rem;color:var(--grey)">${s.email}</div></div><div style="display:flex;gap:.5rem">${!isCeoS&&canEdit?`<button class="btn-sm btn-sm-${s.status==='active'?'danger':'green'}" onclick="confirmWithPassword('toggleStatus',${s.id})">${s.status==='active'?'Deactivate':'Reactivate'}</button>`:''}${isCeoS?'<span style="font-size:.73rem;color:var(--grey)">Full access - cannot be restricted</span>':''}</div></div>${!isCeoS?`<div style="margin-bottom:1rem"><div style="font-size:.7rem;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Module Access Levels</div><div class="perm-table-wrap"><table class="perm-table"><thead><tr><th>Module</th><th>Access Level</th><th>Module</th><th>Access Level</th></tr></thead><tbody>${chunkArray(ALL_MODULES.filter(m=>!m.comingSoon),2).map(pair=>`<tr>${pair.map(m=>{const lvl=getAccessLevel(s,m.key);return`<td style="color:var(--grey-2)">${m.label}</td><td>${canEdit?alSelect(s.id,m.key,lvl,false):alBadge(lvl)}</td>`;}).join('')}${pair.length<2?'<td></td><td></td>':''}</tr>`).join('')}</tbody></table></div></div><div style="margin-bottom:.85rem"><div style="font-size:.7rem;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Client Assignment</div><div style="display:flex;flex-wrap:wrap;gap:.5rem">${CLIENT_COMPANIES.map(c=>{const assigned=clientIds.includes(c.id);return`<label style="display:flex;align-items:center;gap:.4rem;cursor:${canEdit?'pointer':'not-allowed'};padding:.3rem .7rem;border-radius:100px;border:1px solid;font-size:.75rem;${assigned?'background:rgba(0,194,255,.08);border-color:rgba(0,194,255,.25);color:var(--accent)':'background:var(--dark-3);border-color:var(--border);color:var(--grey-2)'}"><input type="checkbox" style="display:none" ${assigned?'checked':''} ${!canEdit?'disabled':''} onchange="toggleClientAssign(${s.id},${c.id},this.checked)"/>${c.name}</label>`;}).join('')}</div></div>${canEdit?`<div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-acc" onclick="confirmWithPassword('savePerms',${s.id})">Save Changes</button><button class="btn-sm btn-sm-ghost" onclick="resetToPosition(${s.id})">Reset to Position Defaults</button></div>`:''}`:''}</div>`;}).join('');}
+function renderPerms(){return STAFF.map(s=>{const isCeoS=s.email==='mundhiradams@supanta.com'||s.role==='super_admin';const canEdit=isCEO()&&!isCeoS;const pos=positionById(s.positionId);const clientIds=s.clients.includes('all')?CLIENT_COMPANIES.map(c=>c.id):s.clients;return`<div class="card" style="margin-bottom:1rem"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1rem"><div><div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.3rem;flex-wrap:wrap"><div style="font-family:var(--fd);font-size:.92rem;font-weight:600">${s.name}</div>${pos?`<span style="font-size:.68rem;font-weight:600;padding:2px 8px;border-radius:100px;background:${pos.color}22;color:${pos.color};border:1px solid ${pos.color}44">${pos.title}</span>`:''}<span class="badge badge-${s.status}">${s.status}</span></div><div style="font-size:.73rem;color:var(--grey)">${s.email}</div></div><div style="display:flex;gap:.5rem">${!isCeoS&&canEdit?`<button class="btn-sm btn-sm-${s.status==='active'?'danger':'green'}" onclick="confirmWithPassword('toggleStatus',${idArg(s.id)})">${s.status==='active'?'Deactivate':'Reactivate'}</button>`:''}${isCeoS?'<span style="font-size:.73rem;color:var(--grey)">Full access - cannot be restricted</span>':''}</div></div>${!isCeoS?`<div style="margin-bottom:1rem"><div style="font-size:.7rem;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Module Access Levels</div><div class="perm-table-wrap"><table class="perm-table"><thead><tr><th>Module</th><th>Access Level</th><th>Module</th><th>Access Level</th></tr></thead><tbody>${chunkArray(ALL_MODULES.filter(m=>!m.comingSoon),2).map(pair=>`<tr>${pair.map(m=>{const lvl=getAccessLevel(s,m.key);return`<td style="color:var(--grey-2)">${m.label}</td><td>${canEdit?alSelect(s.id,m.key,lvl,false):alBadge(lvl)}</td>`;}).join('')}${pair.length<2?'<td></td><td></td>':''}</tr>`).join('')}</tbody></table></div></div><div style="margin-bottom:.85rem"><div style="font-size:.7rem;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.6rem">Client Assignment</div><div style="display:flex;flex-wrap:wrap;gap:.5rem">${CLIENT_COMPANIES.map(c=>{const assigned=clientIds.includes(c.id);return`<label style="display:flex;align-items:center;gap:.4rem;cursor:${canEdit?'pointer':'not-allowed'};padding:.3rem .7rem;border-radius:100px;border:1px solid;font-size:.75rem;${assigned?'background:rgba(0,194,255,.08);border-color:rgba(0,194,255,.25);color:var(--accent)':'background:var(--dark-3);border-color:var(--border);color:var(--grey-2)'}"><input type="checkbox" style="display:none" ${assigned?'checked':''} ${!canEdit?'disabled':''} onchange="toggleClientAssign(${idArg(s.id)},${idArg(c.id)},this.checked)"/>${c.name}</label>`;}).join('')}</div></div>${canEdit?`<div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-acc" onclick="confirmWithPassword('savePerms',${idArg(s.id)})">Save Changes</button><button class="btn-sm btn-sm-ghost" onclick="resetToPosition(${idArg(s.id)})">Reset to Position Defaults</button></div>`:''}`:''}</div>`;}).join('');}
 function setModuleLevel(uid,mk,level){const s=STAFF.find(x=>x.id===uid);if(!s)return;if(!s.access)s.access={};s.access[mk]=level;}
 function toggleClientAssign(uid,cid,checked){const s=STAFF.find(x=>x.id===uid);if(!s)return;if(s.clients.includes('all'))s.clients=CLIENT_COMPANIES.map(c=>c.id);if(checked&&!s.clients.includes(cid))s.clients.push(cid);else s.clients=s.clients.filter(id=>id!==cid);document.getElementById('perms-list').innerHTML=renderPerms();}
-function execToggleStatus(uid){const s=STAFF.find(x=>x.id===uid);if(!s)return;s.status=s.status==='active'?'inactive':'active';logAudit(`${s.status==='active'?'Reactivated':'Deactivated'} account: ${s.name}${s.status!=='active'?' — retained for QA':''}`,'success');document.getElementById('perms-list').innerHTML=renderPerms();toast(`${s.name} ${s.status==='active'?'reactivated':'deactivated'}`,'var(--accent)');}
-function execSavePerms(uid){const s=STAFF.find(x=>x.id===uid);logAudit(`Updated permissions for ${s.name}`,'success');document.getElementById('perms-list').innerHTML=renderPerms();toast('Permissions saved','var(--green)');}
-function resetToPosition(uid){const s=STAFF.find(x=>x.id===uid);if(!s)return;const pos=positionById(s.positionId);s.access=pos?{...pos.defaultAccess}:{};document.getElementById('perms-list').innerHTML=renderPerms();logAudit(`Reset ${s.name} access to position defaults`,'success');toast('Reset to position defaults','var(--accent)');}
+async function execToggleStatus(uid){
+  const s=STAFF.find(x=>String(x.id)===String(uid));if(!s)return;
+  s.status=s.status==='active'?'inactive':'active';
+  logAudit(`${s.status==='active'?'Reactivated':'Deactivated'} account: ${s.name}${s.status!=='active'?' — retained for QA':''}`,'success');
+  document.getElementById('perms-list').innerHTML=renderPerms();
+  toast(`${s.name} ${s.status==='active'?'reactivated':'deactivated'}`,'var(--accent)');
+  if(window._sb){const{error}=await window._sb.from('user_profiles').update({status:s.status}).eq('id',s.id);if(error)console.warn('execToggleStatus persist failed:',error);}
+}
+async function execSavePerms(uid){
+  const s=STAFF.find(x=>String(x.id)===String(uid));if(!s)return;
+  logAudit(`Updated permissions for ${s.name}`,'success');
+  document.getElementById('perms-list').innerHTML=renderPerms();
+  toast('Permissions saved','var(--green)');
+  if(window._sb){
+    const assignedClients=s.clients.includes('all')?[]:s.clients;
+    const{error}=await window._sb.from('user_profiles').update({access:s.access,assigned_clients:assignedClients}).eq('id',s.id);
+    if(error)console.warn('execSavePerms persist failed:',error);
+  }
+}
+async function resetToPosition(uid){
+  const s=STAFF.find(x=>String(x.id)===String(uid));if(!s)return;
+  const pos=positionById(s.positionId);s.access=pos?{...pos.defaultAccess}:{};
+  document.getElementById('perms-list').innerHTML=renderPerms();
+  logAudit(`Reset ${s.name} access to position defaults`,'success');
+  toast('Reset to position defaults','var(--accent)');
+  if(window._sb){const{error}=await window._sb.from('user_profiles').update({access:s.access}).eq('id',s.id);if(error)console.warn('resetToPosition persist failed:',error);}
+}
 
 // ADD EMPLOYEE
 function populatePositionSelect(){const sel=document.getElementById('ae-position');if(!sel)return;sel.innerHTML='<option value="">-- No position --</option>'+POSITIONS.map(p=>`<option value="${p.id}">${p.title} (${p.dept})</option>`).join('');}
-function execAddEmployee(){const fname=document.getElementById('ae-fname').value.trim(),lname=document.getElementById('ae-lname').value.trim(),email=document.getElementById('ae-email').value.trim().toLowerCase(),posId=parseInt(document.getElementById('ae-position').value)||null;if(!fname||!email){toast('Name and email required','var(--danger)');return;}if(!email.endsWith('@supanta.com')){toast('Email must be @supanta.com','var(--danger)');return;}if(STAFF.some(s=>s.email===email)){toast('Account already exists','var(--danger)');return;}const tmpPass=genTempPass(),initials=(fname[0]+(lname[0]||'')).toUpperCase();const colors=['#00c2ff','#a99cff','#00d4aa','#f59e0b','#ff4d6d'];const color=colors[STAFF.length%colors.length];const pos=positionById(posId);const nid=Math.max(...STAFF.map(s=>s.id),0)+1,fullName=`${fname} ${lname}`.trim();STAFF.push({id:nid,name:fullName,email,positionId:posId,jobTitle:pos?pos.title:'Employee',status:'active',clients:[],access:pos?{...pos.defaultAccess}:{},avatar:initials,color});logAudit(`Added employee: ${fullName} (${email})${pos?' as '+pos.title:''}. Temp: ${tmpPass}`,'success');closeModal('add-emp-modal');toast(`${fullName} added. Temp password: ${tmpPass}`,'var(--green)');renderSection('permissions');}
+async function execAddEmployee(){
+  const fname=document.getElementById('ae-fname').value.trim(),lname=document.getElementById('ae-lname').value.trim(),email=document.getElementById('ae-email').value.trim().toLowerCase(),posId=parseInt(document.getElementById('ae-position').value)||null;
+  if(!fname||!email){toast('Name and email required','var(--danger)');return;}
+  if(!email.endsWith('@supanta.com')){toast('Email must be @supanta.com','var(--danger)');return;}
+  if(STAFF.some(s=>s.email===email)){toast('Account already exists','var(--danger)');return;}
+  const initials=(fname[0]+(lname[0]||'')).toUpperCase();
+  const colors=['#00c2ff','#a99cff','#00d4aa','#f59e0b','#ff4d6d'];
+  const color=colors[STAFF.length%colors.length];
+  const pos=positionById(posId);
+  const fullName=`${fname} ${lname}`.trim();
+  if(!window._sb){toast('Connection unavailable','var(--danger)');return;}
+  const btn=document.querySelector('#add-emp-modal .btn-sm-acc');
+  if(btn){btn.textContent='Creating…';btn.disabled=true;}
+  const{data,error}=await window._sb.functions.invoke('admin-users',{body:{
+    action:'invite',email,full_name:fullName,role:'admin',job_title:pos?pos.title:'Employee',position_id:posId,assigned_clients:[]
+  }});
+  if(btn){btn.textContent='Add Employee';btn.disabled=false;}
+  if(error||!data||data.error){
+    toast(data&&data.error?data.error:'Could not create employee account','var(--danger)');
+    console.warn('execAddEmployee failed:',error||data);
+    return;
+  }
+  STAFF.push({id:data.user_id,name:fullName,email,positionId:posId,jobTitle:pos?pos.title:'Employee',status:'active',clients:[],access:pos?{...pos.defaultAccess}:{},avatar:initials,color});
+  logAudit(`Added employee: ${fullName} (${email})${pos?' as '+pos.title:''}`,'success');
+  closeModal('add-emp-modal');
+  currentLoginDetailsUser={name:fullName,email,tmpPass:data.temp_password};
+  openSendLoginModal(currentLoginDetailsUser);
+  renderSection('permissions');
+}
 
 // POSITION MANAGER
 function buildPositionManager(){return phdr('Position Manager',POSITIONS.length+' positions',`<button class="btn-sm btn-sm-acc" onclick="openCreatePosition(null)">+ Create Position</button>`)+POSITIONS.map(p=>`<div class="position-card" style="--pc-color:${p.color}"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem"><div><div style="font-family:var(--fd);font-size:.95rem;font-weight:700">${p.title}</div><div style="font-size:.72rem;color:var(--grey);margin-top:.2rem">${p.dept} - ${STAFF.filter(s=>s.positionId===p.id).length} staff assigned</div></div><div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-ghost" onclick="openCreatePosition(${p.id})">Edit</button>${STAFF.filter(s=>s.positionId===p.id).length===0?`<button class="btn-sm btn-sm-danger" onclick="pendingPayload=${p.id};confirmWithPassword('deletePosition')">Remove</button>`:'<span style="font-size:.72rem;color:var(--grey);padding:.4rem .5rem">In use</span>'}</div></div><div style="font-size:.82rem;color:var(--grey);margin-bottom:.65rem">${p.desc}</div><div style="display:flex;flex-wrap:wrap;gap:.35rem">${ALL_MODULES.filter(m=>!m.comingSoon&&p.defaultAccess[m.key]&&p.defaultAccess[m.key]!=='none').map(m=>`<span style="font-size:.65rem;padding:2px 8px;border-radius:100px;background:${p.defaultAccess[m.key]==='admin'?'rgba(0,212,170,.1)':p.defaultAccess[m.key]==='edit'?'rgba(245,158,11,.1)':'rgba(30,144,255,.1)'};color:${p.defaultAccess[m.key]==='admin'?'var(--green)':p.defaultAccess[m.key]==='edit'?'var(--warning)':'#60a5fa'};border:1px solid ${p.defaultAccess[m.key]==='admin'?'rgba(0,212,170,.25)':p.defaultAccess[m.key]==='edit'?'rgba(245,158,11,.25)':'rgba(30,144,255,.25)'}">${m.label} - ${AL_LABELS[p.defaultAccess[m.key]]}</span>`).join('')}</div></div>`).join('');}
 function openCreatePosition(id){editingPositionId=id;document.getElementById('cp-modal-title').textContent=id?'Edit Position':'Create New Position';const existing=id?positionById(id):null;document.getElementById('cp-modules-grid').innerHTML=ALL_MODULES.filter(m=>!m.comingSoon).map(m=>{const cur=existing?existing.defaultAccess[m.key]||'none':'none';return`<div style="background:var(--dark-3);border-radius:6px;padding:.4rem .6rem;display:flex;align-items:center;gap:.4rem"><span style="font-size:.72rem;color:var(--grey-2);flex:1">${m.label}</span><select class="rb-select" id="cp-mod-${m.key}" style="width:auto;padding:.25rem .5rem;font-size:.68rem;background:var(--dark-4)">${Object.entries(AL_LABELS).map(([k,l])=>`<option value="${k}" ${cur===k?'selected':''}>${l}</option>`).join('')}</select></div>`;}).join('');if(existing){document.getElementById('cp-title').value=existing.title;document.getElementById('cp-dept').value=existing.dept;document.getElementById('cp-desc').value=existing.desc;document.getElementById('cp-color').value=existing.color;}else{['cp-title','cp-dept','cp-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('cp-color').value='#00c2ff';}openModal('create-position-modal');}
-function execSavePosition(){const title=document.getElementById('cp-title').value.trim(),dept=document.getElementById('cp-dept').value.trim(),desc=document.getElementById('cp-desc').value.trim(),color=document.getElementById('cp-color').value;if(!title||!dept){toast('Title and department required','var(--danger)');return;}const access={};ALL_MODULES.filter(m=>!m.comingSoon).forEach(m=>{const sel=document.getElementById('cp-mod-'+m.key);if(sel)access[m.key]=sel.value;});if(editingPositionId){const p=POSITIONS.find(x=>x.id===editingPositionId);p.title=title;p.dept=dept;p.desc=desc;p.color=color;p.defaultAccess=access;logAudit(`Updated position: ${title}`,'success');}else{const nid=Math.max(...POSITIONS.map(p=>p.id),0)+1;POSITIONS.push({id:nid,title,dept,color,desc,defaultAccess:access});logAudit(`Created position: ${title} (${dept})`,'success');}closeModal('create-position-modal');toast('Position saved','var(--green)');renderSection('positions');}
+async function execSavePosition(){
+  const title=document.getElementById('cp-title').value.trim(),dept=document.getElementById('cp-dept').value.trim(),desc=document.getElementById('cp-desc').value.trim(),color=document.getElementById('cp-color').value;
+  if(!title||!dept){toast('Title and department required','var(--danger)');return;}
+  const access={};ALL_MODULES.filter(m=>!m.comingSoon).forEach(m=>{const sel=document.getElementById('cp-mod-'+m.key);if(sel)access[m.key]=sel.value;});
+  if(editingPositionId){
+    const p=POSITIONS.find(x=>x.id===editingPositionId);
+    p.title=title;p.dept=dept;p.desc=desc;p.color=color;p.defaultAccess=access;
+    logAudit(`Updated position: ${title}`,'success');
+    if(window._sb){const{error}=await window._sb.from('positions').update({title,dept,color,description:desc,default_access:access}).eq('id',p.id);if(error)console.warn('execSavePosition update failed:',error);}
+  }else{
+    if(window._sb){
+      const{data,error}=await window._sb.from('positions').insert({title,dept,color,description:desc,default_access:access}).select('id').single();
+      if(error||!data){toast('Could not create position','var(--danger)');console.warn('execSavePosition insert failed:',error);return;}
+      POSITIONS.push({id:data.id,title,dept,color,desc,defaultAccess:access});
+    }else{
+      const nid=Math.max(...POSITIONS.map(p=>p.id),0)+1;
+      POSITIONS.push({id:nid,title,dept,color,desc,defaultAccess:access});
+    }
+    logAudit(`Created position: ${title} (${dept})`,'success');
+  }
+  closeModal('create-position-modal');toast('Position saved','var(--green)');renderSection('positions');
+}
 
 // CAREERS ADMIN
 function buildCareersAdmin(){populateJobDeptSelect();return phdr('Careers Admin',JOBS.filter(j=>j.active).length+' open',`<button class="btn-sm btn-sm-acc" onclick="openEditJob(null)">+ Add Listing</button>`)+`<div id="jobs-admin-list">${renderJobAdmin()}</div><div class="card" style="margin-top:1.25rem"><div class="card-title">Recent Applications</div><table class="rb-table"><thead><tr><th>Applicant</th><th>Position</th><th>Date</th><th>Status</th></tr></thead><tbody><tr><td style="color:var(--white);font-weight:500">Nomvula Zulu</td><td>Customer Support Agent</td><td style="color:var(--grey)">2026-05-30</td><td><span class="badge badge-pending">pending</span></td></tr></tbody></table></div>`;}
 function populateJobDeptSelect(){const sel=document.getElementById('ej-dept');if(!sel)return;sel.innerHTML=getDepts().map(d=>`<option value="${d}">${d}</option>`).join('');}
-function renderJobAdmin(){return JOBS.map(j=>`<div style="background:var(--dark-3);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:.65rem;${!j.active?'opacity:.55':''}"><div style="flex:1"><div style="font-size:.88rem;font-weight:600;margin-bottom:.2rem">${j.title}</div><div style="font-size:.73rem;color:var(--grey)">${j.dept} - ${j.type} - ${j.active?'<span style="color:var(--green)">Active</span>':'<span style="color:var(--danger)">Paused</span>'}</div></div><div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-ghost" onclick="openEditJob(${j.id})">Edit</button><button class="btn-sm btn-sm-${j.active?'danger':'green'}" onclick="toggleJob(${j.id})">${j.active?'Pause':'Activate'}</button><button class="btn-sm btn-sm-danger" onclick="deleteJob(${j.id})">Remove</button></div></div>`).join('');}
+function renderJobAdmin(){return JOBS.map(j=>`<div style="background:var(--dark-3);border:1px solid var(--border);border-radius:10px;padding:1.1rem 1.25rem;display:flex;align-items:center;gap:1rem;margin-bottom:.65rem;${!j.active?'opacity:.55':''}"><div style="flex:1"><div style="font-size:.88rem;font-weight:600;margin-bottom:.2rem">${j.title}</div><div style="font-size:.73rem;color:var(--grey)">${j.dept} - ${j.type} - ${j.active?'<span style="color:var(--green)">Active</span>':'<span style="color:var(--danger)">Paused</span>'}</div></div><div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-ghost" onclick="openEditJob(${idArg(j.id)})">Edit</button><button class="btn-sm btn-sm-${j.active?'danger':'green'}" onclick="toggleJob(${idArg(j.id)})">${j.active?'Pause':'Activate'}</button><button class="btn-sm btn-sm-danger" onclick="deleteJob(${idArg(j.id)})">Remove</button></div></div>`).join('');}
 function openEditJob(id){editingJobId=id;document.getElementById('ej-modal-title').textContent=id?'Edit Listing':'Add Listing';populateJobDeptSelect();if(id){const j=JOBS.find(x=>x.id===id);document.getElementById('ej-title').value=j.title;document.getElementById('ej-desc').value=j.desc;}else{document.getElementById('ej-title').value='';document.getElementById('ej-desc').value='';}openModal('edit-job-modal');}
 function saveJob(){const t=document.getElementById('ej-title').value.trim();if(!t){toast('Job title required','var(--danger)');return;}if(editingJobId){const j=JOBS.find(x=>x.id===editingJobId);j.title=t;j.desc=document.getElementById('ej-desc').value;logAudit(`Updated job listing: ${t}`,'success');}else{const nid=Math.max(...JOBS.map(j=>j.id),0)+1;JOBS.push({id:nid,title:t,dept:document.getElementById('ej-dept').value||'Operations',type:'Full-Time',loc:'Remote - South Africa',desc:document.getElementById('ej-desc').value,responsibilities:[],requirements:[],active:true});logAudit(`Added job listing: ${t}`,'success');}closeModal('edit-job-modal');const el=document.getElementById('jobs-admin-list');if(el)el.innerHTML=renderJobAdmin();renderPublicJobs();buildCareersFilterBar();toast('Listing saved','var(--green)');}
 function toggleJob(id){const j=JOBS.find(x=>x.id===id);if(!j)return;j.active=!j.active;logAudit(`${j.active?'Activated':'Paused'} job: ${j.title}`,'success');const el=document.getElementById('jobs-admin-list');if(el)el.innerHTML=renderJobAdmin();renderPublicJobs();toast(`${j.title} ${j.active?'is now live':'paused'}`,'var(--accent)');}
@@ -1931,7 +2022,7 @@ function execSaveFaq(){
 }
 
 // PUBLIC JOBS
-function renderPublicJobs(filter='all'){const list=document.getElementById('jobs-list');if(!list)return;const filtered=JOBS.filter(j=>j.active&&(filter==='all'||j.dept===filter));if(!filtered.length){list.innerHTML='<div style="text-align:center;padding:3rem;color:var(--grey)">No open positions at this time.</div>';return;}list.innerHTML=filtered.map(j=>`<div class="job-card"><div style="flex:1"><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem"><span class="job-tag tag-dept">${j.dept}</span><span class="job-tag tag-type">${j.type}</span><span class="job-tag tag-loc">${j.loc}</span></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.4rem">${j.title}</div><div style="font-size:.83rem;color:var(--grey);line-height:1.65">${j.desc}</div></div><div style="display:flex;flex-direction:column;gap:.5rem;flex-shrink:0"><button class="btn-apply" onclick="openApplyModal(${j.id})">Apply Now</button><button class="btn-detail" onclick="openJobDetail(${j.id})">View Details</button></div></div>`).join('');}
+function renderPublicJobs(filter='all'){const list=document.getElementById('jobs-list');if(!list)return;const filtered=JOBS.filter(j=>j.active&&(filter==='all'||j.dept===filter));if(!filtered.length){list.innerHTML='<div style="text-align:center;padding:3rem;color:var(--grey)">No open positions at this time.</div>';return;}list.innerHTML=filtered.map(j=>`<div class="job-card"><div style="flex:1"><div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem"><span class="job-tag tag-dept">${j.dept}</span><span class="job-tag tag-type">${j.type}</span><span class="job-tag tag-loc">${j.loc}</span></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.4rem">${j.title}</div><div style="font-size:.83rem;color:var(--grey);line-height:1.65">${j.desc}</div></div><div style="display:flex;flex-direction:column;gap:.5rem;flex-shrink:0"><button class="btn-apply" onclick="openApplyModal(${idArg(j.id)})">Apply Now</button><button class="btn-detail" onclick="openJobDetail(${idArg(j.id)})">View Details</button></div></div>`).join('');}
 function buildCareersFilterBar(){const bar=document.getElementById('careers-filter-bar');if(!bar)return;const depts=[...new Set(JOBS.filter(j=>j.active).map(j=>j.dept))];bar.innerHTML=`<button class="filter-btn active" onclick="filterJobs('all',this)">All Roles</button>`+depts.map(d=>`<button class="filter-btn" onclick="filterJobs('${d}',this)">${d}</button>`).join('');}
 function filterJobs(filter,btn){document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderPublicJobs(filter);}
 function openApplyModal(jobId){const j=JOBS.find(x=>x.id===jobId);if(!j)return;document.getElementById('apply-modal-title').textContent=`Apply - ${j.title}`;const sel=document.getElementById('app-position');sel.innerHTML=JOBS.filter(x=>x.active).map(x=>`<option value="${x.id}" ${x.id===jobId?'selected':''}>${x.title}</option>`).join('');document.getElementById('apply-form-content').style.display='block';document.getElementById('apply-success').classList.remove('show');openModal('apply-modal');}
@@ -2024,19 +2115,38 @@ async function loadSupabaseData(){
           });
         }
       }
-      // Load user_profiles for staff
-      const {data:profiles}=await window._sb.from('user_profiles').select('id,full_name,email,role,company').in('role',['super_admin','admin']);
+      // Load real positions
+      const {data:posRows}=await window._sb.from('positions').select('id,title,dept,color,description,default_access').order('id',{ascending:true});
+      if(posRows&&posRows.length){
+        POSITIONS=posRows.map(p=>({id:p.id,title:p.title,dept:p.dept,color:p.color,desc:p.description||'',defaultAccess:p.default_access||{}}));
+      }
+      // Load user_profiles for staff (employees)
+      const {data:profiles}=await window._sb.from('user_profiles').select('id,full_name,email,role,job_title,position_id,status,cover_color,access,assigned_clients').in('role',['super_admin','admin']);
       if(profiles&&profiles.length){
         const colors=['#00c2ff','#a99cff','#00d4aa','#f59e0b','#ff4d6d'];
-        STAFF=profiles.map((p,i)=>({
-          id:p.id,name:p.full_name||p.email,email:p.email,
-          positionId:p.role==='super_admin'?1:2,
-          jobTitle:p.role==='super_admin'?'Founder & CEO+CTO':p.role==='admin'?'Team Lead':'Staff',
-          status:'active',clients:['all'],access:{},
-          avatar:(p.full_name||p.email).split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2),
-          color:colors[i%colors.length]
+        STAFF=profiles.map((p,i)=>{
+          const pos=POSITIONS.find(x=>x.id===p.position_id);
+          return{
+            id:p.id,name:p.full_name||p.email,email:p.email,
+            positionId:p.position_id||(p.role==='super_admin'?1:2),
+            jobTitle:p.job_title||(p.role==='super_admin'?'Founder & CEO+CTO':'Team Lead'),
+            role:p.role,
+            status:p.status||'active',
+            clients:(p.assigned_clients&&p.assigned_clients.length)?p.assigned_clients:(p.role==='super_admin'?['all']:[]),
+            access:(p.access&&Object.keys(p.access).length)?p.access:(pos?{...pos.defaultAccess}:{}),
+            avatar:(p.full_name||p.email).split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2),
+            color:p.cover_color||colors[i%colors.length]
+          };
+        });
+      }
+      // Load user_profiles for client-side users (people who log into a client's portal)
+      const {data:clientProfiles}=await window._sb.from('user_profiles').select('id,full_name,email,job_title,client_id,status,updated_at').eq('role','client');
+      if(clientProfiles&&clientProfiles.length){
+        CLIENT_USERS=clientProfiles.map(p=>({
+          id:p.id,companyId:p.client_id,name:p.full_name||p.email,email:p.email,
+          jobtitle:p.job_title||'',lastLogin:(p.updated_at||'').toString().slice(0,16).replace('T',' ')||'Never',
+          active:p.status!=='inactive'
         }));
-        STAFF.forEach(s=>{const pos=POSITIONS.find(x=>x.id===s.positionId);s.access=pos?{...pos.defaultAccess}:{};});
       }
       // Load real audit log history
       const {data:auditRows}=await window._sb.from('audit_log').select('actor_name,action,type,created_at').order('created_at',{ascending:false}).limit(200);
