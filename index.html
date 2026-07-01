@@ -276,6 +276,12 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .aria-chat-status{font-size:.65rem;color:var(--green);display:flex;align-items:center;gap:4px}
 .aria-chat-close{background:none;border:none;color:var(--grey);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .2s;line-height:1}
 .aria-chat-close:hover{color:var(--white)}
+.aria-menu-btn{background:none;border:none;color:var(--grey);font-size:1.1rem;cursor:pointer;padding:2px 8px;border-radius:4px;transition:color .2s;line-height:1;display:none}
+.aria-menu-btn:hover{color:var(--white)}
+.aria-menu{display:none;position:absolute;top:calc(100% + 4px);right:26px;background:var(--dark-4);border:1px solid var(--border-light);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.4);min-width:170px;z-index:10;overflow:hidden}
+.aria-menu.open{display:block}
+.aria-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--grey-2);font-size:.78rem;padding:.6rem .85rem;cursor:pointer;transition:background .2s,color .2s;font-family:var(--fb)}
+.aria-menu button:hover{background:var(--dark-3);color:var(--white)}
 .aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;min-height:200px;max-height:320px;overflow-y:auto}
 .aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55;animation:ariaPop .3s var(--ease-out,ease) both}
 @keyframes ariaPop{from{opacity:0;transform:translateY(8px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -1005,7 +1011,14 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
         <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
         <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status"><span class="live-dot"></span>Online</div></div>
       </div>
-      <button class="aria-chat-close" onclick="toggleAriaChat()" aria-label="Close chat">&#10005;</button>
+      <div style="display:flex;align-items:center;gap:2px;position:relative">
+        <button class="aria-menu-btn" id="aria-menu-btn" onclick="toggleAriaMenu()" aria-label="More options" aria-haspopup="true">&#8942;</button>
+        <div class="aria-menu" id="aria-menu">
+          <button onclick="reportAriaResponse()">Report</button>
+          <button onclick="downloadAriaConversation()">Download Conversation</button>
+        </div>
+        <button class="aria-chat-close" onclick="toggleAriaChat()" aria-label="Close chat">&#10005;</button>
+      </div>
     </div>
     <div class="aria-chat-msgs" id="aria-msgs">
       <div class="aria-msg aria-msg-bot" id="aria-greeting">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
@@ -1151,16 +1164,72 @@ const ARIA_IMAGE_TYPES=['image/png','image/jpeg','image/webp','image/gif'];
 function toggleAriaChat(){
   const b=document.getElementById('aria-chat-box');b.classList.toggle('open');
   const btn=document.getElementById('aria-trigger-btn');if(btn)btn.classList.remove('wiggle');
+  toggleAriaMenu(false);
   if(b.classList.contains('open')){
     document.getElementById('aria-input').focus();
     const greeting=document.getElementById('aria-greeting');
     const attachBtn=document.getElementById('aria-attach-btn');
+    const menuBtn=document.getElementById('aria-menu-btn');
     if(greeting&&currentUser){
       greeting.textContent=`Hi ${currentUser.name.split(' ')[0]}, I'm ARIA — what can I help with?`;
       const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';
     }
     if(attachBtn)attachBtn.style.display=currentUser?'flex':'none';
+    if(menuBtn)menuBtn.style.display=currentUser?'inline-block':'none';
   }
+}
+function toggleAriaMenu(force){
+  const m=document.getElementById('aria-menu');if(!m)return;
+  const show=typeof force==='boolean'?force:!m.classList.contains('open');
+  m.classList.toggle('open',show);
+}
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('aria-menu'),btn=document.getElementById('aria-menu-btn');
+  if(menu&&menu.classList.contains('open')&&!menu.contains(e.target)&&e.target!==btn){toggleAriaMenu(false);}
+});
+function getAriaCompanyName(){
+  if(currentUser&&currentUser.companyId&&typeof CLIENT_COMPANIES!=='undefined'){
+    const co=CLIENT_COMPANIES.find(c=>c.id===currentUser.companyId);
+    if(co)return co.name;
+  }
+  return currentUser?currentUser.name:'Supanta';
+}
+function downloadTextFile(filename,text){
+  const blob=new Blob([text],{type:'text/plain'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+}
+function downloadAriaConversation(){
+  toggleAriaMenu(false);
+  const bubbles=document.querySelectorAll('#aria-msgs .aria-msg:not(.aria-typing)');
+  if(!bubbles.length){toast('Nothing to download yet','var(--warning)');return;}
+  const lines=[];
+  bubbles.forEach(el=>{
+    const who=el.classList.contains('aria-msg-user')?(currentUser?currentUser.name:'You'):'ARIA';
+    lines.push(`${who}: ${el.textContent.trim()}`);
+  });
+  const company=getAriaCompanyName().replace(/[^a-z0-9]+/gi,'-');
+  const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  downloadTextFile(`ARIA-Conversation-${company}-${stamp}.txt`,lines.join('\n\n'));
+}
+async function reportAriaResponse(){
+  toggleAriaMenu(false);
+  const bots=document.querySelectorAll('#aria-msgs .aria-msg-bot:not(.aria-typing)');
+  if(!bots.length){toast('No ARIA response to report yet','var(--warning)');return;}
+  const lastBot=bots[bots.length-1].textContent.trim();
+  const users=document.querySelectorAll('#aria-msgs .aria-msg-user');
+  const lastUser=users.length?users[users.length-1].textContent.trim():'';
+  if(!window._sb){toast('Connection unavailable','var(--danger)');return;}
+  toast('Reporting to the team...','var(--accent)');
+  const{data,error}=await window._sb.functions.invoke('report-issue',{body:{flagged_reply:lastBot,user_message:lastUser}});
+  if(error||!data||data.error){
+    toast('Could not submit the report — please try again','var(--danger)');
+    console.warn('report-issue failed:',error||data);
+    return;
+  }
+  toast('Thanks — this has been flagged to the team.','var(--green)');
 }
 function clearAriaAttachment(){
   ARIA_PENDING_ATTACHMENT=null;
@@ -1339,14 +1408,27 @@ async function doLogin(){
     }
     err.style.display='none';
     await loadSupabaseData();
+    startAriaPresenceHeartbeat();
     buildPortal();goTo('portal');
   } catch(e){
     err.textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.';err.style.display='block';
   }
   if(btn){btn.textContent='Sign In';btn.disabled=false;}
 }
+let ARIA_PRESENCE_INTERVAL=null;
+function startAriaPresenceHeartbeat(){
+  if(!currentUser||!currentUser.isEmployee||!window._sb||!sbUser)return;
+  const ping=()=>{window._sb.from('user_profiles').update({last_seen_at:new Date().toISOString()}).eq('id',sbUser.id).then(()=>{}).catch(()=>{});};
+  ping();
+  if(ARIA_PRESENCE_INTERVAL)clearInterval(ARIA_PRESENCE_INTERVAL);
+  ARIA_PRESENCE_INTERVAL=setInterval(ping,60000);
+}
+function stopAriaPresenceHeartbeat(){
+  if(ARIA_PRESENCE_INTERVAL){clearInterval(ARIA_PRESENCE_INTERVAL);ARIA_PRESENCE_INTERVAL=null;}
+}
 async function doLogout(){
   await window._sb.auth.signOut();
+  stopAriaPresenceHeartbeat();
   sbUser=null;currentUser=null;
   ARIA_PORTAL_HISTORY=[];
   const msgs=document.getElementById('aria-msgs');
@@ -2730,6 +2812,7 @@ async function initApp(){
       }
     }
     await loadSupabaseData();
+    startAriaPresenceHeartbeat();
     buildPortal();goTo('portal');
   }
   // Load public jobs regardless
