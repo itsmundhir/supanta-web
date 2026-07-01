@@ -4,6 +4,17 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Supanta — AI-Powered Contact Centre</title>
+<meta name="description" content="Supanta combines AI agents (ARIA, PULSE, FLOW) with South African human expertise to run customer support, sales development, and back-office operations for growing eCommerce and SaaS brands."/>
+<link rel="canonical" href="https://supanta.com/"/>
+<meta name="robots" content="index, follow"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Supanta"/>
+<meta property="og:title" content="Supanta — AI-Powered Contact Centre"/>
+<meta property="og:description" content="AI agents plus South African human expertise, combined into one accountable customer operations platform."/>
+<meta property="og:url" content="https://supanta.com/"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Supanta — AI-Powered Contact Centre"/>
+<meta name="twitter:description" content="AI agents plus South African human expertise, combined into one accountable customer operations platform."/>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -19,7 +30,10 @@ body{font-family:var(--fb);background:var(--dark);color:var(--white);line-height
 a{text-decoration:none;color:inherit}
 button{font-family:var(--fb);cursor:pointer;border:none;outline:none}
 input,textarea,select{font-family:var(--fb)}
-.page{display:none}.page.active{display:block}#page-home{display:block}#page-portal.active{display:flex!important}#page-login.active{display:flex!important}#page-home{display:block}
+.page{display:none}.page.active{display:block}#page-home{display:block}#page-portal.active{display:flex!important}#page-login.active{display:flex!important}
+.skip-link{position:absolute;left:-9999px;top:0;background:var(--accent);color:var(--dark);padding:.75rem 1.25rem;font-weight:700;font-size:.85rem;border-radius:0 0 8px 0;z-index:10000}
+.skip-link:focus{left:0}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #main-nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 5%;height:68px;display:flex;align-items:center;justify-content:space-between;background:rgba(5,13,26,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
 .nav-logo{font-family:var(--fd);font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:10px;cursor:pointer}
 .nav-links{display:flex;align-items:center;gap:2rem;list-style:none}
@@ -554,28 +568,30 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 </style>
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 <!-- NAV -->
-<nav id="main-nav" style="display:none">
-  <div class="nav-logo" onclick="goTo('home')"><svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg)"/></svg> Supanta</div>
+<nav id="main-nav" style="display:none" aria-label="Main navigation">
+  <div class="nav-logo" onclick="goTo('home')" role="link" tabindex="0" aria-label="Supanta home"><svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg)"/></svg> Supanta</div>
   <ul class="nav-links">
-    <li><a id="nl-home" onclick="goTo('home')">Home</a></li>
-    <li><a id="nl-about" onclick="goTo('about')">About</a></li>
-    <li><a id="nl-services" onclick="goTo('services')">Services</a></li>
-    <li><a id="nl-careers" onclick="goTo('careers')">Careers</a></li>
-    <li><a id="nl-contact" onclick="goTo('contact')">Contact</a></li>
-    <li><a onclick="goTo('login')" class="nav-cta">Login</a></li>
+    <li><a id="nl-home" onclick="goTo('home')" role="link" tabindex="0">Home</a></li>
+    <li><a id="nl-about" onclick="goTo('about')" role="link" tabindex="0">About</a></li>
+    <li><a id="nl-services" onclick="goTo('services')" role="link" tabindex="0">Services</a></li>
+    <li><a id="nl-careers" onclick="goTo('careers')" role="link" tabindex="0">Careers</a></li>
+    <li><a id="nl-contact" onclick="goTo('contact')" role="link" tabindex="0">Contact</a></li>
+    <li><a onclick="goTo('login')" class="nav-cta" role="link" tabindex="0">Login</a></li>
   </ul>
-  <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu"><span></span><span></span><span></span></button>
 </nav>
 <div class="mobile-menu" id="mobile-menu">
-  <a onclick="goTo('home');closeMob()">Home</a>
-  <a onclick="goTo('about');closeMob()">About</a>
-  <a onclick="goTo('services');closeMob()">Services</a>
-  <a onclick="goTo('careers');closeMob()">Careers</a>
-  <a onclick="goTo('contact');closeMob()">Contact</a>
-  <a onclick="goTo('login');closeMob()" style="color:var(--accent);font-weight:600">Login</a>
+  <a onclick="goTo('home');closeMob()" role="link" tabindex="0">Home</a>
+  <a onclick="goTo('about');closeMob()" role="link" tabindex="0">About</a>
+  <a onclick="goTo('services');closeMob()" role="link" tabindex="0">Services</a>
+  <a onclick="goTo('careers');closeMob()" role="link" tabindex="0">Careers</a>
+  <a onclick="goTo('contact');closeMob()" role="link" tabindex="0">Contact</a>
+  <a onclick="goTo('login');closeMob()" style="color:var(--accent);font-weight:600" role="link" tabindex="0">Login</a>
 </div>
 
+<main id="main-content" tabindex="-1">
 <!-- HOME -->
 <div id="page-home" class="page">
 <section class="page-hero" style="background:var(--dark)">
@@ -831,6 +847,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 </div></section>
 <footer><div class="foot-in"><span>&#169; 2026 Supanta. All rights reserved.</span><div class="foot-links"><a onclick="goTo('about')">About</a><a onclick="goTo('services')">Services</a><a onclick="goTo('careers')">Careers</a><a onclick="goTo('contact')">Contact</a></div></div></footer>
 </div>
+</main>
 
 <!-- LOGIN -->
 <div id="page-login" class="page">
@@ -841,8 +858,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     </div>
     <h2 style="font-family:var(--fd);font-size:1.35rem;font-weight:700;text-align:center;margin-bottom:.3rem">Welcome back</h2>
     <p style="font-size:.82rem;color:var(--grey);text-align:center;margin-bottom:2rem">Sign in to your Supanta account</p>
-    <div class="form-group"><label>Email address</label><input class="rb-input" type="email" id="login-email" placeholder="Email address"/></div>
-    <div class="form-group"><label>Password</label><input class="rb-input" type="password" id="login-pass" placeholder="Password"/></div>
+    <div class="form-group"><label for="login-email">Email address</label><input class="rb-input" type="email" id="login-email" placeholder="Email address" autocomplete="username"/></div>
+    <div class="form-group"><label for="login-pass">Password</label><input class="rb-input" type="password" id="login-pass" placeholder="Password" autocomplete="current-password"/></div>
     <button class="btn-submit" onclick="doLogin()">Sign In</button>
     <div style="color:var(--danger);font-size:.78rem;text-align:center;margin-top:.75rem;display:none" id="login-err">Invalid credentials. Please try again.</div>
     <div style="text-align:center;margin-top:1.25rem"><button onclick="goTo('home')" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Back to website</button></div>
@@ -873,8 +890,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
   <div class="login-box" style="max-width:420px">
     <h2 style="font-family:var(--fd);font-size:1.1rem;font-weight:700;text-align:center;margin-bottom:.35rem">Set your password</h2>
     <p style="font-size:.82rem;color:var(--grey);text-align:center;margin-bottom:1.75rem">You're using a temporary password. Set a new one before continuing.</p>
-    <div class="form-group"><label>New Password</label><input class="rb-input" type="password" id="new-pwd-1" placeholder="Min. 8 characters"/></div>
-    <div class="form-group"><label>Confirm Password</label><input class="rb-input" type="password" id="new-pwd-2" placeholder="Repeat password"/></div>
+    <div class="form-group"><label for="new-pwd-1">New Password</label><input class="rb-input" type="password" id="new-pwd-1" placeholder="Min. 8 characters" autocomplete="new-password"/></div>
+    <div class="form-group"><label for="new-pwd-2">Confirm Password</label><input class="rb-input" type="password" id="new-pwd-2" placeholder="Repeat password" autocomplete="new-password"/></div>
     <div style="color:var(--danger);font-size:.78rem;text-align:center;margin-bottom:.75rem;display:none" id="new-pwd-err"></div>
     <button class="btn-submit" onclick="setNewPassword()">Set Password & Continue</button>
   </div>
@@ -968,17 +985,17 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
         <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
         <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status"><span class="live-dot"></span>Online</div></div>
       </div>
-      <button class="aria-chat-close" onclick="toggleAriaChat()">&#10005;</button>
+      <button class="aria-chat-close" onclick="toggleAriaChat()" aria-label="Close chat">&#10005;</button>
     </div>
     <div class="aria-chat-msgs" id="aria-msgs">
       <div class="aria-msg aria-msg-bot">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
     </div>
     <div class="aria-chat-input-row">
-      <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+      <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." aria-label="Chat message" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     </div>
   </div>
-  <button class="aria-trigger-btn" onclick="toggleAriaChat()">
+  <button class="aria-trigger-btn" onclick="toggleAriaChat()" aria-label="Open chat with ARIA">
     <span class="aria-trigger-pulse"></span>
     Talk to us
   </button>
@@ -1088,8 +1105,9 @@ const CONTENT_MAP={'home-hero-title':{label:'Home - Hero Title'},'home-hero-sub'
 let currentUser=null,currentSection='dashboard',editingJobId=null,editingContentId=null,editingFaqIdx=null,editingPositionId=null,currentAdminTab='home',pendingAction=null,pendingPayload=null,addingClientCompanyId=null,currentLoginDetailsUser=null;
 
 // ARIA WIDGET
+function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('aria-input').focus();}
-function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;setTimeout(()=>{const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','ARIA handles 40-60% of queries automatically, with South African agents covering the rest.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${r}</div>`;msgs.scrollTop=msgs.scrollHeight;},800);}
+function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtml(msg)}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;setTimeout(()=>{const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','ARIA handles 40-60% of queries automatically, with South African agents covering the rest.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(r)}</div>`;msgs.scrollTop=msgs.scrollHeight;},800);}
 
 // ROUTER
 function goTo(page){
@@ -1173,9 +1191,14 @@ function setNewPassword(){
 // PASSWORD CONFIRM
 function confirmWithPassword(action,payload){pendingAction=action;pendingPayload=payload||null;document.getElementById('pwd-confirm-input').value='';document.getElementById('pwd-err').style.display='none';document.getElementById('pwd-modal').classList.add('open');}
 function cancelPwd(){document.getElementById('pwd-modal').classList.remove('open');pendingAction=null;pendingPayload=null;}
-function submitPwd(){
-  const entered=document.getElementById('pwd-confirm-input').value;const u=USERS[currentUser.email];
-  if(!u||u.pass!==entered){document.getElementById('pwd-err').style.display='block';AUDIT.unshift({time:now(),actor:currentUser.name,action:`Failed password confirmation for: ${pendingAction}`,type:'fail'});return;}
+async function submitPwd(){
+  const entered=document.getElementById('pwd-confirm-input').value;
+  let ok=false;
+  if(window._sb&&currentUser){
+    const{error}=await window._sb.auth.signInWithPassword({email:currentUser.email,password:entered});
+    ok=!error;
+  }
+  if(!ok){document.getElementById('pwd-err').style.display='block';AUDIT.unshift({time:now(),actor:currentUser.name,action:`Failed password confirmation for: ${pendingAction}`,type:'fail'});return;}
   document.getElementById('pwd-err').style.display='none';document.getElementById('pwd-modal').classList.remove('open');
   const acts={
     saveContent:execSaveContent,saveFaq:execSaveFaq,savePosition:execSavePosition,addEmployee:execAddEmployee,
@@ -1255,8 +1278,8 @@ function openInvitePreviewModal(user){
 function openSendLoginModal(user){const co=CLIENT_COMPANIES.find(c=>c.id===user.companyId);document.getElementById('sld-user-name').textContent=`${user.name} - ${co?co.name:''}`;document.getElementById('sld-preview').textContent=`Hi ${user.name.split(' ')[0]},\n\nWelcome to Supanta. Your client portal (PULSE) is ready.\n\nLogin URL: https://portal.supanta.com\nEmail: ${user.email}\nTemporary Password: ${user.tmpPass}\n\nPlease log in and set a new password on your first visit.\n\nIf you have any issues, contact us at hello@supanta.com\n\nThe Supanta Team`;openModal('send-login-modal');}
 function copyLoginDetails(){navigator.clipboard.writeText(document.getElementById('sld-preview').textContent).then(()=>toast('Copied','var(--green)')).catch(()=>toast('Select text manually','var(--warning)'));}
 function openEmailClient(){if(!currentLoginDetailsUser)return;window.open(`mailto:${currentLoginDetailsUser.email}?subject=${encodeURIComponent('Your Supanta Portal Access')}&body=${encodeURIComponent(document.getElementById('sld-preview').textContent)}`);}
-function resendLoginDetails(uid){const cu=CLIENT_USERS.find(u=>u.id===uid);const uu=USERS[cu.email];if(!cu||!uu)return;const tmpPass=genTempPass();uu.pass=tmpPass;uu.mustChangePwd=true;currentLoginDetailsUser={name:cu.name,email:cu.email,tmpPass,companyId:cu.companyId};openSendLoginModal(currentLoginDetailsUser);AUDIT.unshift({time:now(),actor:currentUser.name,action:`Regenerated password for: ${cu.name}`,type:'success'});}
-function toggleClientUser(uid){const cu=CLIENT_USERS.find(u=>u.id===uid);if(!cu)return;cu.active=!cu.active;if(USERS[cu.email])USERS[cu.email].active=cu.active;AUDIT.unshift({time:now(),actor:currentUser.name,action:`${cu.active?'Activated':'Deactivated'} client user: ${cu.name}`,type:'success'});toast(`${cu.name} ${cu.active?'activated':'deactivated'}`,'var(--accent)');renderSection('clients');}
+function resendLoginDetails(uid){const cu=CLIENT_USERS.find(u=>u.id===uid);if(!cu)return;const tmpPass=genTempPass();currentLoginDetailsUser={name:cu.name,email:cu.email,tmpPass,companyId:cu.companyId};openSendLoginModal(currentLoginDetailsUser);AUDIT.unshift({time:now(),actor:currentUser.name,action:`Regenerated password for: ${cu.name}`,type:'success'});}
+function toggleClientUser(uid){const cu=CLIENT_USERS.find(u=>u.id===uid);if(!cu)return;cu.active=!cu.active;AUDIT.unshift({time:now(),actor:currentUser.name,action:`${cu.active?'Activated':'Deactivated'} client user: ${cu.name}`,type:'success'});toast(`${cu.name} ${cu.active?'activated':'deactivated'}`,'var(--accent)');renderSection('clients');}
 
 // PORTAL BUILD
 function buildPortal(){const u=currentUser,av=document.getElementById('sb-av');av.textContent=u.initials;av.style.background=u.color+'22';av.style.color=u.color;av.style.border='1px solid '+u.color+'44';document.getElementById('sb-name').textContent=u.name;if(u.isEmployee){const s=getMyStaff();document.getElementById('sb-jobtitle').textContent=s?s.jobTitle:'Employee';}else{const co=CLIENT_COMPANIES.find(c=>c.id===u.companyId);document.getElementById('sb-jobtitle').textContent=co?co.name:'Client';}buildSidebar();renderSection('dashboard');}
@@ -1839,7 +1862,7 @@ function resetToPosition(uid){const s=STAFF.find(x=>x.id===uid);if(!s)return;con
 
 // ADD EMPLOYEE
 function populatePositionSelect(){const sel=document.getElementById('ae-position');if(!sel)return;sel.innerHTML='<option value="">-- No position --</option>'+POSITIONS.map(p=>`<option value="${p.id}">${p.title} (${p.dept})</option>`).join('');}
-function execAddEmployee(){const fname=document.getElementById('ae-fname').value.trim(),lname=document.getElementById('ae-lname').value.trim(),email=document.getElementById('ae-email').value.trim().toLowerCase(),posId=parseInt(document.getElementById('ae-position').value)||null;if(!fname||!email){toast('Name and email required','var(--danger)');return;}if(!email.endsWith('@supanta.com')){toast('Email must be @supanta.com','var(--danger)');return;}if(USERS[email]){toast('Account already exists','var(--danger)');return;}const tmpPass=genTempPass(),initials=(fname[0]+(lname[0]||'')).toUpperCase();const colors=['#00c2ff','#a99cff','#00d4aa','#f59e0b','#ff4d6d'];const color=colors[STAFF.length%colors.length];const pos=positionById(posId);const nid=Math.max(...STAFF.map(s=>s.id),0)+1,fullName=`${fname} ${lname}`.trim();STAFF.push({id:nid,name:fullName,email,positionId:posId,jobTitle:pos?pos.title:'Employee',status:'active',clients:[],access:pos?{...pos.defaultAccess}:{},avatar:initials,color});USERS[email]={pass:tmpPass,name:fullName,initials,color,isEmployee:true,mustChangePwd:true};AUDIT.unshift({time:now(),actor:currentUser.name,action:`Added employee: ${fullName} (${email})${pos?' as '+pos.title:''}. Temp: ${tmpPass}`,type:'success'});closeModal('add-emp-modal');toast(`${fullName} added. Temp password: ${tmpPass}`,'var(--green)');renderSection('permissions');}
+function execAddEmployee(){const fname=document.getElementById('ae-fname').value.trim(),lname=document.getElementById('ae-lname').value.trim(),email=document.getElementById('ae-email').value.trim().toLowerCase(),posId=parseInt(document.getElementById('ae-position').value)||null;if(!fname||!email){toast('Name and email required','var(--danger)');return;}if(!email.endsWith('@supanta.com')){toast('Email must be @supanta.com','var(--danger)');return;}if(STAFF.some(s=>s.email===email)){toast('Account already exists','var(--danger)');return;}const tmpPass=genTempPass(),initials=(fname[0]+(lname[0]||'')).toUpperCase();const colors=['#00c2ff','#a99cff','#00d4aa','#f59e0b','#ff4d6d'];const color=colors[STAFF.length%colors.length];const pos=positionById(posId);const nid=Math.max(...STAFF.map(s=>s.id),0)+1,fullName=`${fname} ${lname}`.trim();STAFF.push({id:nid,name:fullName,email,positionId:posId,jobTitle:pos?pos.title:'Employee',status:'active',clients:[],access:pos?{...pos.defaultAccess}:{},avatar:initials,color});AUDIT.unshift({time:now(),actor:currentUser.name,action:`Added employee: ${fullName} (${email})${pos?' as '+pos.title:''}. Temp: ${tmpPass}`,type:'success'});closeModal('add-emp-modal');toast(`${fullName} added. Temp password: ${tmpPass}`,'var(--green)');renderSection('permissions');}
 
 // POSITION MANAGER
 function buildPositionManager(){return phdr('Position Manager',POSITIONS.length+' positions',`<button class="btn-sm btn-sm-acc" onclick="openCreatePosition(null)">+ Create Position</button>`)+POSITIONS.map(p=>`<div class="position-card" style="--pc-color:${p.color}"><div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.75rem"><div><div style="font-family:var(--fd);font-size:.95rem;font-weight:700">${p.title}</div><div style="font-size:.72rem;color:var(--grey);margin-top:.2rem">${p.dept} - ${STAFF.filter(s=>s.positionId===p.id).length} staff assigned</div></div><div style="display:flex;gap:.5rem"><button class="btn-sm btn-sm-ghost" onclick="openCreatePosition(${p.id})">Edit</button>${STAFF.filter(s=>s.positionId===p.id).length===0?`<button class="btn-sm btn-sm-danger" onclick="pendingPayload=${p.id};confirmWithPassword('deletePosition')">Remove</button>`:'<span style="font-size:.72rem;color:var(--grey);padding:.4rem .5rem">In use</span>'}</div></div><div style="font-size:.82rem;color:var(--grey);margin-bottom:.65rem">${p.desc}</div><div style="display:flex;flex-wrap:wrap;gap:.35rem">${ALL_MODULES.filter(m=>!m.comingSoon&&p.defaultAccess[m.key]&&p.defaultAccess[m.key]!=='none').map(m=>`<span style="font-size:.65rem;padding:2px 8px;border-radius:100px;background:${p.defaultAccess[m.key]==='admin'?'rgba(0,212,170,.1)':p.defaultAccess[m.key]==='edit'?'rgba(245,158,11,.1)':'rgba(30,144,255,.1)'};color:${p.defaultAccess[m.key]==='admin'?'var(--green)':p.defaultAccess[m.key]==='edit'?'var(--warning)':'#60a5fa'};border:1px solid ${p.defaultAccess[m.key]==='admin'?'rgba(0,212,170,.25)':p.defaultAccess[m.key]==='edit'?'rgba(245,158,11,.25)':'rgba(30,144,255,.25)'}">${m.label} - ${AL_LABELS[p.defaultAccess[m.key]]}</span>`).join('')}</div></div>`).join('');}
@@ -1893,7 +1916,7 @@ async function submitApply(){
 function openJobDetail(jobId){const j=JOBS.find(x=>x.id===jobId);if(!j)return;document.getElementById('detail-modal-title').textContent=j.title;document.getElementById('detail-modal-sub').textContent=`${j.dept} - ${j.type} - ${j.loc}`;document.getElementById('detail-modal-body').innerHTML=`<p style="font-size:.85rem;color:var(--grey-2);line-height:1.75;margin-bottom:1.25rem">${j.desc}</p>${j.responsibilities.length?`<div style="font-size:.78rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Responsibilities</div><ul class="svc-bullets" style="--bc:var(--accent);margin-bottom:1.25rem">${j.responsibilities.map(r=>`<li>${r}</li>`).join('')}</ul>`:''}${j.requirements.length?`<div style="font-size:.78rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Requirements</div><ul class="svc-bullets" style="--bc:var(--accent-2);margin-bottom:1.25rem">${j.requirements.map(r=>`<li>${r}</li>`).join('')}</ul>`:''}`;document.getElementById('detail-apply-btn').onclick=()=>{closeModal('detail-modal');openApplyModal(jobId);};openModal('detail-modal');}
 
 // CONTACT & FAQ
-function applyFaqToPage(){const c=document.getElementById('faq-container');if(!c)return;c.innerHTML=FAQ_DATA.map(f=>`<div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q"><span class="faq-q-text">${f.q}</span><span class="faq-chevron">&#9660;</span></div><div class="faq-a">${f.a}</div></div>`).join('');}
+function applyFaqToPage(){const c=document.getElementById('faq-container');if(!c)return;c.innerHTML=FAQ_DATA.map(f=>`<div class="faq-item" onclick="toggleFaq(this)" role="button" tabindex="0"><div class="faq-q"><span class="faq-q-text">${escapeHtml(f.q)}</span><span class="faq-chevron">&#9660;</span></div><div class="faq-a">${escapeHtml(f.a)}</div></div>`).join('');}
 function toggleFaq(el){el.classList.toggle('open');}
 
 // MODALS
@@ -1905,8 +1928,17 @@ document.addEventListener('click',e=>{if(e.target.classList.contains('modal-over
 function toast(msg,color='var(--accent)'){const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');ta.style.background=color;tm.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
 // NAV HAMBURGER
-document.getElementById('hamburger').addEventListener('click',()=>{document.getElementById('mobile-menu').classList.toggle('open');});
-function closeMob(){document.getElementById('mobile-menu').classList.remove('open');}
+document.getElementById('hamburger').addEventListener('click',function(){const open=document.getElementById('mobile-menu').classList.toggle('open');this.setAttribute('aria-expanded',open?'true':'false');});
+function closeMob(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').setAttribute('aria-expanded','false');}
+
+// KEYBOARD ACCESS: activate role="link"/role="button" elements with Enter or Space
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const t=e.target;
+  if(t&&(t.getAttribute('role')==='link'||t.getAttribute('role')==='button')&&t.hasAttribute('onclick')){
+    e.preventDefault();t.click();
+  }
+});
 
 // ─── SUPABASE DATA LOADER ──────────────────────────────────
 async function loadSupabaseData(){
@@ -2219,7 +2251,7 @@ function renderConvoMsg(m,agentName){
   return `<div class="cm ${side}">
     <div class="cm-bubble ${cls}">
       <div class="cm-meta"><span class="cm-who">${who}</span>${chan}</div>
-      <div class="cm-text">${m.content}</div>
+      <div class="cm-text">${escapeHtml(m.content)}</div>
       <div class="cm-foot"><span class="cm-time">${(m.created_at||'').toString().slice(0,16).replace('T',' ')}</span>${conf}${flag}</div>
     </div>
   </div>`;
