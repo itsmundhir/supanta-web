@@ -306,6 +306,9 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .aria-attach-remove{background:none;border:none;color:var(--grey);cursor:pointer;font-size:.75rem;padding:2px 4px}
 .aria-attach-remove:hover{color:var(--danger)}
 .aria-msg-img{max-width:100%;border-radius:8px;display:block;margin-bottom:.4rem}
+.aria-msg-file{display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);border-radius:6px;padding:.4rem .6rem;font-size:.76rem;margin-bottom:.4rem}
+.aria-download-btn{display:block;margin-top:.6rem;background:var(--accent);color:var(--dark);border:none;border-radius:7px;padding:.5rem .8rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:var(--fd);transition:opacity .2s}
+.aria-download-btn:hover{opacity:.85}
 .aria-trigger-btn{background:var(--accent);color:var(--dark);border:none;border-radius:100px;padding:.75rem 1.5rem;font-family:var(--fd);font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.6rem;box-shadow:0 8px 30px rgba(0,194,255,.35);transition:transform .2s,box-shadow .2s}
 .aria-trigger-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,194,255,.45)}
 .aria-trigger-pulse{width:8px;height:8px;border-radius:50%;background:rgba(5,13,26,.5);animation:pulse-dot 1.5s ease-in-out infinite}
@@ -1018,8 +1021,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       <button class="aria-attach-remove" onclick="clearAriaAttachment()" aria-label="Remove attached image">&#10005;</button>
     </div>
     <div class="aria-chat-input-row">
-      <input type="file" id="aria-file-input" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" onchange="handleAriaFileSelect(event)"/>
-      <button class="aria-attach-btn" id="aria-attach-btn" onclick="document.getElementById('aria-file-input').click()" aria-label="Attach an image" title="Attach an image" style="display:none">
+      <input type="file" id="aria-file-input" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain" style="display:none" onchange="handleAriaFileSelect(event)"/>
+      <button class="aria-attach-btn" id="aria-attach-btn" onclick="document.getElementById('aria-file-input').click()" aria-label="Attach an image or document" title="Attach an image or document (PDF/TXT)" style="display:none">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
       </button>
       <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." aria-label="Chat message" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
@@ -1141,8 +1144,10 @@ let currentUser=null,currentSection='dashboard',editingJobId=null,editingContent
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function idArg(id){return typeof id==='number'?String(id):"'"+String(id).replace(/'/g,"\\'")+"'";}
 let ARIA_PORTAL_HISTORY=[];
-let ARIA_PENDING_IMAGE=null;
-const ARIA_MAX_IMAGE_BYTES=5*1024*1024;
+let ARIA_PENDING_ATTACHMENT=null;
+const ARIA_MAX_ATTACHMENT_BYTES=5*1024*1024;
+const ARIA_DOC_TYPES=['application/pdf','text/plain'];
+const ARIA_IMAGE_TYPES=['image/png','image/jpeg','image/webp','image/gif'];
 function toggleAriaChat(){
   const b=document.getElementById('aria-chat-box');b.classList.toggle('open');
   const btn=document.getElementById('aria-trigger-btn');if(btn)btn.classList.remove('wiggle');
@@ -1151,41 +1156,44 @@ function toggleAriaChat(){
     const greeting=document.getElementById('aria-greeting');
     const attachBtn=document.getElementById('aria-attach-btn');
     if(greeting&&currentUser){
-      greeting.textContent=`Hi ${currentUser.name.split(' ')[0]}, I'm ARIA. Ask me anything about your account, or attach a screenshot/photo and I'll take a look — I can see your account's own metrics and knowledge base, but I can't create tickets or alerts, and I can't discuss any other client's account.`;
+      greeting.textContent=`Hi ${currentUser.name.split(' ')[0]}, I'm ARIA — what can I help with?`;
       const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';
     }
     if(attachBtn)attachBtn.style.display=currentUser?'flex':'none';
   }
 }
 function clearAriaAttachment(){
-  ARIA_PENDING_IMAGE=null;
+  ARIA_PENDING_ATTACHMENT=null;
   const fi=document.getElementById('aria-file-input');if(fi)fi.value='';
   const prev=document.getElementById('aria-attach-preview');if(prev)prev.style.display='none';
+  const thumb=document.getElementById('aria-attach-thumb');if(thumb)thumb.style.display='none';
 }
 function handleAriaFileSelect(e){
   const file=e.target.files&&e.target.files[0];
   if(!file)return;
-  if(!/^image\/(png|jpeg|jpg|webp|gif)$/.test(file.type)){
-    toast('Only images (PNG, JPEG, WEBP, GIF) can be attached','var(--danger)');
+  const isImage=ARIA_IMAGE_TYPES.includes(file.type);
+  const isDoc=ARIA_DOC_TYPES.includes(file.type);
+  if(!isImage&&!isDoc){
+    toast('Attach an image (PNG/JPEG/WEBP/GIF) or a document (PDF/TXT)','var(--danger)');
     clearAriaAttachment();return;
   }
-  if(file.size>ARIA_MAX_IMAGE_BYTES){
-    toast('Image is too large — please attach one under 5MB','var(--danger)');
+  if(file.size>ARIA_MAX_ATTACHMENT_BYTES){
+    toast('That file is too large — please attach one under 5MB','var(--danger)');
     clearAriaAttachment();return;
   }
   const reader=new FileReader();
   reader.onload=()=>{
     const dataUrl=reader.result;
     const base64=dataUrl.split(',')[1];
-    ARIA_PENDING_IMAGE={media_type:file.type,data:base64,dataUrl,name:file.name};
+    ARIA_PENDING_ATTACHMENT={kind:isImage?'image':'document',media_type:file.type,data:base64,dataUrl,name:file.name};
     const prev=document.getElementById('aria-attach-preview');
     const thumb=document.getElementById('aria-attach-thumb');
     const nameEl=document.getElementById('aria-attach-name');
-    if(thumb)thumb.src=dataUrl;
+    if(thumb){if(isImage){thumb.src=dataUrl;thumb.style.display='block';}else{thumb.style.display='none';}}
     if(nameEl)nameEl.textContent=file.name;
     if(prev)prev.style.display='flex';
   };
-  reader.onerror=()=>{toast('Could not read that image','var(--danger)');clearAriaAttachment();};
+  reader.onerror=()=>{toast('Could not read that file','var(--danger)');clearAriaAttachment();};
   reader.readAsDataURL(file);
 }
 function ariaTypingStart(){
@@ -1207,12 +1215,19 @@ function ariaBotReply(){
     msgs.scrollTop=msgs.scrollHeight;
   },900+Math.random()*500);
 }
-async function ariaAssistantReply(userMsg,image){
+function downloadAriaFile(filename,mime,base64){
+  const a=document.createElement('a');
+  a.href=`data:${mime};base64,${base64}`;
+  a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+}
+async function ariaAssistantReply(userMsg,attachment){
   const typing=ariaTypingStart();
   const msgs=document.getElementById('aria-msgs');
   if(!window._sb){typing.remove();msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Connection unavailable right now — please try again in a moment.</div>`;msgs.scrollTop=msgs.scrollHeight;return;}
   const body={message:userMsg,history:ARIA_PORTAL_HISTORY};
-  if(image)body.image={media_type:image.media_type,data:image.data};
+  if(attachment&&attachment.kind==='image')body.image={media_type:attachment.media_type,data:attachment.data};
+  if(attachment&&attachment.kind==='document')body.document={media_type:attachment.media_type,data:attachment.data,name:attachment.name};
   const{data,error}=await window._sb.functions.invoke('client-assistant',{body});
   typing.remove();
   if(error||!data||data.error){
@@ -1221,21 +1236,31 @@ async function ariaAssistantReply(userMsg,image){
     console.warn('client-assistant failed:',error||data);
     return;
   }
-  ARIA_PORTAL_HISTORY.push({role:'user',content:image?`${userMsg} [attached an image: ${image.name||'image'}]`:userMsg},{role:'assistant',content:data.reply});
-  msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(data.reply)}</div>`;
+  const historyNote=attachment?`${userMsg} [attached ${attachment.kind}: ${attachment.name||attachment.kind}]`:userMsg;
+  ARIA_PORTAL_HISTORY.push({role:'user',content:historyNote},{role:'assistant',content:data.reply});
+  let downloadBtn='';
+  if(data.download&&data.download.base64){
+    window.__ariaLastDownload=window.__ariaLastDownload||{};
+    const dlId='dl'+Date.now();
+    window.__ariaLastDownload[dlId]=data.download;
+    downloadBtn=`<button class="aria-download-btn" onclick="const d=window.__ariaLastDownload['${dlId}'];downloadAriaFile(d.filename,d.mime,d.base64)">Download ${escapeHtml(data.download.filename)}</button>`;
+  }
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtml(data.reply)}${downloadBtn}</div>`;
   msgs.scrollTop=msgs.scrollHeight;
 }
 function sendAriaMsg(){
   const inp=document.getElementById('aria-input');const msg=inp.value.trim();
-  const image=ARIA_PENDING_IMAGE;
-  if(!msg&&!image)return;
+  const attachment=ARIA_PENDING_ATTACHMENT;
+  if(!msg&&!attachment)return;
   const msgs=document.getElementById('aria-msgs');
-  const imgHtml=image?`<img class="aria-msg-img" src="${image.dataUrl}" alt="Attached image"/>`:'';
-  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${imgHtml}${msg?escapeHtml(msg):''}</div>`;
+  let attachHtml='';
+  if(attachment&&attachment.kind==='image')attachHtml=`<img class="aria-msg-img" src="${attachment.dataUrl}" alt="Attached image"/>`;
+  else if(attachment)attachHtml=`<div class="aria-msg-file">${escapeHtml(attachment.name)}</div>`;
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${attachHtml}${msg?escapeHtml(msg):''}</div>`;
   inp.value='';msgs.scrollTop=msgs.scrollHeight;
   const chips=document.getElementById('aria-chips');if(chips)chips.style.display='none';
   clearAriaAttachment();
-  if(currentUser)ariaAssistantReply(msg||'What do you see in this image?',image);else ariaBotReply();
+  if(currentUser)ariaAssistantReply(msg||(attachment&&attachment.kind==='image'?'What do you see in this image?':'Please look at this document.'),attachment);else ariaBotReply();
 }
 function sendQuickReply(text){const inp=document.getElementById('aria-input');inp.value=text;sendAriaMsg();}
 
