@@ -115,6 +115,9 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .coming-soon-sub{font-size:.875rem;color:var(--grey);max-width:400px;margin:0 auto;line-height:1.65;font-weight:300}
 #page-portal.active{display:flex;min-height:100vh}
 .sidebar{width:240px;background:var(--dark-2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:50}
+.sidebar-mobile-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:301;width:40px;height:40px;border-radius:10px;background:var(--dark-2);border:1px solid var(--border-light);color:var(--white);align-items:center;justify-content:center;cursor:pointer}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:290}
+.sidebar-backdrop.mobile-open{display:block}
 .sb-logo{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-size:1rem;font-weight:700;padding:1.25rem;border-bottom:1px solid var(--border);cursor:pointer}
 .sb-user{padding:.85rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.65rem}
 .user-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
@@ -270,7 +273,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .aria-trigger-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,194,255,.45)}
 .aria-trigger-pulse{width:8px;height:8px;border-radius:50%;background:rgba(5,13,26,.5);animation:pulse-dot 1.5s ease-in-out infinite}
 @media(max-width:1024px){.svc-grid-3{grid-template-columns:1fr 1fr}.stats-grid{grid-template-columns:1fr 1fr}.about-cards,.perks-grid{grid-template-columns:1fr 1fr}.sidebar{width:200px}.portal-main{margin-left:200px}.dash-widget-grid{grid-template-columns:1fr}.why-feats{grid-template-columns:1fr 1fr}.pkg-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:680px){.svc-grid-3,.why-feats,.perks-grid,.about-cards{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.job-card{flex-direction:column}.form-row-2{grid-template-columns:1fr}.pkg-grid{grid-template-columns:1fr}.aria-chat-box{width:calc(100vw - 3rem)}}
+@media(max-width:680px){.svc-grid-3,.why-feats,.perks-grid,.about-cards{grid-template-columns:1fr}.stats-grid{grid-template-columns:1fr 1fr}.job-card{flex-direction:column}.form-row-2{grid-template-columns:1fr}.pkg-grid{grid-template-columns:1fr}.aria-chat-box{width:calc(100vw - 3rem)}.sidebar{transform:translateX(-100%);transition:transform .25s ease;width:260px;z-index:300}.sidebar.mobile-open{transform:translateX(0)}.portal-main{margin-left:0!important;padding:1.1rem .9rem}.sidebar-mobile-toggle{display:flex!important}.sidebar-backdrop.mobile-open{display:block}.dv-grid,[style*="grid-template-columns:1fr 1fr"],[style*="grid-template-columns: 1fr 1fr"],[style*="grid-template-columns:repeat(2,1fr)"],[style*="grid-template-columns:repeat(3,1fr)"],[style*="grid-template-columns:repeat(4,1fr)"],[style*="grid-template-columns:2fr 1fr 1fr"],[style*="grid-template-columns:1fr 1fr 1fr"],[style*="grid-template-columns:1fr 280px"],[style*="grid-template-columns:1fr 1.5fr"]{grid-template-columns:1fr!important}.hero-inner,.page-hero{padding-left:1.25rem!important;padding-right:1.25rem!important}.login-box{padding:1.75rem 1.5rem;margin:0 1rem}}
 
 /* ═══ MONDAY-INSPIRED MOTION & CARD LAYER ═══ */
 /* Status pill palette */
@@ -585,7 +588,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       <div>
         <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.2);border-radius:100px;padding:.35rem 1rem;font-size:.72rem;font-weight:500;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:1.5rem"><span class="live-dot"></span>AI-Powered Contact Centre</div>
         <h1 class="ht" id="home-hero-title">The smarter way to run<br><span>customer operations</span></h1>
-        <p class="sub" style="margin-bottom:2.5rem" id="home-hero-sub">ARIA handles conversations. PULSE tracks performance. FLOW automates workflows. South African human expertise closes the gap — seamlessly combined.</p>
+        <p class="sub" style="margin-bottom:2.5rem" id="home-hero-sub">ARIA handles conversations. PULSE tracks performance. FLOW automates workflows. Skilled human expertise closes the gap — seamlessly combined.</p>
         <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:3rem">
           <button class="btn-p" onclick="goTo('contact')">Get Started</button>
           <button class="btn-s" onclick="goTo('services')">Explore Services</button>
@@ -620,8 +623,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-radius:16px;overflow:hidden">
     <div style="background:var(--dark);padding:2rem 1.5rem"><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">ARIA</div><div style="font-size:.72rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">AI Resolution Agent</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300">Handles conversations across voice, chat, WhatsApp, SMS, and email. Resolves 40–60% without any human involvement.</div></div>
     <div style="background:var(--dark);padding:2rem 1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">PULSE</div><div style="font-size:.72rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Performance Dashboard</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300">Real-time analytics for every client. CSAT, deflection rate, resolution time, cost per ticket — updated every 15 minutes.</div></div>
-    <div style="background:var(--dark);padding:2rem 1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">FLOW</div><div style="font-size:.72rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Workflow Automation</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300">Automates lead qualification, onboarding sequences, renewal reminders, and ticket escalations. Available Month 9.</div></div>
-    <div style="background:var(--dark);padding:2rem 1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">NEXUS</div><div style="font-size:.72rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Customer Intelligence Hub</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300">Unified customer profile across every channel and tool. One view of every interaction, call, and ticket. Available Month 12.</div></div>
+    <div style="background:var(--dark);padding:2rem 1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">FLOW</div><div style="font-size:.72rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Workflow Automation</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300">Automates lead qualification, onboarding sequences, renewal reminders, and ticket escalations.</div></div>
+    <div style="background:var(--dark);padding:2rem 1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--accent);margin-bottom:.5rem">NEXUS</div><div style="font-size:.72rem;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.65rem">Customer Intelligence Hub</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300">Unified customer profile across every channel and tool. One view of every interaction, call, and ticket.</div></div>
   </div>
 </div></section>
 <section class="sec" style="background:var(--dark)"><div class="sec-in">
@@ -634,7 +637,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     </div>
     <div class="about-cards">
       <div class="about-card"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">ARIA-First</div><div style="font-size:.8rem;color:var(--grey);line-height:1.6;font-weight:300">Every interaction enters through ARIA first — resolving what it can, handing off with full context.</div></div>
-      <div class="about-card"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">South African Talent</div><div style="font-size:.8rem;color:var(--grey);line-height:1.6;font-weight:300">English-fluent, UK timezone aligned, culturally close to Western markets.</div></div>
+      <div class="about-card"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">Skilled Human Agents</div><div style="font-size:.8rem;color:var(--grey);line-height:1.6;font-weight:300">English-fluent, technically trained, timezone-aligned to your customers.</div></div>
       <div class="about-card"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">PULSE Transparency</div><div style="font-size:.8rem;color:var(--grey);line-height:1.6;font-weight:300">Every metric, live. No monthly reports, no guessing — clients see what we see.</div></div>
       <div class="about-card"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">Omnichannel</div><div style="font-size:.8rem;color:var(--grey);line-height:1.6;font-weight:300">Voice, chat, WhatsApp, SMS, email — all in one unified routing engine.</div></div>
     </div>
@@ -645,8 +648,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
   <h2 class="st">Three service lines. One platform.</h2>
   <p class="sub" style="margin-bottom:2.5rem">Start with what you need. Add the rest as you scale.</p>
   <div class="svc-grid-3">
-    <div class="svc-card" style="--card-top:var(--accent)"><div style="width:48px;height:48px;border-radius:12px;background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.67a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.65rem">Customer Support</div><p style="font-size:.875rem;color:var(--grey-2);line-height:1.75;font-weight:300;margin-bottom:1.25rem">ARIA handles Tier 0–1 automatically. Trained South African agents handle Tier 2–3.</p><ul class="svc-bullets" style="--bc:var(--accent)"><li>Inbound support across all channels</li><li>ARIA deflects 40–60% automatically</li><li>Ticket management end-to-end</li><li>CSAT & NPS surveys automated</li></ul></div>
-    <div class="svc-card" style="--card-top:var(--accent-2)"><div style="width:48px;height:48px;border-radius:12px;background:rgba(107,91,255,.08);border:1px solid rgba(107,91,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.65rem">Sales & Lead Generation</div><p style="font-size:.875rem;color:var(--grey-2);line-height:1.75;font-weight:300;margin-bottom:1.25rem">FLOW runs personalised outbound sequences. ARIA qualifies leads. South African SDRs run discovery calls.</p><ul class="svc-bullets" style="--bc:var(--accent-2)"><li>200–1,000 leads targeted per month</li><li>AI-powered email & LinkedIn sequences</li><li>ARIA qualifies before SDR speaks</li><li>PULSE tracks pipeline value</li></ul></div>
+    <div class="svc-card" style="--card-top:var(--accent)"><div style="width:48px;height:48px;border-radius:12px;background:rgba(0,194,255,.08);border:1px solid rgba(0,194,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.67a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.65rem">Customer Support</div><p style="font-size:.875rem;color:var(--grey-2);line-height:1.75;font-weight:300;margin-bottom:1.25rem">ARIA handles Tier 0–1 automatically. Trained, technically skilled agents handle Tier 2–3.</p><ul class="svc-bullets" style="--bc:var(--accent)"><li>Inbound support across all channels</li><li>ARIA deflects 40–60% automatically</li><li>Ticket management end-to-end</li><li>CSAT & NPS surveys automated</li></ul></div>
+    <div class="svc-card" style="--card-top:var(--accent-2)"><div style="width:48px;height:48px;border-radius:12px;background:rgba(107,91,255,.08);border:1px solid rgba(107,91,255,.15);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.65rem">Sales & Lead Generation</div><p style="font-size:.875rem;color:var(--grey-2);line-height:1.75;font-weight:300;margin-bottom:1.25rem">FLOW runs personalised outbound sequences. ARIA qualifies leads. Skilled SDRs run discovery calls.</p><ul class="svc-bullets" style="--bc:var(--accent-2)"><li>200–1,000 leads targeted per month</li><li>AI-powered email & LinkedIn sequences</li><li>ARIA qualifies before SDR speaks</li><li>PULSE tracks pipeline value</li></ul></div>
     <div class="svc-card" style="--card-top:var(--green)"><div style="width:48px;height:48px;border-radius:12px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.15);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div><div style="font-family:var(--fd);font-size:1rem;font-weight:700;margin-bottom:.65rem">Back-Office Operations</div><p style="font-size:.875rem;color:var(--grey-2);line-height:1.75;font-weight:300;margin-bottom:1.25rem">FLOW handles structured, repetitive tasks. Human analysts manage exceptions and edge cases.</p><ul class="svc-bullets" style="--bc:var(--green)"><li>Data entry, CRM hygiene & invoicing</li><li>Order & subscription management</li><li>Content moderation & QA</li><li>Reporting & compliance docs</li></ul></div>
   </div>
   <div style="text-align:center;margin-top:2rem"><button class="btn-s" onclick="goTo('services')">Explore All Services</button></div>
@@ -664,7 +667,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div class="why-stat"><div class="why-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="why-val">75%+</div><div class="why-lbl">First contact resolution target</div></div>
   </div>
   <div class="why-feats">
-    <div class="why-feat"><div class="wf-icon" style="background:rgba(0,194,255,.07);border-color:rgba(0,194,255,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><div><div class="wf-title">English-Fluent, Neutral Accent</div><div class="wf-text">South African agents with natural cultural alignment to UK and Western markets.</div></div></div>
+    <div class="why-feat"><div class="wf-icon" style="background:rgba(0,194,255,.07);border-color:rgba(0,194,255,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div><div><div class="wf-title">English-Fluent, Technically Skilled</div><div class="wf-text">Agents trained on your product, not just a script — with the technical grounding to handle real complexity.</div></div></div>
     <div class="why-feat"><div class="wf-icon" style="background:rgba(107,91,255,.07);border-color:rgba(107,91,255,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div><div class="wf-title">PULSE — Real-Time Dashboard</div><div class="wf-text">Every KPI, live. No monthly reports, no waiting — clients see what we see, always.</div></div></div>
     <div class="why-feat"><div class="wf-icon" style="background:rgba(0,212,170,.07);border-color:rgba(0,212,170,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="wf-title">GDPR & POPIA Compliant</div><div class="wf-text">South Africa's POPIA aligns directly with UK GDPR — no compliance headaches.</div></div></div>
     <div class="why-feat"><div class="wf-icon" style="background:rgba(255,123,84,.07);border-color:rgba(255,123,84,.15)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff9a6c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div><div class="wf-title">ARIA-Native, Not Bolted On</div><div class="wf-text">ARIA is the foundation of every service — built by engineers, not retrofitted by consultants.</div></div></div>
@@ -693,7 +696,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div style="display:flex;flex-direction:column;gap:1rem">
       <div style="background:var(--dark-3);border:1px solid var(--border-light);border-radius:14px;padding:1.5rem;border-top:2px solid var(--accent)"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">ARIA — The AI Brain</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.65;font-weight:300">Understands natural language, searches your knowledge base, resolves issues, and hands off with full context. Never sleeps. Never gets tired.</div></div>
       <div style="background:var(--dark-3);border:1px solid var(--border-light);border-radius:14px;padding:1.5rem;border-top:2px solid var(--accent-2)"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">PULSE — The Control Room</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.65;font-weight:300">Real-time client dashboard. CSAT, deflection rate, resolution time, cost per ticket — updated every 15 minutes. No waiting, no guessing.</div></div>
-      <div style="background:var(--dark-3);border:1px solid var(--border-light);border-radius:14px;padding:1.5rem;border-top:2px solid var(--green)"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">South African Talent</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.65;font-weight:300">English-fluent agents with neutral accents, near-zero timezone gap with the UK, and natural cultural alignment. Structural cost advantages built in.</div></div>
+      <div style="background:var(--dark-3);border:1px solid var(--border-light);border-radius:14px;padding:1.5rem;border-top:2px solid var(--green)"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.35rem">Skilled Human Agents</div><div style="font-size:.82rem;color:var(--grey-2);line-height:1.65;font-weight:300">English-fluent agents with strong technical grounding, timezone-aligned coverage, and the training to handle real product complexity — not scripted responses.</div></div>
     </div>
   </div>
 </div></section>
@@ -707,7 +710,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 </div>
 <section class="sec" style="background:var(--dark)"><div class="sec-in">
   <div class="slbl">Service Lines</div><h2 class="st" id="svc-1-title" style="margin-bottom:.5rem">Customer Support</h2>
-  <p class="sub" style="margin-bottom:1.5rem" id="svc-1-desc">ARIA handles Tier 0–1 automatically. Trained South African human agents handle Tier 2–3. All channels, all hours.</p>
+  <p class="sub" style="margin-bottom:1.5rem" id="svc-1-desc">ARIA handles Tier 0–1 automatically. Trained, technically skilled human agents handle Tier 2–3. All channels, all hours.</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;margin-bottom:5rem">
     <div>
       <div style="font-size:.82rem;font-weight:600;color:var(--grey);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.85rem">ARIA Resolves Independently (Tier 0)</div>
@@ -723,10 +726,9 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
         <div style="background:var(--dark-4);border-radius:10px;padding:.85rem .75rem;border:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700">&lt;2m</div><div style="font-size:.65rem;color:var(--grey);margin-top:2px">First Response</div></div>
         <div style="background:var(--dark-4);border-radius:10px;padding:.85rem .75rem;border:1px solid var(--border)"><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--green)">75%+</div><div style="font-size:.65rem;color:var(--grey);margin-top:2px">First Contact Res.</div></div>
       </div>
-      <div style="font-size:.78rem;color:var(--grey-2);padding:.75rem;background:rgba(0,194,255,.04);border-radius:8px;border:1px solid rgba(0,194,255,.12)">Target cost per ticket: <span style="color:var(--accent);font-weight:600">&lt;$2.00 by Month 12</span> as ARIA deflection rises.</div>
     </div>
   </div>
-  <div style="margin-bottom:5rem"><h2 class="st" id="svc-2-title" style="margin-bottom:.5rem">Sales & Lead Generation (SDR)</h2><p class="sub" style="margin-bottom:1.5rem" id="svc-2-desc">A fully managed outbound sales development function. FLOW runs outreach. ARIA qualifies. South African SDRs run discovery calls. Available from Month 3.</p>
+  <div style="margin-bottom:5rem"><h2 class="st" id="svc-2-title" style="margin-bottom:.5rem">Sales & Lead Generation (SDR)</h2><p class="sub" style="margin-bottom:1.5rem" id="svc-2-desc">A fully managed outbound sales development function. FLOW runs outreach. ARIA qualifies. Skilled SDRs run discovery calls.</p>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-radius:16px;overflow:hidden">
       <div style="background:var(--dark-2);padding:1.5rem"><div style="font-family:var(--fd);font-size:.82rem;font-weight:600;margin-bottom:.5rem">ICP Definition</div><div style="font-size:.78rem;color:var(--grey);line-height:1.55;font-weight:300">Supanta defines your Ideal Customer Profile — company size, industry, geography, and buying signals.</div></div>
       <div style="background:var(--dark-2);padding:1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:.82rem;font-weight:600;margin-bottom:.5rem">FLOW Outreach</div><div style="font-size:.78rem;color:var(--grey);line-height:1.55;font-weight:300">Personalised cold email and LinkedIn sequences. 200–1,000 leads/month.</div></div>
@@ -734,7 +736,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       <div style="background:var(--dark-2);padding:1.5rem;border-left:1px solid var(--border)"><div style="font-family:var(--fd);font-size:.82rem;font-weight:600;margin-bottom:.5rem">Human SDR</div><div style="font-size:.78rem;color:var(--grey);line-height:1.55;font-weight:300">Discovery call with full prospect profile. Meets booked into client calendar.</div></div>
     </div>
   </div>
-  <div><h2 class="st" id="svc-3-title" style="margin-bottom:.5rem">Back-Office Operations</h2><p class="sub" style="margin-bottom:1.5rem" id="svc-3-desc">FLOW handles structured tasks automatically — human analysts manage exceptions. Available from Month 6.</p>
+  <div><h2 class="st" id="svc-3-title" style="margin-bottom:.5rem">Back-Office Operations</h2><p class="sub" style="margin-bottom:1.5rem" id="svc-3-desc">FLOW handles structured tasks automatically — human analysts manage exceptions.</p>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem">
       <div style="background:var(--dark-2);border:1px solid var(--border);border-radius:12px;padding:1.25rem"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.5rem">Data Entry & Cleanup</div><div style="font-size:.78rem;color:var(--grey);line-height:1.55;font-weight:300">CRM data entry, contact deduplication, list cleaning.</div></div>
       <div style="background:var(--dark-2);border:1px solid var(--border);border-radius:12px;padding:1.25rem"><div style="font-family:var(--fd);font-size:.88rem;font-weight:600;margin-bottom:.5rem">Invoice Processing</div><div style="font-size:.78rem;color:var(--grey);line-height:1.55;font-weight:300">Receipt, coding, approval routing, payment status tracking.</div></div>
@@ -751,14 +753,14 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 <!-- CAREERS -->
 <div id="page-careers" class="page">
 <div class="page-hero" style="background:linear-gradient(180deg,var(--dark) 0%,var(--dark-2) 100%)"><div class="hero-bg-grad"></div><div class="hero-grid-bg"></div>
-  <div class="hero-inner"><div class="slbl">Careers</div><h1 class="ht" id="careers-hero-title">Build the future of <span>customer operations</span></h1><p class="sub" id="careers-hero-sub">AI-augmented, outcome-driven. Work with ARIA, PULSE, and FLOW every day — and serve global brands from South Africa.</p></div>
+  <div class="hero-inner"><div class="slbl">Careers</div><h1 class="ht" id="careers-hero-title">Build the future of <span>customer operations</span></h1><p class="sub" id="careers-hero-sub">AI-augmented, outcome-driven. Work with ARIA, PULSE, and FLOW every day — and serve international brands.</p></div>
 </div>
 <section class="sec" style="background:var(--dark-2)"><div class="sec-in">
   <div class="slbl">Why Join Us</div><h2 class="st">What working here looks like</h2>
   <div class="perks-grid">
     <div class="perk"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;margin-bottom:.4rem">ARIA-first environment</div><div style="font-size:.82rem;color:var(--grey);line-height:1.65;font-weight:300">Work alongside ARIA every day — it&#39;s how we operate, not a novelty.</div></div>
     <div class="perk"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;margin-bottom:.4rem">Clear progression</div><div style="font-size:.82rem;color:var(--grey);line-height:1.65;font-weight:300">Agent to Team Lead to Ops. We promote based on output, not tenure.</div></div>
-    <div class="perk"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;margin-bottom:.4rem">Global exposure</div><div style="font-size:.82rem;color:var(--grey);line-height:1.65;font-weight:300">UK, US, and AU brands every day without relocating.</div></div>
+    <div class="perk"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;margin-bottom:.4rem">Global exposure</div><div style="font-size:.82rem;color:var(--grey);line-height:1.65;font-weight:300">Work with international brands every day without relocating.</div></div>
     <div class="perk"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;margin-bottom:.4rem">PULSE transparency</div><div style="font-size:.82rem;color:var(--grey);line-height:1.65;font-weight:300">You see the same metrics your clients see. No black box management.</div></div>
     <div class="perk"><div style="font-family:var(--fd);font-size:.9rem;font-weight:600;margin-bottom:.4rem">Tight-knit team</div><div style="font-size:.82rem;color:var(--grey);line-height:1.65;font-weight:300">Early-stage, direct access to leadership, real ownership.</div></div>
   </div>
@@ -879,7 +881,7 @@ async function doForgotPassword(){
 
 <!-- PORTAL -->
 <div id="page-portal" class="page">
-  <aside class="sidebar">
+  <aside class="sidebar" id="portal-sidebar">
     <div class="sb-logo"><svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg2)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg2)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg2)"/></svg> Supanta</div>
     <div class="sb-user">
       <div class="user-av" id="sb-av"></div>
@@ -891,6 +893,10 @@ async function doForgotPassword(){
     <nav class="sb-nav" id="sb-nav"></nav>
     <div class="sb-foot"><button class="btn-logout" onclick="doLogout()">Sign Out</button></div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebarMobile(false)"></div>
+  <button class="sidebar-mobile-toggle" id="sidebar-mobile-toggle" onclick="toggleSidebarMobile()" aria-label="Toggle menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
   <main class="portal-main" id="portal-main"></main>
   <div id="search-results" class="search-results-panel"></div>
   <div id="detail-overlay" class="detail-overlay" onclick="if(event.target===this)closeDetail()"><div class="detail-sheet" id="detail-sheet"></div></div>
@@ -1001,15 +1007,97 @@ async function doForgotPassword(){
     <div class="aria-chat-msgs" id="aria-msgs">
       <div class="aria-msg aria-msg-bot">Hello, I'm ARIA — Supanta's AI assistant. How can I help you today?</div>
     </div>
+    <div id="aria-lead-capture" style="display:none;padding:.9rem 1rem;border-top:1px solid var(--border);background:var(--dark-3)">
+      <div style="font-size:.78rem;color:var(--grey-2);margin-bottom:.6rem" id="aria-lead-capture-msg">Leave your details and a member of our team will follow up shortly.</div>
+      <input class="rb-input" id="aria-lead-name" placeholder="Name" style="margin-bottom:.5rem;font-size:.82rem;padding:.55rem .7rem"/>
+      <input class="rb-input" id="aria-lead-phone" type="tel" placeholder="Phone number" style="margin-bottom:.5rem;font-size:.82rem;padding:.55rem .7rem"/>
+      <input class="rb-input" id="aria-lead-email" type="email" placeholder="Email address *" style="margin-bottom:.5rem;font-size:.82rem;padding:.55rem .7rem"/>
+      <input class="rb-input" id="aria-lead-company" placeholder="Company (optional)" style="margin-bottom:.6rem;font-size:.82rem;padding:.55rem .7rem"/>
+      <button class="btn-sm btn-sm-acc" style="width:100%" onclick="submitAriaLead()">Send</button>
+      <div id="aria-lead-status" style="font-size:.72rem;margin-top:.5rem;display:none"></div>
+    </div>
     <div class="aria-chat-input-row">
       <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     </div>
+    <div style="text-align:center;padding:.4rem 0;border-top:1px solid var(--border)"><button onclick="openAriaLeadCaptureManual()" style="background:none;border:none;color:var(--grey);font-size:.7rem;cursor:pointer;text-decoration:underline">Prefer to just leave your details?</button></div>
   </div>
   <button class="aria-trigger-btn" onclick="toggleAriaChat()">
     <span class="aria-trigger-pulse"></span>
     Ask ARIA
   </button>
+  <script>
+    const ARIA_SESSION_ID = (crypto.randomUUID ? crypto.randomUUID() : (Date.now()+'-'+Math.random().toString(36).slice(2)));
+    const ARIA_SUPANTA_CLIENT_ID = '30aa317f-05fd-4e14-b979-98a9348933df';
+    let _ariaLastUserMsg = '';
+    let _ariaLeadShownForSession = false;
+
+    async function sendAriaMsg(){
+      const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
+      const msgs=document.getElementById('aria-msgs');
+      msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;
+      _ariaLastUserMsg = msg;
+      inp.value='';msgs.scrollTop=msgs.scrollHeight;
+      const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='...';
+      msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
+      try{
+        const res=await fetch('https://api.supanta.com/chat',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:ARIA_SUPANTA_CLIENT_ID,message:msg})
+        });
+        if(!res.ok)throw new Error('bad response');
+        const data=await res.json();
+        document.getElementById('aria-typing')?.remove();
+        msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${data.reply}</div>`;
+        msgs.scrollTop=msgs.scrollHeight;
+        if(data.escalated && !_ariaLeadShownForSession){
+          _ariaLeadShownForSession=true;
+          msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Leave your details and our team will follow up shortly.</div>`;
+          msgs.scrollTop=msgs.scrollHeight;
+          document.getElementById('aria-lead-capture').style.display='block';
+        }
+      }catch(e){
+        document.getElementById('aria-typing')?.remove();
+        msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Sorry, I'm having trouble connecting right now.</div>`;
+        if(!_ariaLeadShownForSession){
+          _ariaLeadShownForSession=true;
+          msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Leave your details and our team will follow up shortly.</div>`;
+          document.getElementById('aria-lead-capture').style.display='block';
+        }
+        msgs.scrollTop=msgs.scrollHeight;
+      }
+    }
+
+    function openAriaLeadCaptureManual(){
+      document.getElementById('aria-lead-capture-msg').textContent='Leave your details and our team will follow up shortly.';
+      document.getElementById('aria-lead-capture').style.display='block';
+      if(!document.getElementById('aria-chat-box').classList.contains('open'))toggleAriaChat();
+    }
+
+    async function submitAriaLead(){
+      const name=document.getElementById('aria-lead-name').value.trim();
+      const email=document.getElementById('aria-lead-email').value.trim();
+      const company=document.getElementById('aria-lead-company').value.trim();
+      const status=document.getElementById('aria-lead-status');
+      status.style.display='block';
+      if(!email||!email.includes('@')){status.style.color='var(--danger)';status.textContent='Please enter a valid email address.';return;}
+      status.style.color='var(--grey)';status.textContent='Sending...';
+      try{
+        if(!window._sb)throw new Error('no supabase client');
+        const {error}=await window._sb.from('prospect_leads').insert({
+          name:name||null,email,company:company||null,
+          message:_ariaLastUserMsg||null,session_id:ARIA_SESSION_ID,source:'aria_widget_escalation'
+        });
+        if(error)throw error;
+        status.style.color='var(--green)';status.textContent="Thanks — we'll be in touch shortly.";
+        document.getElementById('aria-lead-name').value='';document.getElementById('aria-lead-email').value='';document.getElementById('aria-lead-company').value='';
+        setTimeout(()=>{document.getElementById('aria-lead-capture').style.display='none';status.style.display='none';},2500);
+      }catch(e){
+        status.style.color='var(--danger)';status.textContent='Could not send right now — please email hello@supanta.com directly.';
+      }
+    }
+  </script>
 </div>
 <script>
 // ─── SUPABASE ──────────────────────────────────────────────
@@ -1061,14 +1149,10 @@ let POSITIONS=[
 {id:8,title:'Admin / Finance Coordinator',dept:'Finance & Admin',color:'#f59e0b',desc:'Finance and admin access only.',defaultAccess:{dashboard:'none',pulse:'none',clients:'none',queue:'none',team:'none',qa:'none',coaching:'none',my_stats:'none',health:'none',kb:'none',flow:'none',aria_config:'none',nexus:'none',integrations:'none',billing:'edit',payroll:'read',contracts:'edit',careers_admin:'none',permissions:'none',positions:'none',admin_backend:'none',audit:'none'}}
 ];
 let STAFF=[
-{id:1,name:'Mundhir Adams',email:'mundhiradams@supanta.com',positionId:1,jobTitle:'Founder & CEO+CTO',status:'active',clients:['all'],access:{},avatar:'MA',color:'#00c2ff'},
-{id:2,name:'Ayesha Nkosi',email:'lead@supanta.com',positionId:2,jobTitle:'Team Lead / Ops Manager',status:'active',clients:[1,2,3],access:{},avatar:'AN',color:'#a99cff'},
-{id:3,name:'Liam Dlamini',email:'agent@supanta.com',positionId:3,jobTitle:'Support Agent',status:'active',clients:[1,2],access:{},avatar:'LD',color:'#00d4aa'},
-{id:4,name:'Priya Govender',email:'csm@supanta.com',positionId:6,jobTitle:'Client Success Manager',status:'active',clients:[1,2,3,4],access:{},avatar:'PG',color:'#f59e0b'},
-{id:5,name:'Thabo Sithole',email:'qa@supanta.com',positionId:7,jobTitle:'QA Specialist',status:'active',clients:[1,2,3,4,5],access:{},avatar:'TS',color:'#ff4d6d'}
+{id:1,name:'Mundhir Adams',email:'mundhiradams@supanta.com',positionId:1,jobTitle:'Founder & CEO+CTO',status:'active',clients:['all'],access:{},avatar:'MA',color:'#00c2ff'}
 ];
 STAFF.forEach(s=>{const p=POSITIONS.find(x=>x.id===s.positionId);s.access=p?{...p.defaultAccess}:{};});
-let CLIENT_COMPANIES=[{id:1,name:'BrandCo UK',prefix:'BRA',seq:1042,industry:'eCommerce',plan:'Growth',arr:'$5,000',csat:94,deflection:52,tickets:1240,open:34,health:'green'},{id:2,name:'NovaMart',prefix:'NOV',seq:890,industry:'eCommerce',plan:'Scale',arr:'$10,000',csat:91,deflection:48,tickets:890,open:12,health:'green'},{id:3,name:'LoopTech SaaS',prefix:'LOO',seq:430,industry:'SaaS',plan:'Starter',arr:'$2,500',csat:87,deflection:41,tickets:430,open:8,health:'amber'},{id:4,name:'EcoThreads AU',prefix:'ECO',seq:670,industry:'eCommerce',plan:'Growth',arr:'$5,000',csat:89,deflection:45,tickets:670,open:22,health:'amber'},{id:5,name:'VaultFinance',prefix:'VAU',seq:2100,industry:'FinTech',plan:'Enterprise',arr:'$20,000',csat:96,deflection:60,tickets:2100,open:5,health:'green'}];
+let CLIENT_COMPANIES=[{id:1,name:'Supanta',prefix:'SUP',seq:0,industry:'AI / Customer Operations',plan:'Internal',arr:'—',csat:0,deflection:0,tickets:0,open:0,health:'green'}];
 // Generate a 3-letter ticket prefix from a company name (mirrors Supabase generate_ticket_prefix)
 function genTicketPrefix(name){
   const letters=(name||'').toUpperCase().replace(/[^A-Z]/g,'');
@@ -1088,44 +1172,19 @@ function updatePrefixHint(name){
 function nextTicketId(company){company.seq=(company.seq||0)+1;return (company.prefix||'CLT')+'-'+company.seq;}
 
 let CLIENT_USERS=[{id:1,companyId:1,name:'Alex Johnson',email:'client@brandco.com',jobtitle:'Operations Manager',lastLogin:'2026-05-31 09:00',active:true},{id:2,companyId:1,name:'Sarah Lee',email:'sarah@brandco.com',jobtitle:'Support Lead',lastLogin:'2026-05-30 14:22',active:true},{id:3,companyId:2,name:'Marcus Webb',email:'marcus@novamart.com',jobtitle:'CEO',lastLogin:'2026-05-29 11:05',active:true}];
-const TICKETS=[{id:'BRA-1042',client:'BrandCo UK',subject:'Refund not processed after 7 days',status:'open',priority:'high',agent:'Liam Dlamini',time:'2m ago'},{id:'NOV-1041',client:'NovaMart',subject:'Login issue - 2FA not working',status:'open',priority:'med',agent:'Liam Dlamini',time:'14m ago'},{id:'LOO-1040',client:'LoopTech SaaS',subject:'API rate limit exceeded',status:'escalated',priority:'high',agent:'Unassigned',time:'31m ago'},{id:'BRA-1039',client:'BrandCo UK',subject:'Product image not displaying',status:'resolved',priority:'low',agent:'Liam Dlamini',time:'1h ago'},{id:'ECO-1038',client:'EcoThreads AU',subject:'Order tracking email not received',status:'resolved',priority:'low',agent:'Ayesha Nkosi',time:'2h ago'}];
+const TICKETS=[];
 const QA_DATA=[{agent:'Liam Dlamini',score:88,calls:42,resolution:91,empathy:85,compliance:90,trend:'up'},{agent:'Nomsa Dube',score:92,calls:38,resolution:94,empathy:95,compliance:88,trend:'up'},{agent:'Kevin Mahlangu',score:74,calls:51,resolution:78,empathy:72,compliance:70,trend:'down'},{agent:'Zanele Mokoena',score:85,calls:29,resolution:83,empathy:88,compliance:82,trend:'up'}];
-let JOBS=[{id:1,title:'Customer Support Agent',dept:'Operations',type:'Full-Time',loc:'South Africa',desc:'Handle inbound queries via chat, email, and voice using ARIA and our AI-augmented platform.',responsibilities:['Manage personal ticket queue across email, chat, and voice','Resolve Tier 1 and Tier 2 queries within agreed SLA targets','Work alongside ARIA to draft responses and escalate intelligently'],requirements:['Strong written and verbal English communication','Customer-facing experience preferred','Reliable internet connection and home office setup'],active:true},{id:2,title:'Customer Support Agent — Voice Specialist',dept:'Operations',type:'Full-Time',loc:'South Africa',desc:'Specialist ARIA Voice role managing inbound and outbound calls for international brands.',responsibilities:['Handle inbound and outbound calls using ARIA Voice platform','Achieve and maintain call quality scores above 85%'],requirements:['Minimum 1 year in voice-based customer service','Clear neutral accent, strong spoken English','Reliable broadband minimum 20Mbps'],active:true}];
+let JOBS=[];
 let KB_ARTICLES=[
-  {id:0,title:'About Supanta — Company Overview & Positioning',category:'Company Info',content:'<p><strong>What Supanta is:</strong> Supanta is an AI-powered contact centre and automation platform. Every conversation is handled first by ARIA, our AI resolution agent, which resolves what it can and hands off to a dedicated human agent with full context when it cannot.</p><p><strong>Slogan:</strong> Smart Support. Real People.</p><p><strong>Core products:</strong></p><ul><li><strong>ARIA</strong> — the AI resolution agent handling chat, voice, and email support, grounded in each client\'s own knowledge base.</li><li><strong>PULSE</strong> — a live performance and analytics dashboard: ticket volume, deflection rate, CSAT, resolution times.</li><li><strong>FLOW</strong> — workflow automation (in development).</li><li><strong>NEXUS</strong> — customer intelligence hub (in development).</li></ul><p><strong>Who we work with:</strong> Primary focus is UK-based SaaS companies from Series A to Series B, but we work with any company that is a good operational fit while we build out our client base.</p><p><strong>What makes Supanta different:</strong> Most vendors are either pure AI with no human fallback, or pure outsourcing with no AI leverage. Supanta combines both — intelligent, seamless AI-first triage plus real human agents for anything AI should not resolve alone.</p><p><strong>Pricing — critical rule:</strong> Never state a specific dollar figure or price range in conversation, under any circumstance. Always respond to pricing questions by inviting the person to book a call for a tailored quote.</p><p><strong>Tone rules when representing Supanta:</strong> Use language like "innovation," "intelligent," "seamless," and "modern." Never use cost-comparison stats such as percentage-cheaper claims. Never frame the model as AI doing the work while humans just add value. Never reference any prior or alternate company name.</p>',author:'Mundhir Adams',status:'approved',approvedBy:'Mundhir Adams',updated:'2026-07-06'},
-  {id:1,title:'Handling Refund Requests',category:'SOP',content:'<p>1. Confirm order number and purchase date.<br>2. Check refund window in client policy (default 30 days unless overridden).<br>3. Process via client\'s payment processor — never issue cash refunds.<br>4. Log resolution in the ticket and tag <code>refund-processed</code>.<br>5. If order value exceeds $500, escalate to Team Lead before processing.</p>',author:'Mundhir Adams',status:'approved',approvedBy:'Mundhir Adams',updated:'2026-06-02'},
-  {id:2,title:'Escalation Criteria — When to Hand Off to a Human',category:'Policy',content:'<p>ARIA escalates automatically below the 0.58 confidence threshold, but agents should also manually escalate when:</p><ul><li>Customer expresses intent to cancel/churn</li><li>Legal, compliance, or safety language is used</li><li>Billing dispute exceeds $200</li><li>Same issue reopened 2+ times</li></ul>',author:'Mundhir Adams',status:'approved',approvedBy:'Mundhir Adams',updated:'2026-06-01'},
-  {id:3,title:'New Agent Onboarding Checklist',category:'Checklist',content:'<p><input type="checkbox" disabled> HubSpot access granted<br><input type="checkbox" disabled> Slack added to #aria-escalations<br><input type="checkbox" disabled> Shadowed 5 live tickets<br><input type="checkbox" disabled> Completed tone & brand voice review<br><input type="checkbox" disabled> First solo ticket QA-reviewed within 48hrs</p>',author:'Mundhir Adams',status:'approved',approvedBy:'Mundhir Adams',updated:'2026-05-28'},
-  {id:4,title:'Tone & Brand Voice Guide',category:'Guide',content:'<p>Every client reply — human or ARIA — should be warm, concise, and solution-first. Avoid corporate hedging ("we apologize for any inconvenience this may have caused"). Say what you\'re doing about it instead. Match the client\'s own brand tone where a client style guide exists in their KB folder.</p>',author:'Mundhir Adams',status:'pending',approvedBy:null,updated:'2026-06-04'},
-  {id:5,title:'How to Log a Bug vs a Feature Request',category:'FAQ',content:'<p>Bug: something that used to work, or should work per docs, and doesn\'t. Tag <code>bug</code>, include repro steps, escalate to client\'s eng contact.<br>Feature request: customer wants new behavior. Tag <code>feature-request</code>, log in HubSpot, do not promise a timeline.</p>',author:'Ayesha Nkosi',status:'rejected',approvedBy:null,updated:'2026-05-20'}
+  {id:0,title:'About Supanta — Company Overview & Positioning',category:'Company Info',content:'<p><strong>What Supanta is:</strong> Supanta is an AI-powered contact centre and automation platform. Every conversation is handled first by ARIA, our AI resolution agent, which resolves what it can and hands off to a dedicated human agent with full context when it cannot.</p><p><strong>Slogan:</strong> Smart Support. Real People.</p><p><strong>Core products:</strong></p><ul><li><strong>ARIA</strong> — the AI resolution agent handling chat, voice, and email support, grounded in each client\'s own knowledge base.</li><li><strong>PULSE</strong> — a live performance and analytics dashboard: ticket volume, deflection rate, CSAT, resolution times.</li><li><strong>FLOW</strong> — workflow automation (in development).</li><li><strong>NEXUS</strong> — customer intelligence hub (in development).</li></ul><p><strong>Who we work with:</strong> Primary focus is UK-based SaaS companies from Series A to Series B, but we work with any company that is a good operational fit while we build out our client base.</p><p><strong>What makes Supanta different:</strong> Most vendors are either pure AI with no human fallback, or pure outsourcing with no AI leverage. Supanta combines both — intelligent, seamless AI-first triage plus real human agents for anything AI should not resolve alone.</p><p><strong>Pricing — critical rule:</strong> Never state a specific dollar figure or price range in conversation, under any circumstance. Always respond to pricing questions by inviting the person to book a call for a tailored quote.</p><p><strong>Tone rules when representing Supanta:</strong> Use language like "innovation," "intelligent," "seamless," and "modern." Never use cost-comparison stats such as percentage-cheaper claims. Never frame the model as AI doing the work while humans just add value. Never reference any prior or alternate company name.</p>',author:'Mundhir Adams',status:'approved',approvedBy:'Mundhir Adams',updated:'2026-07-06'}
 ];
-let AUDIT=[{time:'2026-05-31 09:12',actor:'Mundhir Adams',action:'Created client user: Sarah Lee (BrandCo UK)',type:'success'},{time:'2026-05-31 08:45',actor:'Mundhir Adams',action:'Created client company: VaultFinance',type:'success'},{time:'2026-05-30 16:30',actor:'Ayesha Nkosi',action:'Added job listing: Voice Specialist',type:'success'},{time:'2026-05-30 14:10',actor:'Mundhir Adams',action:'Updated permissions for Thabo Sithole',type:'success'},
-{time:'2026-05-30 11:22',actor:'Ayesha Nkosi',action:'Resolved escalation TK-1038 for EcoThreads AU',type:'success'},
-{time:'2026-05-29 17:05',actor:'Mundhir Adams',action:'Changed ARIA confidence threshold to 0.45',type:'success'},
-{time:'2026-05-29 15:48',actor:'Priya Govender',action:'Added coaching note for Liam Dlamini',type:'success'},
-{time:'2026-05-29 10:30',actor:'Thabo Sithole',action:'Failed password confirmation for: savePerms',type:'fail'},
-{time:'2026-05-28 16:12',actor:'Mundhir Adams',action:'Published blog post: Why South African talent wins',type:'success'},
-{time:'2026-05-28 14:00',actor:'Ayesha Nkosi',action:'Paused job listing: Voice Specialist',type:'success'},
-{time:'2026-05-28 09:15',actor:'Mundhir Adams',action:'Created client company: VaultFinance',type:'success'},
-{time:'2026-05-27 18:40',actor:'Liam Dlamini',action:'Failed login attempt',type:'fail'},
-{time:'2026-05-27 13:25',actor:'Priya Govender',action:'Requested meeting with Kevin Mahlangu',type:'success'},
-{time:'2026-05-27 11:10',actor:'Mundhir Adams',action:'Updated KB entry: Refund Policy & Edge Cases',type:'success'},
-{time:'2026-05-26 16:55',actor:'Ayesha Nkosi',action:'Reassigned TK-1041 to Liam Dlamini',type:'success'},
-{time:'2026-05-26 14:30',actor:'Mundhir Adams',action:'Approved KB pending entry from ARIA',type:'success'},
-{time:'2026-05-26 10:05',actor:'Thabo Sithole',action:'Submitted QA scorecard for NovaMart',type:'success'},
-{time:'2026-05-25 17:20',actor:'Mundhir Adams',action:'Deactivated account: test@supanta.com',type:'success'},
-{time:'2026-05-25 12:45',actor:'Priya Govender',action:'Updated client health: LoopTech SaaS to At Risk',type:'success'},
-{time:'2026-05-24 15:30',actor:'Ayesha Nkosi',action:'Created position: Back-Office Analyst',type:'success'},
-{time:'2026-05-24 09:50',actor:'Mundhir Adams',action:'Failed password confirmation for: deletePosition',type:'fail'},
-{time:'2026-05-23 16:15',actor:'Mundhir Adams',action:'Generated monthly report for BrandCo UK',type:'success'},
-{time:'2026-05-23 11:30',actor:'Liam Dlamini',action:'Closed 12 tickets in queue',type:'success'}];
-let FAQ_DATA=[{q:'How quickly can you onboard a new client?',a:'Most clients are live within 48-72 hours of the discovery call on Starter and Growth. Scale clients get priority onboarding in 1 week.'},{q:'What is ARIA and how is it different from a chatbot?',a:"ARIA is Supanta's proprietary AI agent. Unlike a chatbot that follows a fixed decision tree, ARIA understands natural language, searches your knowledge base in real time, and passes full context to a human agent on escalation."},{q:'Which markets do you serve?',a:'We primarily serve UK, US, and Australian businesses, but work with any English-language market.'},{q:'Do we need to change our existing tools?',a:'No. We integrate with your existing HubSpot, Zendesk, or any major CRM and helpdesk.'},{q:'How does pricing work?',a:'We offer four fixed monthly retainer packages: Starter ($2,500-$3,500), Growth ($5,000-$8,000), Scale ($10,000-$18,000), and Enterprise ($20,000+).'},{q:'Is our data secure?',a:'Yes. Supanta is POPIA-compliant and operates in line with UK GDPR requirements.'}];
+let AUDIT=[];
+let FAQ_DATA=[{q:'How quickly can you onboard a new client?',a:'Most clients are live within 48-72 hours of the discovery call. Larger or more complex deployments may take up to a week depending on integration and knowledge base setup.'},{q:'What is ARIA and how is it different from a chatbot?',a:"ARIA is Supanta's proprietary AI agent. Unlike a chatbot that follows a fixed decision tree, ARIA understands natural language, searches your knowledge base in real time, and passes full context to a human agent on escalation."},{q:'Which markets do you serve?',a:'Our primary focus is UK-based SaaS companies, but we work with businesses in any English-language market.'},{q:'Do we need to change our existing tools?',a:'No. We integrate with your existing HubSpot, Zendesk, or any major CRM and helpdesk.'},{q:'How does pricing work?',a:'Pricing is tailored to your ticket volume, channel mix, and support needs. Book a call and we will put together a quote scoped to your team.'},{q:'Is our data secure?',a:'Yes. Supanta is POPIA-compliant and operates in line with UK GDPR requirements.'}];
 const CONTENT_MAP={'home-hero-title':{label:'Home - Hero Title'},'home-hero-sub':{label:'Home - Hero Subtitle'},'about-mini-title':{label:'Home - About Title'},'about-mini-sub':{label:'Home - About Sub'},'about-hero-title':{label:'About - Hero Title'},'about-hero-sub':{label:'About - Hero Subtitle'},'about-mission-title':{label:'About - Mission Title'},'about-mission-sub':{label:'About - Mission Text'},'svc-hero-title':{label:'Services - Hero Title'},'svc-hero-sub':{label:'Services - Hero Sub'},'svc-1-title':{label:'Service 1 - Title'},'svc-1-desc':{label:'Service 1 - Desc'},'svc-2-title':{label:'Service 2 - Title'},'svc-2-desc':{label:'Service 2 - Desc'},'svc-3-title':{label:'Service 3 - Title'},'svc-3-desc':{label:'Service 3 - Desc'},'careers-hero-title':{label:'Careers - Hero Title'},'careers-hero-sub':{label:'Careers - Hero Sub'},'careers-openings-sub':{label:'Careers - Openings Sub'},'contact-hero-title':{label:'Contact - Hero Title'},'contact-hero-sub':{label:'Contact - Hero Sub'},'contact-email':{label:'Contact - Email'},'contact-location':{label:'Contact - Location'},'contact-website':{label:'Contact - Website'}};
 let currentUser=null,currentSection='dashboard',editingJobId=null,editingContentId=null,editingFaqIdx=null,editingPositionId=null,currentAdminTab='home',pendingAction=null,pendingPayload=null,addingClientCompanyId=null,currentLoginDetailsUser=null;
 
 // ARIA WIDGET
 function toggleAriaChat(){const b=document.getElementById('aria-chat-box');b.classList.toggle('open');if(b.classList.contains('open'))document.getElementById('aria-input').focus();}
-function sendAriaMsg(){const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;const msgs=document.getElementById('aria-msgs');msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;inp.value='';msgs.scrollTop=msgs.scrollHeight;setTimeout(()=>{const r=['Thanks for reaching out. Can you tell me more about your current support setup?','We typically respond within 24 hours with a tailored proposal. Would you like to book a discovery call?','ARIA handles 40-60% of queries automatically, with South African agents covering the rest.','We offer a free 2-week pilot with no obligation. Would that work for your team?'][Math.floor(Math.random()*4)];msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${r}</div>`;msgs.scrollTop=msgs.scrollHeight;},800);}
 
 // ROUTER
 function goTo(page){
@@ -1332,7 +1391,12 @@ function toggleNavGroup(label){
   const g=document.querySelector(`.nav-group[data-group="${label}"]`);
   if(g)g.classList.toggle('collapsed');
 }
-function renderSection(key){currentSection=key;document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));const ni=document.getElementById('ni-'+key);if(ni)ni.classList.add('active');if(!currentUser.isEmployee&&key==='dashboard')key='pulse';const m=document.getElementById('portal-main');if(!currentUser.isEmployee){const pages={pulse:buildClientPulse,ctickets:buildClientTickets,creports:buildClientReports,cteam:buildClientTeam,caria:buildClientAria};m.innerHTML=(pages[key]||(() =>''))();runAnimations(m);return;}const mod=ALL_MODULES.find(x=>x.key===key);if(mod&&mod.comingSoon){m.innerHTML=phdr(mod.label,'')+`<div class="coming-soon-box"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">${mod.label}</div>${mod.desc?`<div style="max-width:560px;margin:0 auto 1rem;font-size:.9rem;line-height:1.7;color:var(--grey-2);font-weight:300">${mod.desc}</div>`:''}</div>`;runAnimations(m);return;}if(!hasAccess(key)&&key!=='dashboard'){m.innerHTML=`<div style="text-align:center;padding:4rem 2rem;color:var(--grey)"><div style="font-family:var(--fd);font-size:.95rem;font-weight:600;margin-bottom:.35rem">No access</div><div style="font-size:.82rem">Contact your administrator.</div></div>`;return;}const sections={dashboard:buildEmployeeDashboard,pulse:buildClientPulse,clients:buildClientAccounts,queue:buildQueue,team:buildTeam,qa:buildQA,coaching:buildCoaching,my_stats:buildMyStats,kb:buildKB,aria_config:buildAriaConfig,integrations:buildIntegrations,billing:buildBilling,payroll:buildPayroll,contracts:buildContracts,permissions:buildPermissions,careers_admin:buildCareersAdmin,audit:buildAudit,admin_backend:buildAdminBackend,positions:buildPositionManager};m.innerHTML=(sections[key]||(() =>phdr(key,'')+'<div class="card"><p style="color:var(--grey)">Coming soon.</p></div>'))();if(key==='audit')renderAuditList();runAnimations(m);}
+function toggleSidebarMobile(force){
+  const sb=document.getElementById('portal-sidebar');const bd=document.getElementById('sidebar-backdrop');
+  const open=force!==undefined?force:!sb.classList.contains('mobile-open');
+  sb.classList.toggle('mobile-open',open);bd.classList.toggle('mobile-open',open);
+}
+function renderSection(key){if(window.innerWidth<=680)toggleSidebarMobile(false);currentSection=key;document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));const ni=document.getElementById('ni-'+key);if(ni)ni.classList.add('active');if(!currentUser.isEmployee&&key==='dashboard')key='pulse';const m=document.getElementById('portal-main');if(!currentUser.isEmployee){const pages={pulse:buildClientPulse,ctickets:buildClientTickets,creports:buildClientReports,cteam:buildClientTeam,caria:buildClientAria};m.innerHTML=(pages[key]||(() =>''))();runAnimations(m);return;}const mod=ALL_MODULES.find(x=>x.key===key);if(mod&&mod.comingSoon){m.innerHTML=phdr(mod.label,'')+`<div class="coming-soon-box"><div class="coming-soon-badge">Coming Soon</div><div class="coming-soon-title">${mod.label}</div>${mod.desc?`<div style="max-width:560px;margin:0 auto 1rem;font-size:.9rem;line-height:1.7;color:var(--grey-2);font-weight:300">${mod.desc}</div>`:''}</div>`;runAnimations(m);return;}if(!hasAccess(key)&&key!=='dashboard'){m.innerHTML=`<div style="text-align:center;padding:4rem 2rem;color:var(--grey)"><div style="font-family:var(--fd);font-size:.95rem;font-weight:600;margin-bottom:.35rem">No access</div><div style="font-size:.82rem">Contact your administrator.</div></div>`;return;}const sections={dashboard:buildEmployeeDashboard,pulse:buildClientPulse,clients:buildClientAccounts,queue:buildQueue,team:buildTeam,qa:buildQA,coaching:buildCoaching,my_stats:buildMyStats,kb:buildKB,aria_config:buildAriaConfig,integrations:buildIntegrations,billing:buildBilling,payroll:buildPayroll,contracts:buildContracts,permissions:buildPermissions,careers_admin:buildCareersAdmin,audit:buildAudit,admin_backend:buildAdminBackend,positions:buildPositionManager};m.innerHTML=(sections[key]||(() =>phdr(key,'')+'<div class="card"><p style="color:var(--grey)">Coming soon.</p></div>'))();if(key==='audit')renderAuditList();runAnimations(m);}
 function phdr(t,s,b=''){return`<div class="portal-hdr"><div><div class="portal-title">${t}</div><div class="portal-sub-txt">${s}</div></div>${b}</div>`;}
 
 // EMPLOYEE DASHBOARD
