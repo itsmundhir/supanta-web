@@ -436,7 +436,10 @@ input:checked + .slider::before{transform:translateX(18px)}
         <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
         <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status" id="aria-scope-status"><span class="live-dot"></span>Online</div></div>
       </div>
-      <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
+      <div style="display:flex;align-items:center;gap:2px">
+        <button class="aria-chat-close" onclick="clearAriaConversation()" title="Clear conversation">🗑</button>
+        <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
+      </div>
     </div>
     <div class="aria-chat-msgs" id="aria-msgs">
       <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
@@ -824,10 +827,21 @@ async function addTeamMember(){
   }
   if(btn){btn.disabled=false;btn.textContent='Add Member';}
 }
-function removeTeamMember(id){
+async function removeTeamMember(id){
   const m=STATE.team.find(x=>x.id===id);
-  if(m&&m.dbId){toast('Removing teammates isn\'t available yet — contact support','var(--warning)');return;}
-  STATE.team=STATE.team.filter(m=>m.id!==id);saveState();renderSection();toast('Member removed','var(--accent)');
+  if(!m)return;
+  if(m.dbId){
+    if(!_sb){toast('Connection unavailable right now','var(--danger)');return;}
+    if(!confirm(`Remove ${m.name} from the team? They'll lose access to this dashboard.`))return;
+    try{
+      const {data,error}=await _sb.functions.invoke('remove-team-member',{body:{user_id:m.dbId}});
+      if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    }catch(e){
+      toast('Could not remove teammate — '+e.message,'var(--danger)');
+      return;
+    }
+  }
+  STATE.team=STATE.team.filter(x=>x.id!==id);saveState();renderSection();toast('Member removed','var(--accent)');
 }
 
 // ─── CHATS ───────────────────────────────────────────────
@@ -1307,9 +1321,21 @@ function runGlobalSearch(v){
   const tm=STATE.team.filter(m=>m.name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q)||m.role.toLowerCase().includes(q)).slice(0,5)
     .map(m=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTeam()"><div class="notif-dot" style="background:#a99cff"></div><div><div>${m.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${m.role}</div></div></div>`);
 
-  const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm);
+  const nt=STATE.notifications.filter(n=>n.text.toLowerCase().includes(q)).slice(0,5)
+    .map(n=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoNotifications()"><div class="notif-dot" style="background:var(--warning)"></div><div><div>${n.text}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${n.time}</div></div></div>`);
+
+  const kb=(STATE.kbDocs||[]).filter(d=>d.name.toLowerCase().includes(q)).slice(0,5)
+    .map(d=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoKb()"><div class="notif-dot" style="background:var(--accent-2)"></div><div><div>${d.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${d.size} · Added ${d.added}</div></div></div>`);
+
+  const iv=(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
+    .map(i=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoInvoices()"><div class="notif-dot" style="background:var(--green)"></div><div><div>${i.id} · ${i.amount}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">Due ${i.dueDate} · ${i.status}</div></div></div>`);
+
+  const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm)+gsGroup('Notifications',nt)+gsGroup('Knowledge Base',kb)+gsGroup('Invoices',iv);
   box.innerHTML=html||'<div class="empty-state">No matches for "'+v+'"</div>';
 }
+function gsGoNotifications(){ toggleGlobalSearch(); showSection('notifications'); }
+function gsGoKb(){ toggleGlobalSearch(); showSection('settings'); _settingsTab='kb'; renderSection(); }
+function gsGoInvoices(){ toggleGlobalSearch(); showSection('settings'); _settingsTab='invoices'; renderSection(); }
 function gsGoTicket(id){
   toggleGlobalSearch();
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
@@ -1488,6 +1514,9 @@ function initAriaScope(){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>${co}`;
     msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA — your assistant for <strong>${co}</strong>. Ask me anything, or ask me to do something, like "create a ticket for a broken checkout" or "add this doc to the knowledge base". How can I help today?</div>`;
+    loadAriaHistory();
+    _ariaHistory.forEach(m=>{ msgs.innerHTML+=`<div class="aria-msg aria-msg-${m.who}">${m.html}</div>`; });
+    msgs.scrollTop=msgs.scrollHeight;
     inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA — or tell it what to do…';
   }else{
     statusEl.innerHTML=`<span class="live-dot" style="background:var(--warning)"></span>Not linked to a business`;
@@ -1597,7 +1626,82 @@ function tryAriaAction(text,file){
     }
   }
 
+  m=low.match(/^(?:please\s+)?remove\s+(.+?)\s+from\s+(?:the\s+)?team$/);
+  if(m){
+    const name=t.match(/remove\s+(.+?)\s+from\s+(?:the\s+)?team/i)[1].trim();
+    const member=STATE.team.find(x=>x.name.toLowerCase()===name.toLowerCase());
+    if(!member)return `I couldn't find "${name}" on the team.`;
+    if(member.id===1)return `ARIA can't remove itself from the team.`;
+    const dbId=member.dbId;
+    STATE.team=STATE.team.filter(x=>x.id!==member.id);
+    saveState(); if(currentSection==='teams')renderSection();
+    if(dbId&&currentUser.companyId&&_sb){
+      _sb.functions.invoke('remove-team-member',{body:{user_id:dbId}}).catch(()=>{});
+    }
+    return `Done — I've removed ${member.name} from the team.`;
+  }
+
+  m=low.match(/^(?:please\s+)?(?:reassign|assign)\s+(?:ticket\s+)?([\w-]+)\s+to\s+(.+)$/);
+  if(m){
+    const idRaw=m[1];
+    const owner=t.match(/to\s+(.+)$/i)[1].trim().replace(/[.!]+$/,'');
+    const tk=STATE.tickets.find(x=>x.id.toLowerCase()===idRaw.toLowerCase());
+    if(!tk)return `I couldn't find a ticket with ID ${idRaw.toUpperCase()}.`;
+    reassignTicket(tk.id,owner);
+    if(currentSection==='tickets')renderSection();
+    return `Done — ${tk.id} is now assigned to ${owner}.`;
+  }
+
+  m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
+  if(m){
+    const wantConnect=m[1]==='connect'||m[1]==='enable'||m[1]==='turn on';
+    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',shopify:'shopify'};
+    const key=aliasMap[m[2].trim().replace(/\s+/g,'')];
+    const i=key&&STATE.integrations.find(x=>x.key===key);
+    if(i){
+      toggleIntegration(key,wantConnect);
+      if(currentSection==='integrations')renderSection();
+      return `Done — ${i.name} is now ${wantConnect?'connected':'disconnected'}.`;
+    }
+  }
+
+  m=low.match(/^mark all notifications? as read$/);
+  if(m){
+    markAllRead();
+    return `Done — all notifications are marked as read.`;
+  }
+
+  m=low.match(/^(?:switch to|use|turn on)\s+(dark|light)(?:\s+mode)?$/);
+  if(m){
+    setTheme(m[1]);
+    return `Done — switched to ${m[1]} mode.`;
+  }
+
   return null;
+}
+
+// ─── ARIA CHAT HISTORY (persisted per user, survives reload) ─────
+let _ariaHistory=[];
+function ariaHistoryKey(){ return 'supanta_aria_history_'+(currentUser?currentUser.id:''); }
+function loadAriaHistory(){
+  try{ const raw=localStorage.getItem(ariaHistoryKey()); _ariaHistory=raw?JSON.parse(raw):[]; }catch(e){ _ariaHistory=[]; }
+}
+function saveAriaHistory(){
+  _ariaHistory=_ariaHistory.slice(-40);
+  try{ localStorage.setItem(ariaHistoryKey(),JSON.stringify(_ariaHistory)); }catch(e){}
+}
+function clearAriaConversation(){
+  if(!confirm('Clear this conversation with ARIA?'))return;
+  _ariaHistory=[];
+  try{ localStorage.removeItem(ariaHistoryKey()); }catch(e){}
+  initAriaScope();
+}
+function ariaAppend(who,html){
+  const msgs=document.getElementById('aria-msgs');
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-${who}">${html}</div>`;
+  msgs.scrollTop=msgs.scrollHeight;
+  _ariaHistory.push({who,html});
+  saveAriaHistory();
 }
 
 async function sendAriaMsg(){
@@ -1607,9 +1711,8 @@ async function sendAriaMsg(){
   const file=_ariaPendingFile;
   if(!msg && !file)return;
   const msgs=document.getElementById('aria-msgs');
-  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${file?`📎 <strong>${file.name}</strong>${msg?'<br>':''}`:''}${msg}</div>`;
+  ariaAppend('user',`${file?`📎 <strong>${file.name}</strong>${msg?'<br>':''}`:''}${msg}`);
   inp.value='';clearAriaAttachment();
-  msgs.scrollTop=msgs.scrollHeight;
 
   const actionReply=tryAriaAction(msg,file);
   if(actionReply!==null){
@@ -1617,13 +1720,11 @@ async function sendAriaMsg(){
     msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
     await new Promise(r=>setTimeout(r,450));
     document.getElementById('aria-typing')?.remove();
-    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${actionReply}</div>`;
-    msgs.scrollTop=msgs.scrollHeight;
+    ariaAppend('bot',actionReply);
     return;
   }
   if(file){
-    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Got <strong>${file.name}</strong> — say the word if you'd like me to add it to your knowledge base, or ask me anything about it.</div>`;
-    msgs.scrollTop=msgs.scrollHeight;
+    ariaAppend('bot',`Got <strong>${file.name}</strong> — say the word if you'd like me to add it to your knowledge base, or ask me anything about it.`);
     return;
   }
 
@@ -1638,12 +1739,11 @@ async function sendAriaMsg(){
     if(!res.ok)throw new Error('bad response');
     const data=await res.json();
     document.getElementById('aria-typing')?.remove();
-    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${data.reply}</div>`;
+    ariaAppend('bot',data.reply);
   }catch(e){
     document.getElementById('aria-typing')?.remove();
-    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Sorry, I'm having trouble connecting right now — try again shortly.</div>`;
+    ariaAppend('bot',"Sorry, I'm having trouble connecting right now — try again shortly.");
   }
-  msgs.scrollTop=msgs.scrollHeight;
 }
 
 // ─── CHAT CONTEXT MENU (right-click a chat row) ──────────
