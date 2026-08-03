@@ -496,6 +496,30 @@ async function boot(){
   showSection('pulse');
   document.getElementById('auth-gate').style.display='none';
   document.getElementById('app').classList.add('ready');
+  await loadRemoteData();
+  renderShell();
+  renderSection();
+}
+// Tickets and Notifications are now backed by real Supabase tables (see
+// server-side migrations), scoped to this business via client_id/RLS — so
+// teammates on the same account now actually see the same board. If this
+// business has no rows there yet, the bundled demo data stays on screen so
+// the dashboard never looks empty; any ticket created from here on is real.
+async function loadRemoteData(){
+  if(!currentUser.companyId||!_sb)return;
+  try{
+    const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
+    if(tks&&tks.length){
+      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority}));
+    }
+  }catch(e){}
+  try{
+    const {data:notifs}=await _sb.from('notifications').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
+    if(notifs&&notifs.length){
+      STATE.notifications=notifs.map(r=>({id:++_notifId,dbId:r.id,text:r.text,time:new Date(r.created_at).toLocaleString(),read:r.read}));
+    }
+  }catch(e){}
+  saveState();
 }
 async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='index.html'; }
 
@@ -1037,24 +1061,50 @@ function openAddTicket(){
   openModal('modal-add-ticket');
 }
 let _tkSeq=1043;
+// Writes are optimistic-local-first (instant UI) with a background Supabase
+// write scoped to this business's client_id; a ticket only gets a `dbId` once
+// that write confirms, so reassign/move only try to sync rows that made it in.
+function persistNewTicket(t){
+  if(!currentUser.companyId||!_sb)return;
+  _sb.from('tickets').insert({
+    client_id:currentUser.companyId,
+    display_id:t.id,
+    subject:t.subject,
+    customer_name:t.client,
+    owner_name:t.owner,
+    status:t.status,
+    priority:t.priority,
+    created_by:currentUser.id
+  }).select().single().then(({data,error})=>{ if(!error&&data)t.dbId=data.id; }).catch(()=>{});
+}
+function createTicket({subject,client,owner,priority}){
+  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'—',owner,status:'active',priority};
+  STATE.tickets.unshift(t);
+  saveState();
+  persistNewTicket(t);
+  pushNotification(`New ticket ${t.id} opened${client&&client!=='—'?` for ${client}`:''}: "${subject}"`);
+  return t;
+}
 function addTicket(){
   const subject=document.getElementById('nt-subject').value.trim();
   const client=document.getElementById('nt-client').value.trim()||'—';
   const owner=document.getElementById('nt-owner').value;
   const priority=document.getElementById('nt-priority').value;
   if(!subject){toast('Subject is required','var(--danger)');return;}
-  STATE.tickets.unshift({id:'SUP-'+(++_tkSeq),subject,client,owner,status:'active',priority});
-  saveState();closeModal('modal-add-ticket');
+  createTicket({subject,client,owner,priority});
+  closeModal('modal-add-ticket');
   document.getElementById('nt-subject').value='';document.getElementById('nt-client').value='';
   renderSection();toast('Ticket created','var(--green)');
 }
 function reassignTicket(id,owner){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   t.owner=owner;saveState();toast(`Reassigned to ${owner}`,'var(--accent)');
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({owner_name:owner,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
 }
 function moveTicket(id,status){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   t.status=status;saveState();renderSection();
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({status,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
 }
 function wireKanban(){
   let dragId=null;
@@ -1109,8 +1159,31 @@ function renderNotifications(){
       </div>`).join(''):'<div class="empty-state">You\'re all caught up.</div>'}
   </div>`;
 }
-function markRead(id){ const n=STATE.notifications.find(x=>x.id===id); if(n){n.read=true;saveState();renderShell();renderSection();} }
-function markAllRead(){ STATE.notifications.forEach(n=>n.read=true); saveState();renderShell();renderSection(); }
+let _notifId=100;
+function pushNotification(text){
+  const n={id:++_notifId,text,time:'Just now',read:false};
+  STATE.notifications.unshift(n);
+  saveState();
+  if(currentUser.companyId&&_sb){
+    _sb.from('notifications').insert({client_id:currentUser.companyId,text,read:false}).select().single()
+      .then(({data,error})=>{ if(!error&&data)n.dbId=data.id; }).catch(()=>{});
+  }
+  renderShell();
+  if(currentSection==='notifications')renderSection();
+}
+function markRead(id){
+  const n=STATE.notifications.find(x=>x.id===id);
+  if(!n)return;
+  n.read=true;saveState();renderShell();renderSection();
+  if(n.dbId&&_sb){ try{ _sb.from('notifications').update({read:true}).eq('id',n.dbId); }catch(e){} }
+}
+function markAllRead(){
+  STATE.notifications.forEach(n=>{
+    n.read=true;
+    if(n.dbId&&_sb){ try{ _sb.from('notifications').update({read:true}).eq('id',n.dbId); }catch(e){} }
+  });
+  saveState();renderShell();renderSection();
+}
 function toggleNotifPanel(){
   const p=document.getElementById('notif-panel');
   document.getElementById('global-search-panel').classList.remove('open');
@@ -1314,7 +1387,7 @@ function initAriaScope(){
   const attachBtn=document.getElementById('aria-attach-btn');
   if(currentUser.companyId){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
-    statusEl.innerHTML=`<span class="live-dot"></span>Scoped to ${co}`;
+    statusEl.innerHTML=`<span class="live-dot"></span>${co}`;
     msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA — your assistant for <strong>${co}</strong>. Ask me anything, or ask me to do something, like "create a ticket for a broken checkout" or "add this doc to the knowledge base". How can I help today?</div>`;
     inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA — or tell it what to do…';
   }else{
@@ -1374,9 +1447,9 @@ function tryAriaAction(text,file){
     subject=subject.replace(/^(about|regarding|:)\s*/i,'').trim();
     if(/\burgent\b|\bhigh priority\b/i.test(subject)){priority='high';subject=subject.replace(/,?\s*(urgent|high priority)\.?$/i,'').trim();}
     if(!subject)subject='New ticket from ARIA';
-    STATE.tickets.unshift({id:'SUP-'+(++_tkSeq),subject,client,owner:currentUser.name,status:'active',priority});
-    saveState(); if(currentSection==='tickets')renderSection();
-    return `Done — I've opened <strong>SUP-${_tkSeq}</strong>${client!=='—'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
+    const newTk=createTicket({subject,client,owner:currentUser.name,priority});
+    if(currentSection==='tickets')renderSection();
+    return `Done — I've opened <strong>${newTk.id}</strong>${client!=='—'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
   }
 
   m=low.match(/^(?:please\s+)?add\s+(.+?)\s+to\s+(?:the\s+)?team\b(.*)$/);
@@ -1406,7 +1479,7 @@ function tryAriaAction(text,file){
     if(kind==='ticket'){
       const tk=STATE.tickets.find(x=>x.id.toUpperCase()===id);
       if(!tk)return `I couldn't find a ticket with ID ${id}.`;
-      tk.status=status; saveState(); if(currentSection==='tickets')renderSection();
+      moveTicket(tk.id,status);
       return `Done — ${tk.id} is now marked ${status}.`;
     }else{
       const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
