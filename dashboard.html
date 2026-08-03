@@ -158,9 +158,10 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .chat-row:last-child{border-bottom:none}
 .chat-row:hover,.chat-row.active{background:var(--bg-3)}
 .chat-row-body{flex:1;min-width:0}
-.chat-row-name{font-size:.85rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:.4rem}
-.chat-row-msg{font-size:.75rem;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.chan-pill{font-size:.6rem;font-weight:700;padding:1px 7px;border-radius:100px;background:var(--bg-4);color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}
+.chat-row-name{font-size:.85rem;font-weight:600;color:var(--text)}
+.chat-row-channel{margin:3px 0}
+.chat-row-msg{font-size:.75rem;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.chan-pill{display:inline-flex;align-items:center;gap:4px;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:100px;background:var(--bg-4);color:var(--text-3);text-transform:uppercase;letter-spacing:.03em;pointer-events:none}
 .chat-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:460px}
 .chat-panel-hd{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .chat-msgs{flex:1;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;max-height:480px;overflow-y:auto}
@@ -201,6 +202,12 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .saved-item-txt{font-size:.74rem;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .saved-del{color:var(--text-3);cursor:pointer;flex-shrink:0}
 .saved-del:hover{color:var(--danger)}
+
+/* EMOJI PICKER */
+.emoji-pop{position:absolute;bottom:56px;left:.85rem;background:var(--bg-2);border:1px solid var(--border-light);border-radius:12px;box-shadow:var(--shadow);z-index:60;display:none;grid-template-columns:repeat(6,1fr);gap:.15rem;padding:.5rem;width:216px}
+.emoji-pop.open{display:grid}
+.emoji-btn{font-size:1.2rem;background:none;border:none;cursor:pointer;border-radius:6px;padding:.3rem;line-height:1;transition:background .15s}
+.emoji-btn:hover{background:var(--bg-3)}
 .saved-pop-foot{padding:.6rem .9rem}
 
 /* INTEGRATIONS */
@@ -271,7 +278,7 @@ input:checked + .slider::before{transform:translateX(18px)}
 .aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55}
 .aria-msg-bot{background:var(--bg-3);color:var(--text-2);align-self:flex-start;border-bottom-left-radius:3px}
 .aria-msg-user{background:rgba(0,194,255,.12);color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid rgba(0,194,255,.2)}
-.aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3)}
+.aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative}
 .aria-chat-input{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
 .aria-chat-input:focus{border-color:var(--accent)}
 .aria-chat-input::placeholder{color:var(--text-3)}
@@ -438,9 +445,11 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
     <div class="aria-chat-input-row">
       <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
+      <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input')" id="aria-emoji-btn" title="Emoji">😊</button>
       <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
       <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
+      <div class="emoji-pop" id="emoji-pop-aria-input" style="left:auto;right:.85rem"></div>
     </div>
   </div>
   <button class="aria-trigger-btn" onclick="toggleAriaChat()">
@@ -766,7 +775,8 @@ function chatListHtml(list){
         <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}" oncontextmenu="openChatCtxMenu(event,'${c.id}')">
           ${avatarHtml(c.customer,'#1a2d47',36)}
           <div class="chat-row-body">
-            <div class="chat-row-name">${c.customer} <span class="chan-pill">${c.channel}</span></div>
+            <div class="chat-row-name">${c.customer}</div>
+            <div class="chat-row-channel"><span class="chan-pill">${INT_ICONS[c.channel.toLowerCase()]||''} ${c.channel}</span></div>
             <div class="chat-row-msg">${c.last}</div>
           </div>
         </div>`).join('');
@@ -851,10 +861,12 @@ function renderChatPanel(c){
     <div class="reply-row">
       <button class="reply-icon-btn" onclick="toggleSavedPop()" title="Saved responses">📋</button>
       <button class="reply-icon-btn" onclick="document.getElementById('reply-img-input').click()" title="Attach image">🖼️</button>
+      <button class="reply-icon-btn emoji-trigger" onclick="toggleEmojiPop('reply-input')" title="Emoji">😊</button>
       <input type="file" id="reply-img-input" accept="image/*" style="display:none" onchange="handleReplyImage(this)"/>
       <textarea class="reply-textarea" id="reply-input" rows="1" placeholder="Type a reply…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply('${c.id}')}"></textarea>
       <button class="aria-send-btn" style="height:38px" onclick="sendReply('${c.id}')">Send</button>
       <div class="saved-pop" id="saved-pop"></div>
+      <div class="emoji-pop" id="emoji-pop-reply-input">${emojiButtonsHtml('reply-input')}</div>
     </div>
   </div>`;
 }
@@ -912,13 +924,37 @@ function renderSavedPopHtml(){
 function toggleSavedPop(){
   const p=document.getElementById('saved-pop');
   const open=!p.classList.contains('open');
-  document.querySelectorAll('.saved-pop.open').forEach(x=>x.classList.remove('open'));
+  document.querySelectorAll('.saved-pop.open, .emoji-pop.open').forEach(x=>x.classList.remove('open'));
   p.classList.toggle('open',open);
   if(open)p.innerHTML=renderSavedPopHtml();
 }
 document.addEventListener('click',e=>{
   document.querySelectorAll('.saved-pop.open').forEach(p=>{
     if(!p.contains(e.target)&&!e.target.closest('.reply-icon-btn'))p.classList.remove('open');
+  });
+});
+
+// ─── EMOJI PICKER (chat reply box + ARIA widget) ─────────
+const EMOJI_LIST=['😀','😂','🙂','😊','😍','😉','👍','👏','🙏','🎉','❤️','🔥','😢','😮','🤔','✅','👀','💯','🙌','😅','😎','🥳','😬','🙈'];
+function emojiButtonsHtml(targetInputId){
+  return EMOJI_LIST.map(e=>`<button class="emoji-btn" onclick="insertEmoji('${targetInputId}','${e}')">${e}</button>`).join('');
+}
+function toggleEmojiPop(targetInputId){
+  const p=document.getElementById('emoji-pop-'+targetInputId);
+  if(!p)return;
+  const open=!p.classList.contains('open');
+  document.querySelectorAll('.emoji-pop.open, .saved-pop.open').forEach(x=>x.classList.remove('open'));
+  if(!p.innerHTML.trim())p.innerHTML=emojiButtonsHtml(targetInputId);
+  p.classList.toggle('open',open);
+}
+function insertEmoji(targetInputId,emoji){
+  const inp=document.getElementById(targetInputId);
+  if(inp){ inp.value+=emoji; inp.focus(); }
+  const p=document.getElementById('emoji-pop-'+targetInputId); if(p)p.classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.emoji-pop.open').forEach(p=>{
+    if(!p.contains(e.target)&&!e.target.closest('.emoji-trigger'))p.classList.remove('open');
   });
 });
 function insertSavedResponse(id){
