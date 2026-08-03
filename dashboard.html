@@ -171,6 +171,37 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .cm-agent{background:rgba(0,194,255,.09);border-color:rgba(0,194,255,.22)}
 .cm-aria{background:rgba(107,91,255,.1);border-color:rgba(107,91,255,.25)}
 .cm-meta{font-size:.65rem;color:var(--text-3);margin-bottom:.3rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.cm-img{max-width:220px;border-radius:8px;display:block;margin-top:.4rem;border:1px solid var(--border)}
+.cm-analyzing{font-size:.7rem;color:var(--text-3);font-style:italic;margin-top:.35rem;display:flex;align-items:center;gap:5px}
+
+/* ARIA SUGGESTIONS */
+.suggest-wrap{padding:.75rem 1.1rem;border-top:1px solid var(--border);background:var(--bg-3)}
+.suggest-lbl{font-size:.68rem;font-weight:700;color:#a99cff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:5px}
+.suggest-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.suggest-chip{background:rgba(107,91,255,.1);border:1px solid rgba(107,91,255,.28);color:var(--text);border-radius:9px;padding:.5rem .8rem;font-size:.78rem;text-align:left;cursor:pointer;transition:all .15s;max-width:100%}
+.suggest-chip:hover{background:rgba(107,91,255,.2);border-color:rgba(107,91,255,.5)}
+
+/* REPLY BOX */
+.reply-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative;align-items:flex-end}
+.reply-icon-btn{width:38px;height:38px;border-radius:8px;background:var(--bg-4);border:1px solid var(--border-light);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s}
+.reply-icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+.reply-textarea{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.6rem .75rem;color:var(--text);font-size:.84rem;font-family:var(--fb);outline:none;resize:none;min-height:38px;max-height:100px;transition:border-color .2s}
+.reply-textarea:focus{border-color:var(--accent)}
+.reply-img-preview{display:flex;align-items:center;gap:.5rem;padding:.5rem 1.1rem;background:var(--bg-3);border-top:1px solid var(--border);font-size:.76rem;color:var(--text-2)}
+.reply-img-preview img{width:34px;height:34px;object-fit:cover;border-radius:6px}
+
+/* SAVED RESPONSES POPOVER */
+.saved-pop{position:absolute;bottom:56px;left:.85rem;width:300px;max-height:320px;overflow-y:auto;background:var(--bg-2);border:1px solid var(--border-light);border-radius:12px;box-shadow:var(--shadow);z-index:60;display:none}
+.saved-pop.open{display:block}
+.saved-pop-hd{padding:.75rem .9rem;border-bottom:1px solid var(--border);font-size:.76rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}
+.saved-item{padding:.6rem .9rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.saved-item:last-child{border-bottom:none}
+.saved-item:hover{background:var(--bg-3)}
+.saved-item-lbl{font-size:.8rem;font-weight:600;margin-bottom:.15rem;display:flex;justify-content:space-between;gap:.5rem}
+.saved-item-txt{font-size:.74rem;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.saved-del{color:var(--text-3);cursor:pointer;flex-shrink:0}
+.saved-del:hover{color:var(--danger)}
+.saved-pop-foot{padding:.6rem .9rem}
 
 /* INTEGRATIONS */
 .int-card{background:var(--bg-2);border:1px solid var(--border);border-radius:14px;padding:1.4rem;display:flex;flex-direction:column;gap:.85rem}
@@ -402,10 +433,13 @@ input:checked + .slider::before{transform:translateX(18px)}
       <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
     </div>
     <div class="aria-chat-msgs" id="aria-msgs">
-      <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account.</div>
+      <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
     </div>
+    <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
     <div class="aria-chat-input-row">
-      <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+      <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
+      <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
+      <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     </div>
   </div>
@@ -471,9 +505,15 @@ function setTheme(t){
 let currentUser=null, currentSection='pulse';
 const LS_KEY='supanta_dash_state_v1';
 let STATE=null;
+const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
     profile:{title:'Team Member',avatar:'',companyAvatar:'',companyName:'Your Company'},
+    savedResponses:[
+      {id:1,label:'Order status template',text:'Thanks for reaching out! Let me check your order status — one moment while I pull that up.'},
+      {id:2,label:'Refund apology',text:'I\'m sorry for the inconvenience — I can see the issue and I\'m processing a refund now. It should reflect in 3-5 business days.'},
+      {id:3,label:'Password reset instructions',text:'No problem! Head to Settings > Security and click "Reset Password" — you\'ll get an email with a reset link within a minute.'}
+    ],
     team:[
       {id:1,name:'ARIA',email:'aria@supanta.ai',role:'AI Agent · Always On',type:'agent',color:'#00c2ff'},
       {id:2,name:'Nomsa Dube',email:'nomsa@company.com',role:'Support Lead',type:'human',color:'#6b5bff'},
@@ -498,7 +538,8 @@ function defaultState(){
       ]},
       {id:'CHT-102',customer:'Sarah Lee',channel:'Email',status:'active',last:'I was charged twice this month',owner:'Liam Dlamini',messages:[
         {who:'customer',text:'I think I was charged twice this month for my subscription.',time:'11:02'},
-        {who:'aria',text:'I\'m sorry about that — let me flag this to a specialist so we get it corrected quickly.',time:'11:03'},
+        {who:'customer',text:'Here\'s a screenshot of my statement:',time:'11:02',image:MOCK_RECEIPT_IMG},
+        {who:'aria',text:'I\'m sorry about that — I can see the screenshot, and it shows two identical $49.00 charges posted on the same day. I\'m flagging this as a duplicate billing charge for a specialist to correct.',time:'11:03'},
         {who:'agent',text:'Hi Sarah, I can see the duplicate charge — refunding it now, should reflect in 3-5 business days.',time:'11:20'}
       ]},
       {id:'CHT-098',customer:'Marcus Webb',channel:'Instagram',status:'done',last:'Perfect, thank you!',owner:'Zanele Mokoena',messages:[
@@ -745,24 +786,162 @@ function wireChatList(){
     row.addEventListener('click',()=>{ _activeChatId=row.dataset.id; renderSection(); });
   });
 }
+function messageHtml(m,c){
+  const side=m.who==='customer'?'left':'right';
+  const cls=m.who==='customer'?'cm-customer':m.who==='aria'?'cm-aria':'cm-agent';
+  const who=m.who==='customer'?c.customer:m.who==='aria'?'ARIA':'Agent';
+  return `<div class="cm ${side}">
+    <div class="cm-bubble ${cls}">
+      <div class="cm-meta">${who} · ${m.time}</div>
+      ${m.text||''}
+      ${m.image?`<img class="cm-img" src="${m.image}" alt="attachment"/>`:''}
+    </div>
+  </div>`;
+}
+function ariaSuggestions(c){
+  const last=[...c.messages].reverse().find(m=>m.who==='customer');
+  const text=(last?last.text:'').toLowerCase();
+  if(/refund|charge|billing|duplicate|invoice/.test(text))return [
+    "I'm sorry about that — I can see the duplicate charge and I'm processing a refund now, it should reflect in 3-5 business days.",
+    "Let me pull up your billing history to confirm — one moment.",
+    "I've flagged this to our billing specialist, they'll follow up shortly."
+  ];
+  if(/order|ship|status|track|deliver/.test(text))return [
+    "Let me check your order status — one moment.",
+    "Your order has shipped and is on its way, I'll share the tracking link.",
+    "Apologies for the delay — I'll escalate this for expedited shipping."
+  ];
+  if(/cancel|unsubscribe/.test(text))return [
+    "I can help with that cancellation — can you confirm the account email?",
+    "I've processed the cancellation, you'll receive a confirmation email shortly."
+  ];
+  if(/stock|available|back in stock/.test(text))return [
+    "Yes, that item is back in stock — want me to send the link?",
+    "Let me check current stock levels for you."
+  ];
+  return [
+    "Thanks for reaching out — let me look into that for you.",
+    "Could you share a bit more detail so I can help faster?",
+    "I've noted this and I'm following up now."
+  ];
+}
+function useSuggestion(el){
+  const inp=document.getElementById('reply-input');
+  if(!inp)return;
+  inp.value=el.textContent;
+  inp.focus();
+}
 function renderChatPanel(c){
   if(!c)return '<div class="chat-panel"><div class="empty-state" style="margin:auto">Select a conversation</div></div>';
+  const suggestions=ariaSuggestions(c);
   return `
   <div class="chat-panel">
     <div class="chat-panel-hd">
       <div><div style="font-weight:600;font-size:.9rem">${c.customer}</div><div style="font-size:.72rem;color:var(--text-3)">${c.channel} · Owner: ${c.owner} · ${c.id}</div></div>
       <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
     </div>
-    <div class="chat-msgs">
-      ${c.messages.map(m=>`
-        <div class="cm ${m.who==='customer'?'left':'right'}">
-          <div class="cm-bubble ${m.who==='customer'?'cm-customer':m.who==='aria'?'cm-aria':'cm-agent'}">
-            <div class="cm-meta">${m.who==='customer'?c.customer:m.who==='aria'?'ARIA':'Agent'} · ${m.time}</div>
-            ${m.text}
-          </div>
-        </div>`).join('')}
+    <div class="chat-msgs" id="chat-msgs-scroll">
+      ${c.messages.map(m=>messageHtml(m,c)).join('')}
+    </div>
+    <div class="suggest-wrap">
+      <div class="suggest-lbl">✨ ARIA suggests</div>
+      <div class="suggest-chips">${suggestions.map(s=>`<button class="suggest-chip" onclick="useSuggestion(this)">${s}</button>`).join('')}</div>
+    </div>
+    <div id="reply-img-preview-wrap"></div>
+    <div class="reply-row">
+      <button class="reply-icon-btn" onclick="toggleSavedPop()" title="Saved responses">📋</button>
+      <button class="reply-icon-btn" onclick="document.getElementById('reply-img-input').click()" title="Attach image">🖼️</button>
+      <input type="file" id="reply-img-input" accept="image/*" style="display:none" onchange="handleReplyImage(this)"/>
+      <textarea class="reply-textarea" id="reply-input" rows="1" placeholder="Type a reply…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply('${c.id}')}"></textarea>
+      <button class="aria-send-btn" style="height:38px" onclick="sendReply('${c.id}')">Send</button>
+      <div class="saved-pop" id="saved-pop"></div>
     </div>
   </div>`;
+}
+function nowTime(){return new Date().toTimeString().slice(0,5);}
+let _pendingReplyImage=null;
+function handleReplyImage(input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _pendingReplyImage=e.target.result;
+    document.getElementById('reply-img-preview-wrap').innerHTML=`<div class="reply-img-preview"><img src="${_pendingReplyImage}"/><span>${file.name}</span><span class="saved-del" style="margin-left:auto" onclick="clearReplyImage()">✕ Remove</span></div>`;
+  };
+  reader.readAsDataURL(file);
+}
+function clearReplyImage(){
+  _pendingReplyImage=null;
+  document.getElementById('reply-img-input').value='';
+  const wrap=document.getElementById('reply-img-preview-wrap'); if(wrap)wrap.innerHTML='';
+}
+function sendReply(chatId){
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  const inp=document.getElementById('reply-input');
+  const text=inp.value.trim();
+  if(!text && !_pendingReplyImage)return;
+  const msg={who:'agent',text,time:nowTime()};
+  if(_pendingReplyImage)msg.image=_pendingReplyImage;
+  c.messages.push(msg);
+  c.last=text||'📷 Image';
+  const hadImage=!!_pendingReplyImage;
+  clearReplyImage();
+  saveState();
+  renderSection();
+  const scroll=document.getElementById('chat-msgs-scroll'); if(scroll)scroll.scrollTop=scroll.scrollHeight;
+  if(hadImage){
+    setTimeout(()=>{
+      const c2=STATE.chats.find(x=>x.id===chatId); if(!c2)return;
+      c2.messages.push({who:'aria',text:"I can see the image you shared — noted and added to this conversation's context.",time:nowTime()});
+      saveState();
+      if(currentSection==='chats'&&_activeChatId===chatId)renderSection();
+    },900);
+  }
+}
+function renderSavedPopHtml(){
+  const items=STATE.savedResponses||[];
+  return `<div class="saved-pop-hd">Saved Responses</div>
+    ${items.length?items.map(r=>`
+      <div class="saved-item">
+        <div onclick="insertSavedResponse(${r.id})" style="cursor:pointer">
+          <div class="saved-item-lbl">${r.label} <span class="saved-del" onclick="event.stopPropagation();deleteSavedResponse(${r.id})" title="Delete">✕</span></div>
+          <div class="saved-item-txt">${r.text}</div>
+        </div>
+      </div>`).join(''):'<div class="empty-state" style="padding:1.5rem">No saved responses yet.</div>'}
+    <div class="saved-pop-foot"><button class="btn btn-ghost btn-sm" style="width:100%" onclick="saveCurrentAsResponse()">+ Save current reply as template</button></div>`;
+}
+function toggleSavedPop(){
+  const p=document.getElementById('saved-pop');
+  const open=!p.classList.contains('open');
+  document.querySelectorAll('.saved-pop.open').forEach(x=>x.classList.remove('open'));
+  p.classList.toggle('open',open);
+  if(open)p.innerHTML=renderSavedPopHtml();
+}
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.saved-pop.open').forEach(p=>{
+    if(!p.contains(e.target)&&!e.target.closest('.reply-icon-btn'))p.classList.remove('open');
+  });
+});
+function insertSavedResponse(id){
+  const r=(STATE.savedResponses||[]).find(x=>x.id===id); if(!r)return;
+  const inp=document.getElementById('reply-input'); if(inp){inp.value=r.text;inp.focus();}
+  const p=document.getElementById('saved-pop'); if(p)p.classList.remove('open');
+}
+let _savedRespId=100;
+function saveCurrentAsResponse(){
+  const inp=document.getElementById('reply-input'); const text=inp?inp.value.trim():'';
+  if(!text){toast('Type a reply first, then save it as a template','var(--danger)');return;}
+  const label=prompt('Name this saved response:','Quick reply');
+  if(!label)return;
+  if(!STATE.savedResponses)STATE.savedResponses=[];
+  STATE.savedResponses.push({id:++_savedRespId,label,text});
+  saveState();
+  const p=document.getElementById('saved-pop'); if(p)p.innerHTML=renderSavedPopHtml();
+  toast('Saved response added','var(--green)');
+}
+function deleteSavedResponse(id){
+  STATE.savedResponses=(STATE.savedResponses||[]).filter(x=>x.id!==id);
+  saveState();
+  const p=document.getElementById('saved-pop'); if(p)p.innerHTML=renderSavedPopHtml();
 }
 function downloadChat(id){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
@@ -1096,15 +1275,16 @@ function initAriaScope(){
   const msgs=document.getElementById('aria-msgs');
   const inp=document.getElementById('aria-input');
   const btn=document.getElementById('aria-send-btn');
+  const attachBtn=document.getElementById('aria-attach-btn');
   if(currentUser.companyId){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>Scoped to ${co}`;
-    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA. I can only see and discuss <strong>${co}</strong>'s data — tickets, chats and knowledge base — never another company's.</div>`;
-    inp.disabled=false;btn.disabled=false;inp.placeholder='Ask ARIA…';
+    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA. I can only see and discuss <strong>${co}</strong>'s data — tickets, chats and knowledge base — never another company's. I can also take action for you: create tickets, add documents to your knowledge base, and more — just ask.</div>`;
+    inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA — or tell it what to do…';
   }else{
     statusEl.innerHTML=`<span class="live-dot" style="background:var(--warning)"></span>Not linked to a business`;
     msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Your account isn't linked to a business yet, so I can't answer company-specific questions here — this keeps me from ever mixing up data between businesses. Please contact support to get your workspace connected.</div>`;
-    inp.disabled=true;btn.disabled=true;inp.placeholder='ARIA unavailable — no business linked';
+    inp.disabled=true;btn.disabled=true;attachBtn.disabled=true;inp.placeholder='ARIA unavailable — no business linked';
   }
 }
 function toggleAriaChat(){
@@ -1112,12 +1292,124 @@ function toggleAriaChat(){
   b.classList.toggle('open');
   if(b.classList.contains('open')&&!document.getElementById('aria-input').disabled)document.getElementById('aria-input').focus();
 }
+let _ariaPendingFile=null;
+function handleAriaAttachment(input){
+  const file=input.files[0]; if(!file)return;
+  _ariaPendingFile=file;
+  const prev=document.getElementById('aria-attach-preview');
+  prev.style.display='flex';
+  prev.innerHTML=`<span>📎 ${file.name}</span><span class="saved-del" style="margin-left:auto" onclick="clearAriaAttachment()">✕ Remove</span>`;
+}
+function clearAriaAttachment(){
+  _ariaPendingFile=null;
+  const fi=document.getElementById('aria-file-input'); if(fi)fi.value='';
+  const prev=document.getElementById('aria-attach-preview'); if(prev){prev.style.display='none';prev.innerHTML='';}
+}
+function addFileToKnowledgeBase(file){
+  const today=new Date().toISOString().slice(0,10);
+  STATE.kbDocs.push({id:++_kbId,name:file.name,size:Math.round(file.size/1024)+' KB',added:today});
+  if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:currentUser.companyId,title:file.name,content:'',category:'aria_chat_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
+  saveState();
+  if(currentSection==='settings')renderSection();
+}
+
+// ─── ARIA TASK ROUTER — lets ARIA perform actions, not just answer questions ───
+// Runs entirely against this business's own STATE (already scoped by currentUser.companyId
+// via the auth/session check in boot()), so actions can never touch another company's data.
+function tryAriaAction(text,file){
+  const t=text.trim();
+  const low=t.toLowerCase();
+
+  if(file && /(knowledge base|\bkb\b)/.test(low) && /add|upload|save/.test(low)){
+    addFileToKnowledgeBase(file);
+    return `Done — I've added <strong>${file.name}</strong> to ${currentUser.companyName||'your'} knowledge base. I can reference it in future answers.`;
+  }
+
+  let m=low.match(/^(?:please\s+)?(?:create|open|raise|log)\s+(?:a\s+|new\s+)?ticket\b(.*)$/);
+  if(m){
+    let rest=t.slice(t.toLowerCase().indexOf(m[0].toLowerCase())+m[0].length-m[1].length).trim();
+    let client='—', priority='med';
+    const forMatch=rest.match(/\bfor\s+([A-Za-z0-9&' ]+?)(?:\s+about\b|\s+regarding\b|:|$)/i);
+    let subject=rest;
+    if(forMatch){
+      client=forMatch[1].trim();
+      subject=rest.slice(forMatch.index+forMatch[0].length).trim();
+    }
+    subject=subject.replace(/^(about|regarding|:)\s*/i,'').trim();
+    if(/\burgent\b|\bhigh priority\b/i.test(subject)){priority='high';subject=subject.replace(/,?\s*(urgent|high priority)\.?$/i,'').trim();}
+    if(!subject)subject='New ticket from ARIA';
+    STATE.tickets.unshift({id:'SUP-'+(++_tkSeq),subject,client,owner:currentUser.name,status:'active',priority});
+    saveState(); if(currentSection==='tickets')renderSection();
+    return `Done — I've opened <strong>SUP-${_tkSeq}</strong>${client!=='—'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
+  }
+
+  m=low.match(/^(?:please\s+)?add\s+(.+?)\s+to\s+(?:the\s+)?team\b(.*)$/);
+  if(m){
+    const name=t.match(/add\s+(.+?)\s+to\s+(?:the\s+)?team/i)[1].trim();
+    const roleMatch=t.match(/\bas\s+(?:an?\s+)?([A-Za-z ]+)$/i);
+    const role=roleMatch?roleMatch[1].trim():'Team Member';
+    const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
+    STATE.team.push({id:++_teamId,name,email:'—',role,type:'human',color:colors[STATE.team.length%colors.length]});
+    saveState(); if(currentSection==='teams')renderSection();
+    return `Done — I've added <strong>${name}</strong> to the team as ${role}.`;
+  }
+
+  m=low.match(/^(?:please\s+)?(?:create|start|make)\s+(?:a\s+)?group\s+(?:called|named)\s+(.+)$/);
+  if(m){
+    const name=t.match(/(?:called|named)\s+(.+)$/i)[1].trim().replace(/["'.]+$/,'');
+    if(!STATE.groups)STATE.groups=[];
+    STATE.groups.push({id:++_grpId,name,members:[1],messages:[]});
+    saveState(); if(currentSection==='teams')renderSection();
+    return `Done — I've created the <strong>#${name}</strong> group. Add teammates to it from Teams → Groups.`;
+  }
+
+  m=low.match(/^mark\s+(ticket|chat)\s+([\w-]+)\s+as\s+(done|archived|active)$/);
+  if(m){
+    const [, kind, idRaw, status]=m;
+    const id=idRaw.toUpperCase();
+    if(kind==='ticket'){
+      const tk=STATE.tickets.find(x=>x.id.toUpperCase()===id);
+      if(!tk)return `I couldn't find a ticket with ID ${id}.`;
+      tk.status=status; saveState(); if(currentSection==='tickets')renderSection();
+      return `Done — ${tk.id} is now marked ${status}.`;
+    }else{
+      const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
+      if(!ch)return `I couldn't find a chat with ID ${id}.`;
+      ch.status=status; saveState(); if(currentSection==='chats')renderSection();
+      return `Done — the conversation with ${ch.customer} is now marked ${status}.`;
+    }
+  }
+
+  return null;
+}
+
 async function sendAriaMsg(){
   if(!currentUser.companyId)return;
-  const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
+  const inp=document.getElementById('aria-input');
+  const msg=inp.value.trim();
+  const file=_ariaPendingFile;
+  if(!msg && !file)return;
   const msgs=document.getElementById('aria-msgs');
-  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;
-  inp.value='';msgs.scrollTop=msgs.scrollHeight;
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${file?`📎 <strong>${file.name}</strong>${msg?'<br>':''}`:''}${msg}</div>`;
+  inp.value='';clearAriaAttachment();
+  msgs.scrollTop=msgs.scrollHeight;
+
+  const actionReply=tryAriaAction(msg,file);
+  if(actionReply!==null){
+    const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='…';
+    msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
+    await new Promise(r=>setTimeout(r,450));
+    document.getElementById('aria-typing')?.remove();
+    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${actionReply}</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+    return;
+  }
+  if(file){
+    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Got <strong>${file.name}</strong> — say the word if you'd like me to add it to your knowledge base, or ask me anything about it.</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
+    return;
+  }
+
   const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='…';
   msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
   try{
