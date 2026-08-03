@@ -485,6 +485,16 @@ function authFail(){ document.getElementById('auth-gate-text').textContent='Cann
 async function boot(){
   const {data:{session}}=await _sb.auth.getSession();
   if(!session){ window.location.href='index.html'; return; }
+  // A signed-in session that hasn't completed its 2FA (AAL2) challenge yet
+  // must not reach the dashboard — bounce back to the login page's code step.
+  // Wrapped defensively: if this check itself fails for any reason, fail
+  // open rather than locking a legitimate user out of their own dashboard.
+  try{
+    const {data:aal}=await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
+      window.location.href='index.html#login'; return;
+    }
+  }catch(e){}
   sbUser=session.user;
   let profile=null;
   try{ const {data}=await _sb.from('user_profiles').select('*').eq('id',sbUser.id).single(); profile=data; }catch(e){}
@@ -741,6 +751,7 @@ function renderSection(){
   m.innerHTML=(fns[currentSection]||(()=>''))();
   if(currentSection==='chats')wireChatList();
   if(currentSection==='tickets')wireKanban();
+  if(currentSection==='settings'&&_settingsTab==='security')refreshMfaStatus();
 }
 function initialsOf(name){return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function avatarHtml(name,color,size){size=size||30;return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*.32}px;background-color:${color||'var(--accent)'};color:#04121f">${initialsOf(name)}</div>`;}
@@ -1430,7 +1441,7 @@ function gsGoTeam(){ toggleGlobalSearch(); showSection('teams'); }
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
 function renderSettings(){
-  const tabs=[['profile','Profile'],['company','Company'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
+  const tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
   return `
   <div class="settings-nav">${tabs.map(([k,l])=>`<button class="tab-btn ${k===_settingsTab?'active':''}" onclick="setSettingsTab('${k}')">${l}</button>`).join('')}</div>
   <div id="settings-body">${renderSettingsTab(_settingsTab)}</div>`;
@@ -1451,12 +1462,18 @@ function renderSettingsTab(t){
       <div class="form-group"><label>Title</label><input class="rb-input" id="set-title" value="${STATE.profile.title||''}" placeholder="e.g. Director"/></div>
       <div class="form-group"><label>Email</label><input class="rb-input" value="${currentUser.email}" disabled/></div>
       <button class="btn btn-acc" onclick="saveProfile()">Save Changes</button>
-    </div>
+    </div>`;
+  if(t==='security')return `
     <div class="card">
       <div class="card-title">Change Password</div>
       <div class="form-group"><label>New Password</label><input class="rb-input" type="password" id="set-pwd-1" placeholder="Min. 8 characters"/></div>
       <div class="form-group"><label>Confirm New Password</label><input class="rb-input" type="password" id="set-pwd-2" placeholder="Repeat password"/></div>
       <button class="btn btn-acc" onclick="changePassword()">Update Password</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Two-Factor Authentication</div>
+      <p style="font-size:.82rem;color:var(--text-3);line-height:1.7;margin-bottom:1rem">Add an authenticator app (Google Authenticator, 1Password, Authy...) as a second step when signing in.</p>
+      <div id="mfa-status-wrap"><div class="empty-state">Loading…</div></div>
     </div>`;
   if(t==='company')return `
     <div class="card">
@@ -1542,6 +1559,80 @@ async function changePassword(){
     toast('Could not update password — '+e.message,'var(--danger)');
   }
 }
+
+// ─── TWO-FACTOR AUTHENTICATION (Supabase Auth TOTP) ──────
+let _mfaEnrollFactorId=null;
+async function refreshMfaStatus(){
+  const wrap=document.getElementById('mfa-status-wrap'); if(!wrap||!_sb)return;
+  try{
+    const {data,error}=await _sb.auth.mfa.listFactors();
+    if(error)throw error;
+    const verified=(data?.totp||[]).find(f=>f.status==='verified');
+    if(verified){
+      wrap.innerHTML=`
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+          <div><span class="badge badge-active">Enabled</span><div style="font-size:.78rem;color:var(--text-3);margin-top:.5rem">Your account requires a code from your authenticator app at sign-in.</div></div>
+          <button class="btn btn-danger btn-sm" onclick="disableMfa('${verified.id}')">Turn off</button>
+        </div>`;
+    }else{
+      wrap.innerHTML=`<span class="badge badge-archived">Not enabled</span><div style="margin-top:.85rem"><button class="btn btn-acc" onclick="startMfaEnroll()">Set up Two-Factor Authentication</button></div>`;
+    }
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state">Could not load 2FA status right now.</div>';
+  }
+}
+async function startMfaEnroll(){
+  const wrap=document.getElementById('mfa-status-wrap'); if(!wrap||!_sb)return;
+  wrap.innerHTML='<div class="empty-state">Generating QR code…</div>';
+  try{
+    const {data,error}=await _sb.auth.mfa.enroll({factorType:'totp'});
+    if(error)throw error;
+    _mfaEnrollFactorId=data.id;
+    wrap.innerHTML=`
+      <div style="font-size:.82rem;color:var(--text-3);margin-bottom:.85rem">Scan this QR code with your authenticator app, then enter the 6-digit code it shows.</div>
+      <div style="background:#fff;border-radius:10px;padding:1rem;width:fit-content;margin-bottom:1rem"><img src="${data.totp.qr_code}" width="160" height="160" alt="2FA QR code"/></div>
+      <div style="font-size:.72rem;color:var(--text-3);margin-bottom:1rem">Can't scan? Enter this code manually: <code style="color:var(--text)">${data.totp.secret}</code></div>
+      <div class="form-group"><label>Verification code</label><input class="rb-input" id="mfa-verify-code" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;max-width:160px"/></div>
+      <div style="display:flex;gap:.6rem">
+        <button class="btn btn-acc" onclick="confirmMfaEnroll()">Confirm & Enable</button>
+        <button class="btn btn-ghost" onclick="cancelMfaEnroll()">Cancel</button>
+      </div>`;
+  }catch(e){
+    wrap.innerHTML='<div class="empty-state">Could not start 2FA setup — '+e.message+'</div>';
+  }
+}
+async function confirmMfaEnroll(){
+  const code=document.getElementById('mfa-verify-code').value.trim();
+  if(!code||code.length<6){toast('Enter the 6-digit code','var(--danger)');return;}
+  try{
+    const {data:challenge,error:chErr}=await _sb.auth.mfa.challenge({factorId:_mfaEnrollFactorId});
+    if(chErr)throw chErr;
+    const {error:vErr}=await _sb.auth.mfa.verify({factorId:_mfaEnrollFactorId,challengeId:challenge.id,code});
+    if(vErr)throw vErr;
+    toast('Two-factor authentication enabled','var(--green)');
+    _mfaEnrollFactorId=null;
+    refreshMfaStatus();
+  }catch(e){
+    toast('Incorrect code — try again','var(--danger)');
+  }
+}
+async function cancelMfaEnroll(){
+  if(_mfaEnrollFactorId&&_sb){ try{ await _sb.auth.mfa.unenroll({factorId:_mfaEnrollFactorId}); }catch(e){} }
+  _mfaEnrollFactorId=null;
+  refreshMfaStatus();
+}
+async function disableMfa(factorId){
+  if(!confirm('Turn off two-factor authentication for your account?'))return;
+  try{
+    const {error}=await _sb.auth.mfa.unenroll({factorId});
+    if(error)throw error;
+    toast('Two-factor authentication turned off','var(--accent)');
+    refreshMfaStatus();
+  }catch(e){
+    toast('Could not turn off 2FA — '+e.message,'var(--danger)');
+  }
+}
+
 function saveCompany(){
   STATE.profile.companyName=document.getElementById('set-company-name').value.trim();
   saveState();toast('Company info saved','var(--green)');
@@ -1594,11 +1685,27 @@ function initAriaScope(){
     _ariaHistory.forEach(m=>{ msgs.innerHTML+=`<div class="aria-msg aria-msg-${m.who}">${m.html}</div>`; });
     msgs.scrollTop=msgs.scrollHeight;
     inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA — or tell it what to do…';
+    maybeSuggestMfa();
   }else{
     statusEl.innerHTML=`<span class="live-dot" style="background:var(--warning)"></span>Not linked to a business`;
     msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Your account isn't linked to a business yet, so I can't answer company-specific questions here — this keeps me from ever mixing up data between businesses. Please contact support to get your workspace connected.</div>`;
     inp.disabled=true;btn.disabled=true;attachBtn.disabled=true;inp.placeholder='ARIA unavailable — no business linked';
   }
+}
+// Proactive nudge, not saved to persisted history so it naturally
+// re-checks (and re-shows if still unresolved) on every session boot
+// rather than being asked once and forgotten.
+async function maybeSuggestMfa(){
+  if(!_sb||!currentUser.companyId)return;
+  try{
+    const {data}=await _sb.auth.mfa.listFactors();
+    const has2fa=(data?.totp||[]).some(f=>f.status==='verified');
+    if(!has2fa){
+      const msgs=document.getElementById('aria-msgs'); if(!msgs)return;
+      msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">By the way — your account doesn't have two-factor authentication set up yet. It only takes a minute and adds real protection.<button class="btn btn-sm btn-acc" style="margin-top:.5rem;display:block" onclick="toggleAriaChat();showSection('settings');_settingsTab='security';renderSection();">Set up 2FA</button></div>`;
+      msgs.scrollTop=msgs.scrollHeight;
+    }
+  }catch(e){}
 }
 function toggleAriaChat(){
   const b=document.getElementById('aria-chat-box');

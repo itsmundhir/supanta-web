@@ -885,20 +885,28 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     </div>
     <h2 style="font-family:var(--fd);font-size:1.35rem;font-weight:700;text-align:center;margin-bottom:.3rem">Welcome back</h2>
     <p style="font-size:.82rem;color:var(--grey);text-align:center;margin-bottom:2rem">Sign in to your Supanta account</p>
-    <div class="form-group"><label>Email address</label><input class="rb-input" type="email" id="login-email" placeholder="Email address"/></div>
-    <div class="form-group" id="login-pass-group">
-      <label>Password</label>
-      <div style="position:relative">
-        <input class="rb-input" type="password" id="login-pass" placeholder="Password" style="padding-right:2.6rem"/>
-        <button type="button" onclick="toggleLoginPassVisibility()" aria-label="Show password" id="login-pass-eye" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--grey);cursor:pointer;padding:.2rem;display:flex;align-items:center">
-          <svg id="login-pass-eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        </button>
+    <div id="login-step-1">
+      <div class="form-group"><label>Email address</label><input class="rb-input" type="email" id="login-email" placeholder="Email address"/></div>
+      <div class="form-group" id="login-pass-group">
+        <label>Password</label>
+        <div style="position:relative">
+          <input class="rb-input" type="password" id="login-pass" placeholder="Password" style="padding-right:2.6rem"/>
+          <button type="button" onclick="toggleLoginPassVisibility()" aria-label="Show password" id="login-pass-eye" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--grey);cursor:pointer;padding:.2rem;display:flex;align-items:center">
+            <svg id="login-pass-eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
+      <button class="btn-submit" id="login-submit-btn" onclick="doLogin()">Sign In</button>
+      <div style="text-align:center;margin-top:1rem"><button onclick="toggleForgotPassword()" id="forgot-pass-link" style="background:none;border:none;color:var(--accent);font-size:.78rem;cursor:pointer">Forgot password?</button></div>
     </div>
-    <button class="btn-submit" id="login-submit-btn" onclick="doLogin()">Sign In</button>
+    <div id="login-step-2fa" style="display:none">
+      <p style="font-size:.82rem;color:var(--grey);text-align:center;margin-bottom:1.25rem">Enter the 6-digit code from your authenticator app.</p>
+      <div class="form-group"><label>Verification code</label><input class="rb-input" inputmode="numeric" maxlength="6" id="login-2fa-code" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:1.1rem"/></div>
+      <button class="btn-submit" id="login-2fa-btn" onclick="verifyLogin2fa()">Verify</button>
+      <div style="text-align:center;margin-top:1rem"><button onclick="cancelLogin2fa()" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Back to sign in</button></div>
+    </div>
     <div style="color:var(--danger);font-size:.78rem;text-align:center;margin-top:.75rem;display:none" id="login-err">Invalid credentials. Please try again.</div>
     <div style="color:var(--green);font-size:.78rem;text-align:center;margin-top:.75rem;display:none" id="login-ok"></div>
-    <div style="text-align:center;margin-top:1rem"><button onclick="toggleForgotPassword()" id="forgot-pass-link" style="background:none;border:none;color:var(--accent);font-size:.78rem;cursor:pointer">Forgot password?</button></div>
     <div style="text-align:center;margin-top:.5rem"><button onclick="goTo('home')" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Back to website</button></div>
   </div>
 </div>
@@ -1048,6 +1056,7 @@ async function doForgotPassword(){
 const SUPABASE_URL = 'https://qzpairbwdmozntmsaryq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cGFpcmJ3ZG1vem50bXNhcnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NjYyMTAsImV4cCI6MjA5NDE0MjIxMH0.UZv426_LewcfGP0k3uYJyW1hsruODnV-t0-jpDxxzg4';
 
+let _appInited=false;
 const _sbScript = document.createElement('script');
 _sbScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
 _sbScript.onload = () => {
@@ -1059,7 +1068,11 @@ _sbScript.onload = () => {
 _sbScript.onerror = () => { console.warn('Supabase SDK blocked — running in public-only mode'); renderPublicFallback(); };
 document.head.appendChild(_sbScript);
 function renderPublicFallback(){ goTo('home'); applyFaqToPage(); }
-setTimeout(()=>{ if(getComputedStyle(document.getElementById('main-nav')).display==='none'){ renderPublicFallback(); } }, 2500);
+// Safety net for when the Supabase SDK never loads at all — gated on a flag,
+// not nav visibility, since the nav is legitimately hidden on the login page
+// (including mid-2FA) and a visibility check alone would boot a real user
+// back to Home just for taking more than a couple seconds to sign in.
+setTimeout(()=>{ if(!_appInited)renderPublicFallback(); }, 2500);
 // ──────────────────────────────────────────────────────────
 
 // ─── NAV / PAGE ROUTING ────────────────────────────────────
@@ -1082,6 +1095,7 @@ document.getElementById('hamburger').addEventListener('click',()=>{document.getE
 function closeMob(){document.getElementById('mobile-menu').classList.remove('open');}
 
 // ─── AUTH — Supabase ───────────────────────────────────────
+let _mfaFactorId=null;
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const pass=document.getElementById('login-pass').value;
@@ -1095,13 +1109,55 @@ async function doLogin(){
   try {
     const {data,error}=await window._sb.auth.signInWithPassword({email,password:pass});
     if(error){err.textContent='Invalid email or password.';err.style.display='block';btn.textContent='Sign In';btn.disabled=false;return;}
+    // Password auth only ever reaches AAL1. If this account has a verified TOTP
+    // factor enrolled, Supabase requires an AAL2 challenge before the session
+    // is fully trusted — so we stop here and ask for the 6-digit code instead
+    // of redirecting straight into the dashboard.
+    const {data:aal}=await window._sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
+      const {data:factors}=await window._sb.auth.mfa.listFactors();
+      const totp=factors?.totp?.find(f=>f.status==='verified');
+      if(totp){
+        _mfaFactorId=totp.id;
+        document.getElementById('login-step-1').style.display='none';
+        document.getElementById('login-step-2fa').style.display='block';
+        document.getElementById('login-2fa-code').focus();
+        btn.textContent='Sign In';btn.disabled=false;
+        return;
+      }
+    }
     window.location.href='dashboard.html';
   } catch(e){
     err.textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.';err.style.display='block';
     btn.textContent='Sign In';btn.disabled=false;
   }
 }
+async function verifyLogin2fa(){
+  const code=document.getElementById('login-2fa-code').value.trim();
+  const err=document.getElementById('login-err');
+  const btn=document.getElementById('login-2fa-btn');
+  err.style.display='none';
+  if(!code||code.length<6){err.textContent='Enter the 6-digit code.';err.style.display='block';return;}
+  btn.textContent='Verifying...';btn.disabled=true;
+  try{
+    const {data:challenge,error:chErr}=await window._sb.auth.mfa.challenge({factorId:_mfaFactorId});
+    if(chErr)throw chErr;
+    const {error:vErr}=await window._sb.auth.mfa.verify({factorId:_mfaFactorId,challengeId:challenge.id,code});
+    if(vErr){err.textContent='Incorrect code — try again.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;return;}
+    window.location.href='dashboard.html';
+  }catch(e){
+    err.textContent='Could not verify code right now.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;
+  }
+}
+function cancelLogin2fa(){
+  _mfaFactorId=null;
+  document.getElementById('login-step-2fa').style.display='none';
+  document.getElementById('login-step-1').style.display='block';
+  document.getElementById('login-2fa-code').value='';
+  document.getElementById('login-err').style.display='none';
+}
 document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-2fa-code').addEventListener('keydown',e=>{if(e.key==='Enter')verifyLogin2fa();});
 
 // ─── CONTACT FORM → Supabase ──────────────────────────────
 async function submitContact(){
@@ -1186,9 +1242,22 @@ function runAnimations(scope){
 
 // ─── INIT ─────────────────────────────────────────────────
 async function initApp(){
+  _appInited=true;
   goTo('home');
   const {data:{session}}=await window._sb.auth.getSession();
-  if(session){ window.location.href='dashboard.html'; return; }
+  if(session){
+    try{
+      const {data:aal}=await window._sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      if(!aal || aal.nextLevel!=='aal2' || aal.nextLevel===aal.currentLevel){
+        window.location.href='dashboard.html'; return;
+      }
+      // Session exists but this account has 2FA enrolled and the current
+      // session hasn't completed the AAL2 challenge yet — fall through to
+      // the normal login page instead of granting dashboard access.
+    }catch(e){
+      window.location.href='dashboard.html'; return;
+    }
+  }
   applyFaqToPage();
 }
 document.addEventListener('DOMContentLoaded',()=>{
