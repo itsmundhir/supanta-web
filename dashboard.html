@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Supanta — Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<title>Supanta — Dashboard</title><link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root,:root[data-theme="dark"]{
@@ -514,9 +513,53 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
+    const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',currentUser.companyId).order('issue_date',{ascending:false});
+    if(invs&&invs.length){
+      STATE.invoices=invs.map(r=>({id:r.display_id,dbId:r.id,date:r.issue_date,dueDate:r.due_date,amount:(r.currency==='USD'?'$':r.currency+' ')+Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}),status:r.status}));
+    }
+  }catch(e){}
+  try{
     const {data:notifs}=await _sb.from('notifications').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
     if(notifs&&notifs.length){
       STATE.notifications=notifs.map(r=>({id:++_notifId,dbId:r.id,text:r.text,time:new Date(r.created_at).toLocaleString(),read:r.read}));
+    }
+  }catch(e){}
+  try{
+    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title').eq('client_id',currentUser.companyId).order('created_at',{ascending:true});
+    if(profiles&&profiles.length){
+      const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
+      const agents=STATE.team.filter(m=>m.type==='agent');
+      const humans=profiles.map((p,i)=>({id:++_teamId,dbId:p.id,name:p.full_name||p.email,email:p.email,role:p.job_title||'Team Member',type:'human',color:colors[i%colors.length]}));
+      STATE.team=[...agents,...humans];
+    }
+  }catch(e){}
+  try{
+    const {data:sr}=await _sb.from('saved_responses').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
+    if(sr&&sr.length){
+      STATE.savedResponses=sr.map(r=>({id:++_savedRespId,dbId:r.id,label:r.label,text:r.text}));
+    }
+  }catch(e){}
+  try{
+    const {data:ic}=await _sb.from('integration_connections').select('*').eq('client_id',currentUser.companyId);
+    if(ic&&ic.length){
+      ic.forEach(row=>{ const i=STATE.integrations.find(x=>x.key===row.integration_key); if(i)i.connected=row.connected; });
+    }
+  }catch(e){}
+  try{
+    const {data:grps}=await _sb.from('groups').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:true});
+    if(grps&&grps.length){
+      const mapped=[];
+      for(const grow of grps){
+        let members=[];
+        try{ const {data:mem}=await _sb.from('group_members').select('member_name').eq('group_id',grow.id); members=(mem||[]).map(x=>x.member_name); }catch(e){}
+        let messages=[];
+        try{
+          const {data:msgs}=await _sb.from('group_messages').select('*').eq('group_id',grow.id).order('created_at',{ascending:true});
+          messages=(msgs||[]).map(m=>({from:m.sender_name,text:m.text,time:new Date(m.created_at).toTimeString().slice(0,5)}));
+        }catch(e){}
+        mapped.push({id:++_grpId,dbId:grow.id,name:grow.name,members,messages});
+      }
+      STATE.groups=mapped;
     }
   }catch(e){}
   saveState();
@@ -620,11 +663,12 @@ function defaultState(){
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
       {id:2,name:'Product FAQ — Spring Catalog.docx',size:'88 KB',added:'2026-05-11'}
     ],
-    billing:{plan:'Growth',price:'$2,500/mo',renews:'2026-06-01',invoices:[
-      {id:'INV-0512',date:'2026-05-01',amount:'$2,500.00',status:'Paid'},
-      {id:'INV-0411',date:'2026-04-01',amount:'$2,500.00',status:'Paid'},
-      {id:'INV-0311',date:'2026-03-01',amount:'$2,150.00',status:'Paid'}
-    ]}
+    wisePayee:{name:'Supanta (Pty) Ltd',email:'payments@supanta.com',reference:'Use your invoice number as the payment reference'},
+    invoices:[
+      {id:'INV-0512',date:'2026-05-01',dueDate:'2026-05-15',amount:'$2,500.00',status:'Paid'},
+      {id:'INV-0411',date:'2026-04-01',dueDate:'2026-04-15',amount:'$2,500.00',status:'Paid'},
+      {id:'INV-0611',date:'2026-06-01',dueDate:'2026-06-15',amount:'$2,500.00',status:'Due'}
+    ]
   };
 }
 function loadState(){
@@ -740,7 +784,7 @@ function teamListHtml(){
       <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
         ${avatarHtml(m.name,m.color,40)}
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:.88rem;display:flex;align-items:center;gap:.5rem">${m.name} ${m.type==='agent'?'<span class="badge badge-done">AI Agent</span>':''}</div>
+          <div style="font-weight:600;font-size:.88rem;display:flex;align-items:center;gap:.5rem">${m.name} ${m.type==='agent'?'<span class="badge badge-done">AI Agent</span>':m.dbId?'':'<span class="badge badge-med">Invite pending</span>'}</div>
           <div style="font-size:.76rem;color:var(--text-3)">${m.role} · ${m.email}</div>
         </div>
         ${m.id!==1?`<button class="btn btn-ghost btn-sm" onclick="removeTeamMember(${m.id})">Remove</button>`:''}
@@ -748,19 +792,41 @@ function teamListHtml(){
 }
 function filterTeams(v){_teamSearch=v;document.getElementById('team-list-wrap').innerHTML=teamListHtml();refocusSearch('team-search');}
 let _teamId=100;
-function addTeamMember(){
+async function addTeamMember(){
   const name=document.getElementById('am-name').value.trim();
   const email=document.getElementById('am-email').value.trim();
   const role=document.getElementById('am-role').value.trim()||'Team Member';
   const type=document.getElementById('am-type').value;
   if(!name){toast('Name is required','var(--danger)');return;}
   const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
-  STATE.team.push({id:++_teamId,name,email:email||'—',role,type,color:colors[STATE.team.length%colors.length]});
-  saveState();closeModal('modal-add-member');
-  ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
-  renderSection();toast(`${name} added to the team`,'var(--green)');
+  if(type==='agent'){
+    STATE.team.push({id:++_teamId,name,email:email||'—',role,type,color:colors[STATE.team.length%colors.length]});
+    saveState();closeModal('modal-add-member');
+    ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
+    renderSection();toast(`${name} added to the team`,'var(--green)');
+    return;
+  }
+  if(!email){toast('Email is required to invite a teammate','var(--danger)');return;}
+  if(!currentUser.companyId||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
+  const btn=document.querySelector('#modal-add-member .btn-acc');
+  if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
+  try{
+    const redirectTo=window.location.origin+window.location.pathname.replace(/dashboard\.html$/,'index.html');
+    const {data,error}=await _sb.functions.invoke('invite-team-member',{body:{email,full_name:name,job_title:role,redirect_to:redirectTo}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    closeModal('modal-add-member');
+    ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
+    toast(`Invite sent to ${email}`,'var(--green)');
+    STATE.team.push({id:++_teamId,name,email,role,type:'human',color:colors[STATE.team.length%colors.length]});
+    saveState();renderSection();
+  }catch(e){
+    toast('Could not send invite — '+e.message,'var(--danger)');
+  }
+  if(btn){btn.disabled=false;btn.textContent='Add Member';}
 }
 function removeTeamMember(id){
+  const m=STATE.team.find(x=>x.id===id);
+  if(m&&m.dbId){toast('Removing teammates isn\'t available yet — contact support','var(--warning)');return;}
   STATE.team=STATE.team.filter(m=>m.id!==id);saveState();renderSection();toast('Member removed','var(--accent)');
 }
 
@@ -993,15 +1059,22 @@ function saveCurrentAsResponse(){
   const label=prompt('Name this saved response:','Quick reply');
   if(!label)return;
   if(!STATE.savedResponses)STATE.savedResponses=[];
-  STATE.savedResponses.push({id:++_savedRespId,label,text});
+  const r={id:++_savedRespId,label,text};
+  STATE.savedResponses.push(r);
   saveState();
   const p=document.getElementById('saved-pop'); if(p)p.innerHTML=renderSavedPopHtml();
   toast('Saved response added','var(--green)');
+  if(currentUser.companyId&&_sb){
+    _sb.from('saved_responses').insert({client_id:currentUser.companyId,label,text,created_by:currentUser.id}).select().single()
+      .then(({data,error})=>{ if(!error&&data)r.dbId=data.id; }).catch(()=>{});
+  }
 }
 function deleteSavedResponse(id){
+  const r=(STATE.savedResponses||[]).find(x=>x.id===id);
   STATE.savedResponses=(STATE.savedResponses||[]).filter(x=>x.id!==id);
   saveState();
   const p=document.getElementById('saved-pop'); if(p)p.innerHTML=renderSavedPopHtml();
+  if(r&&r.dbId&&_sb){ try{ _sb.from('saved_responses').delete().eq('id',r.dbId); }catch(e){} }
 }
 function downloadChat(id){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
@@ -1145,6 +1218,9 @@ function toggleIntegration(key,checked){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
   i.connected=checked;saveState();
   toast(checked?`${i.name} connected`:`${i.name} disconnected`,checked?'var(--green)':'var(--accent)');
+  if(currentUser.companyId&&_sb){
+    _sb.from('integration_connections').upsert({client_id:currentUser.companyId,integration_key:key,connected:checked,updated_at:new Date().toISOString()},{onConflict:'client_id,integration_key'}).then(()=>{}).catch(()=>{});
+  }
 }
 
 // ─── NOTIFICATIONS ───────────────────────────────────────
@@ -1252,7 +1328,7 @@ function gsGoTeam(){ toggleGlobalSearch(); showSection('teams'); }
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
 function renderSettings(){
-  const tabs=[['profile','Profile'],['company','Company'],['display','Display'],['kb','ARIA Knowledge Base'],['billing','Billing']];
+  const tabs=[['profile','Profile'],['company','Company'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
   return `
   <div class="settings-nav">${tabs.map(([k,l])=>`<button class="tab-btn ${k===_settingsTab?'active':''}" onclick="setSettingsTab('${k}')">${l}</button>`).join('')}</div>
   <div id="settings-body">${renderSettingsTab(_settingsTab)}</div>`;
@@ -1273,6 +1349,12 @@ function renderSettingsTab(t){
       <div class="form-group"><label>Title</label><input class="rb-input" id="set-title" value="${STATE.profile.title||''}" placeholder="e.g. Director"/></div>
       <div class="form-group"><label>Email</label><input class="rb-input" value="${currentUser.email}" disabled/></div>
       <button class="btn btn-acc" onclick="saveProfile()">Save Changes</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Change Password</div>
+      <div class="form-group"><label>New Password</label><input class="rb-input" type="password" id="set-pwd-1" placeholder="Min. 8 characters"/></div>
+      <div class="form-group"><label>Confirm New Password</label><input class="rb-input" type="password" id="set-pwd-2" placeholder="Repeat password"/></div>
+      <button class="btn btn-acc" onclick="changePassword()">Update Password</button>
     </div>`;
   if(t==='company')return `
     <div class="card">
@@ -1310,18 +1392,20 @@ function renderSettingsTab(t){
           <button class="btn btn-ghost btn-sm" onclick="removeKbDoc(${d.id})">Remove</button>
         </div>`).join(''):'<div class="empty-state">No documents yet.</div>'}
     </div>`;
-  if(t==='billing')return `
+  if(t==='invoices')return `
     <div class="card">
-      <div class="card-title">Current Plan</div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700">${STATE.billing.plan}</div><div style="font-size:.78rem;color:var(--text-3)">${STATE.billing.price} · renews ${STATE.billing.renews}</div></div>
-        <button class="btn btn-ghost" onclick="toast('Contact your account manager to change plans','var(--accent)')">Change Plan</button>
+      <div class="card-title">Pay via Wise</div>
+      <p style="font-size:.82rem;color:var(--text-3);line-height:1.7;margin-bottom:1rem">Invoices are settled by bank transfer through <strong>Wise</strong> — no card or subscription on file. Send payment to the details below, using the invoice number as your reference.</p>
+      <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:.25rem 1.1rem">
+        <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--text-3)">Payee name</span><span style="font-weight:600">${STATE.wisePayee.name}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--text-3)">Wise email</span><span style="font-weight:600">${STATE.wisePayee.email}</span></div>
+        <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;font-size:.82rem"><span style="color:var(--text-3)">Reference</span><span style="font-weight:600;text-align:right">${STATE.wisePayee.reference}</span></div>
       </div>
     </div>
     <div class="card">
       <div class="card-title">Invoices</div>
-      <table class="rb-table"><thead><tr><th>Invoice</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
-        ${STATE.billing.invoices.map(i=>`<tr><td style="color:var(--accent)">${i.id}</td><td>${i.date}</td><td>${i.amount}</td><td><span class="badge badge-active">${i.status}</span></td><td><button class="btn btn-ghost btn-sm" onclick="toast('Downloading ${i.id}...','var(--accent)')">Download</button></td></tr>`).join('')}
+      <table class="rb-table"><thead><tr><th>Invoice</th><th>Issued</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
+        ${STATE.invoices.map(i=>`<tr><td style="color:var(--accent)">${i.id}</td><td>${i.date}</td><td>${i.dueDate}</td><td>${i.amount}</td><td><span class="badge ${i.status==='Paid'?'badge-active':i.status==='Overdue'?'badge-high':'badge-med'}">${i.status}</span></td><td style="display:flex;gap:.4rem">${i.status!=='Paid'?`<button class="btn btn-acc btn-sm" onclick="toast('Opening Wise to pay ${i.id}…','var(--accent)')">Pay with Wise</button>`:''}<button class="btn btn-ghost btn-sm" onclick="toast('Downloading ${i.id}...','var(--accent)')">Download</button></td></tr>`).join('')}
       </tbody></table>
     </div>`;
   return '';
@@ -1340,6 +1424,21 @@ function saveProfile(){
   currentUser.name=document.getElementById('set-name').value.trim()||currentUser.name;
   STATE.profile.title=document.getElementById('set-title').value.trim();
   saveState();renderShell();toast('Profile saved','var(--green)');
+}
+async function changePassword(){
+  const p1=document.getElementById('set-pwd-1').value;
+  const p2=document.getElementById('set-pwd-2').value;
+  if(!p1||p1.length<8){toast('Password must be at least 8 characters','var(--danger)');return;}
+  if(p1!==p2){toast('Passwords do not match','var(--danger)');return;}
+  if(!_sb){toast('Connection unavailable right now','var(--danger)');return;}
+  try{
+    const {error}=await _sb.auth.updateUser({password:p1});
+    if(error)throw error;
+    document.getElementById('set-pwd-1').value='';document.getElementById('set-pwd-2').value='';
+    toast('Password updated','var(--green)');
+  }catch(e){
+    toast('Could not update password — '+e.message,'var(--danger)');
+  }
 }
 function saveCompany(){
   STATE.profile.companyName=document.getElementById('set-company-name').value.trim();
@@ -1467,8 +1566,17 @@ function tryAriaAction(text,file){
   if(m){
     const name=t.match(/(?:called|named)\s+(.+)$/i)[1].trim().replace(/["'.]+$/,'');
     if(!STATE.groups)STATE.groups=[];
-    STATE.groups.push({id:++_grpId,name,members:[1],messages:[]});
+    const g={id:++_grpId,name,members:['ARIA'],messages:[]};
+    STATE.groups.push(g);
     saveState(); if(currentSection==='teams')renderSection();
+    if(currentUser.companyId&&_sb){
+      _sb.from('groups').insert({client_id:currentUser.companyId,name,created_by:currentUser.id}).select().single()
+        .then(({data,error})=>{
+          if(error||!data)return;
+          g.dbId=data.id;
+          _sb.from('group_members').insert({group_id:data.id,member_name:'ARIA',is_agent:true}).then(()=>{}).catch(()=>{});
+        }).catch(()=>{});
+    }
     return `Done — I've created the <strong>#${name}</strong> group. Add teammates to it from Teams → Groups.`;
   }
 
@@ -1588,7 +1696,7 @@ function renderGroups(){
 }
 function renderGroupChat(g){
   if(!g)return '<div class="chat-panel"><div class="empty-state" style="margin:auto">Create a group to start chatting</div></div>';
-  const memberNames=g.members.map(id=>{const m=STATE.team.find(x=>x.id===id);return m?m.name:'';}).filter(Boolean);
+  const memberNames=g.members.map(x=>typeof x==='number'?(STATE.team.find(t=>t.id===x)||{}).name:x).filter(Boolean);
   return `
   <div class="chat-panel">
     <div class="chat-panel-hd">
@@ -1614,21 +1722,35 @@ function sendGroupMsg(gid){
   g.messages.push({from:currentUser.name,text,time:new Date().toTimeString().slice(0,5)});
   saveState(); inp.value=''; renderSection();
   setTimeout(()=>{ const box=document.getElementById('group-msgs'); if(box)box.scrollTop=box.scrollHeight; },0);
+  if(g.dbId&&currentUser.companyId&&_sb){
+    try{ _sb.from('group_messages').insert({group_id:g.dbId,client_id:currentUser.companyId,sender_name:currentUser.name,text}); }catch(e){}
+  }
 }
 let _grpId=100;
 function openAddGroup(){
   document.getElementById('ng-name').value='';
-  document.getElementById('ng-members').innerHTML=STATE.team.map(m=>`<label><input type="checkbox" value="${m.id}"/> ${m.name} <span style="color:var(--text-3);font-size:.72rem">— ${m.role}</span></label>`).join('');
+  document.getElementById('ng-members').innerHTML=STATE.team.map(m=>`<label><input type="checkbox" value="${m.name}" data-agent="${m.type==='agent'}"/> ${m.name} <span style="color:var(--text-3);font-size:.72rem">— ${m.role}</span></label>`).join('');
   openModal('modal-add-group');
 }
 function addGroup(){
   const name=document.getElementById('ng-name').value.trim();
   if(!name){toast('Group name is required','var(--danger)');return;}
-  const members=Array.from(document.querySelectorAll('#ng-members input:checked')).map(el=>parseInt(el.value,10));
+  const checked=Array.from(document.querySelectorAll('#ng-members input:checked'));
+  const members=checked.map(el=>el.value);
   if(!STATE.groups)STATE.groups=[];
-  STATE.groups.push({id:++_grpId,name,members,messages:[]});
+  const g={id:++_grpId,name,members,messages:[]};
+  STATE.groups.push(g);
   saveState();closeModal('modal-add-group');_activeGroupId=_grpId;renderSection();
   toast(`#${name} created`,'var(--green)');
+  if(currentUser.companyId&&_sb){
+    _sb.from('groups').insert({client_id:currentUser.companyId,name,created_by:currentUser.id}).select().single()
+      .then(({data,error})=>{
+        if(error||!data)return;
+        g.dbId=data.id;
+        const rows=checked.map(el=>({group_id:data.id,member_name:el.value,is_agent:el.dataset.agent==='true'}));
+        if(rows.length)_sb.from('group_members').insert(rows).then(()=>{}).catch(()=>{});
+      }).catch(()=>{});
+  }
 }
 </script>
 </body>
