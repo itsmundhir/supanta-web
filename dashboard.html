@@ -77,7 +77,8 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .sidebar-backdrop.open{display:block}
 
 /* MAIN */
-.main{flex:1;margin-left:76px;min-height:100vh;background:var(--bg)}
+.main{flex:1;margin-left:76px;min-height:100vh;background:var(--bg);transition:margin-left .22s ease}
+.sidebar:hover ~ .main,.sidebar:focus-within ~ .main{margin-left:250px}
 .topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 2rem;border-bottom:1px solid var(--border);background:var(--bg);z-index:40}
 .page-title{font-family:var(--fd);font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
 .page-sub{font-size:.78rem;color:var(--text-3);margin-top:2px}
@@ -115,6 +116,13 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .rb-textarea{min-height:90px;resize:vertical}
 .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem}
 label{font-size:.76rem;font-weight:500;color:var(--text-2)}
+.search-bar-wrap{position:relative;margin-bottom:1.1rem;max-width:340px}
+.search-bar-wrap svg{position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
+.search-bar{width:100%;background:var(--bg-2);border:1px solid var(--border-light);border-radius:9px;padding:.62rem .9rem .62rem 2.35rem;color:var(--text);font-size:.83rem;font-family:var(--fb);outline:none;transition:border-color .2s,box-shadow .2s}
+.search-bar:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,194,255,.12)}
+.search-bar::placeholder{color:var(--text-3)}
+.toolbar-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.toolbar-row .search-bar-wrap{margin-bottom:0;flex:1}
 .tabs{display:flex;gap:.4rem;margin-bottom:1.25rem;border-bottom:1px solid var(--border);padding-bottom:.9rem;flex-wrap:wrap}
 .tab-btn{background:transparent;border:1px solid var(--border);border-radius:7px;color:var(--text-2);font-size:.78rem;padding:.45rem .95rem;cursor:pointer;transition:all .2s}
 .tab-btn:hover{border-color:var(--border-light);color:var(--text)}
@@ -222,6 +230,7 @@ input:checked + .slider::before{transform:translateX(18px)}
   .sidebar .lbl{opacity:1}
   .sidebar .nolbl{display:none}
   .main{margin-left:0}
+  .sidebar:hover ~ .main,.sidebar:focus-within ~ .main{margin-left:0}
   .sidebar-mobile-toggle{display:flex}
   .content{padding:1.1rem}
   .topbar{padding:1rem 1.1rem 1rem 4.2rem}
@@ -264,10 +273,22 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="topbar">
       <div><div class="page-title" id="page-title">Pulse</div><div class="page-sub" id="page-sub"></div></div>
       <div class="topbar-right">
+        <button class="icon-btn" onclick="toggleGlobalSearch()" aria-label="Search everything">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
         <button class="icon-btn" onclick="toggleNotifPanel()" aria-label="Notifications">
           🔔<span class="dot-badge" id="topbar-notif-dot" style="display:none"></span>
         </button>
         <div class="avatar" id="topbar-avatar" style="cursor:pointer" onclick="showSection('settings')"></div>
+      </div>
+      <div class="notif-panel" id="global-search-panel">
+        <div style="padding:.75rem;border-bottom:1px solid var(--border)">
+          <div class="search-bar-wrap" style="margin-bottom:0">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--text-3)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="search-bar" id="global-search-input" placeholder="Search tickets, chats, team…" oninput="runGlobalSearch(this.value)"/>
+          </div>
+        </div>
+        <div id="global-search-results"></div>
       </div>
       <div class="notif-panel" id="notif-panel"></div>
     </div>
@@ -510,11 +531,25 @@ function downloadReport(name){
 }
 
 // ─── TEAMS ───────────────────────────────────────────────
+function searchIcon(){return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`;}
+function refocusSearch(id){
+  const el=document.getElementById(id); if(!el)return;
+  const pos=el.value.length; el.focus(); try{el.setSelectionRange(pos,pos);}catch(e){}
+}
+let _teamSearch='';
 function renderTeams(){
   return `
-  <div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-acc" onclick="openModal('modal-add-member')">+ Add to Team</button></div>
-  <div class="card" style="padding:0">
-    ${STATE.team.map(m=>`
+  <div class="toolbar-row">
+    <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="team-search" placeholder="Search team members…" value="${_teamSearch}" oninput="filterTeams(this.value)"/></div>
+    <button class="btn btn-acc" onclick="openModal('modal-add-member')">+ Add to Team</button>
+  </div>
+  <div class="card" style="padding:0" id="team-list-wrap">${teamListHtml()}</div>`;
+}
+function teamListHtml(){
+  const q=_teamSearch.trim().toLowerCase();
+  const list=STATE.team.filter(m=>!q||m.name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q)||m.role.toLowerCase().includes(q));
+  if(!list.length)return '<div class="empty-state">No team members match your search.</div>';
+  return list.map(m=>`
       <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
         ${avatarHtml(m.name,m.color,40)}
         <div style="flex:1;min-width:0">
@@ -522,9 +557,9 @@ function renderTeams(){
           <div style="font-size:.76rem;color:var(--text-3)">${m.role} · ${m.email}</div>
         </div>
         ${m.id!==1?`<button class="btn btn-ghost btn-sm" onclick="removeTeamMember(${m.id})">Remove</button>`:''}
-      </div>`).join('')}
-  </div>`;
+      </div>`).join('');
 }
+function filterTeams(v){_teamSearch=v;document.getElementById('team-list-wrap').innerHTML=teamListHtml();refocusSearch('team-search');}
 let _teamId=100;
 function addTeamMember(){
   const name=document.getElementById('am-name').value.trim();
@@ -543,29 +578,46 @@ function removeTeamMember(id){
 }
 
 // ─── CHATS ───────────────────────────────────────────────
-let _chatTab='active', _activeChatId=null;
+let _chatTab='active', _activeChatId=null, _chatSearch='';
+function chatFilteredList(){
+  const q=_chatSearch.trim().toLowerCase();
+  return STATE.chats.filter(c=>c.status===_chatTab && (!q||c.customer.toLowerCase().includes(q)||c.last.toLowerCase().includes(q)||c.channel.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)));
+}
 function renderChats(){
-  const list=STATE.chats.filter(c=>c.status===_chatTab);
+  const list=chatFilteredList();
   if(!_activeChatId||!list.find(c=>c.id===_activeChatId))_activeChatId=list[0]?list[0].id:null;
   return `
   <div class="tabs">
     ${['active','archived','done'].map(t=>`<button class="tab-btn ${t===_chatTab?'active':''}" onclick="setChatTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
   </div>
+  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
   <div class="chat-layout">
-    <div class="chat-list">
-      ${list.length?list.map(c=>`
+    <div class="chat-list" id="chat-list-wrap">${chatListHtml(list)}</div>
+    <div id="chat-panel-wrap">${renderChatPanel(list.find(c=>c.id===_activeChatId))}</div>
+  </div>`;
+}
+function chatListHtml(list){
+  list=list||chatFilteredList();
+  if(!list.length)return '<div class="empty-state">No chats match.</div>';
+  return list.map(c=>`
         <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}">
           ${avatarHtml(c.customer,'#1a2d47',36)}
           <div class="chat-row-body">
             <div class="chat-row-name">${c.customer} <span class="chan-pill">${c.channel}</span></div>
             <div class="chat-row-msg">${c.last}</div>
           </div>
-        </div>`).join(''):'<div class="empty-state">No chats here.</div>'}
-    </div>
-    <div id="chat-panel-wrap">${renderChatPanel(list.find(c=>c.id===_activeChatId))}</div>
-  </div>`;
+        </div>`).join('');
 }
 function setChatTab(t){_chatTab=t;_activeChatId=null;renderSection();}
+function filterChats(v){
+  _chatSearch=v;
+  const list=chatFilteredList();
+  if(!_activeChatId||!list.find(c=>c.id===_activeChatId))_activeChatId=list[0]?list[0].id:null;
+  document.getElementById('chat-list-wrap').innerHTML=chatListHtml(list);
+  document.getElementById('chat-panel-wrap').innerHTML=renderChatPanel(list.find(c=>c.id===_activeChatId));
+  wireChatList();
+  refocusSearch('chat-search');
+}
 function wireChatList(){
   document.querySelectorAll('.chat-row').forEach(row=>{
     row.addEventListener('click',()=>{ _activeChatId=row.dataset.id; renderSection(); });
@@ -599,16 +651,27 @@ function downloadChat(id){
 }
 
 // ─── TICKETS ─────────────────────────────────────────────
+let _ticketSearch='';
+const TK_COLS=['active','archived','done'], TK_LABELS={active:'Active',archived:'Archived',done:'Done'};
 function renderTickets(){
-  const cols=['active','archived','done'];
-  const labels={active:'Active',archived:'Archived',done:'Done'};
   return `
-  <div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-acc" onclick="openAddTicket()">+ New Ticket</button></div>
-  <div class="kanban">
-    ${cols.map(col=>{
-      const items=STATE.tickets.filter(t=>t.status===col);
-      return `<div class="kanban-col">
-        <div class="kanban-col-hd"><span>${labels[col]}</span><span class="badge badge-${col}">${items.length}</span></div>
+  <div class="toolbar-row">
+    <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="ticket-search" placeholder="Search tickets by subject, client, ID or owner…" value="${_ticketSearch}" oninput="filterTickets(this.value)"/></div>
+    <button class="btn btn-acc" onclick="openAddTicket()">+ New Ticket</button>
+  </div>
+  <div class="kanban" id="kanban-wrap">${kanbanHtml()}</div>`;
+}
+function ticketFilteredList(){
+  const q=_ticketSearch.trim().toLowerCase();
+  if(!q)return STATE.tickets;
+  return STATE.tickets.filter(t=>t.subject.toLowerCase().includes(q)||t.client.toLowerCase().includes(q)||t.owner.toLowerCase().includes(q)||t.id.toLowerCase().includes(q));
+}
+function kanbanHtml(){
+  const all=ticketFilteredList();
+  return TK_COLS.map(col=>{
+    const items=all.filter(t=>t.status===col);
+    return `<div class="kanban-col">
+        <div class="kanban-col-hd"><span>${TK_LABELS[col]}</span><span class="badge badge-${col}">${items.length}</span></div>
         <div class="kanban-body" data-col="${col}">
           ${items.map(t=>`
             <div class="tk-card" draggable="true" data-id="${t.id}">
@@ -623,8 +686,13 @@ function renderTickets(){
             </div>`).join('')}
         </div>
       </div>`;
-    }).join('')}
-  </div>`;
+  }).join('');
+}
+function filterTickets(v){
+  _ticketSearch=v;
+  document.getElementById('kanban-wrap').innerHTML=kanbanHtml();
+  wireKanban();
+  refocusSearch('ticket-search');
 }
 function openAddTicket(){
   const sel=document.getElementById('nt-owner');
@@ -708,6 +776,7 @@ function markRead(id){ const n=STATE.notifications.find(x=>x.id===id); if(n){n.r
 function markAllRead(){ STATE.notifications.forEach(n=>n.read=true); saveState();renderShell();renderSection(); }
 function toggleNotifPanel(){
   const p=document.getElementById('notif-panel');
+  document.getElementById('global-search-panel').classList.remove('open');
   const open=!p.classList.contains('open');
   p.classList.toggle('open',open);
   if(open){
@@ -721,6 +790,54 @@ document.addEventListener('click',e=>{
   const p=document.getElementById('notif-panel');
   if(p&&p.classList.contains('open')&&!p.contains(e.target)&&!e.target.closest('.icon-btn'))p.classList.remove('open');
 });
+
+// ─── GLOBAL SEARCH (topbar) ──────────────────────────────
+function toggleGlobalSearch(){
+  const p=document.getElementById('global-search-panel');
+  document.getElementById('notif-panel').classList.remove('open');
+  const open=!p.classList.contains('open');
+  p.classList.toggle('open',open);
+  if(open){
+    document.getElementById('global-search-results').innerHTML='<div class="empty-state">Type to search across tickets, chats and your team.</div>';
+    setTimeout(()=>document.getElementById('global-search-input').focus(),10);
+  }
+}
+document.addEventListener('click',e=>{
+  const p=document.getElementById('global-search-panel');
+  if(p&&p.classList.contains('open')&&!p.contains(e.target)&&!e.target.closest('.icon-btn'))p.classList.remove('open');
+});
+function gsGroup(label,rows){ return rows.length?`<div class="nav-sec-lbl" style="opacity:1;padding:.7rem 1.1rem .35rem">${label}</div>${rows.join('')}`:''; }
+function runGlobalSearch(v){
+  const q=v.trim().toLowerCase();
+  const box=document.getElementById('global-search-results');
+  if(!q){ box.innerHTML='<div class="empty-state">Type to search across tickets, chats and your team.</div>'; return; }
+
+  const tk=STATE.tickets.filter(t=>t.subject.toLowerCase().includes(q)||t.client.toLowerCase().includes(q)||t.owner.toLowerCase().includes(q)||t.id.toLowerCase().includes(q)).slice(0,5)
+    .map(t=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTicket('${t.id}')"><div class="notif-dot" style="background:var(--accent)"></div><div><div>${t.subject}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${t.id} · ${t.client} · ${t.owner}</div></div></div>`);
+
+  const ch=STATE.chats.filter(c=>c.customer.toLowerCase().includes(q)||c.last.toLowerCase().includes(q)||c.channel.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)).slice(0,5)
+    .map(c=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoChat('${c.id}')"><div class="notif-dot" style="background:var(--green)"></div><div><div>${c.customer} <span style="color:var(--text-3);font-weight:400">— ${c.channel}</span></div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${c.last}</div></div></div>`);
+
+  const tm=STATE.team.filter(m=>m.name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q)||m.role.toLowerCase().includes(q)).slice(0,5)
+    .map(m=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTeam()"><div class="notif-dot" style="background:#a99cff"></div><div><div>${m.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${m.role}</div></div></div>`);
+
+  const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm);
+  box.innerHTML=html||'<div class="empty-state">No matches for "'+v+'"</div>';
+}
+function gsGoTicket(id){
+  toggleGlobalSearch();
+  const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  _ticketSearch='';showSection('tickets');
+  document.getElementById('ticket-search').value=t.subject;
+  filterTickets(t.subject);
+}
+function gsGoChat(id){
+  toggleGlobalSearch();
+  const c=STATE.chats.find(x=>x.id===id); if(!c)return;
+  _chatTab=c.status;_activeChatId=c.id;_chatSearch='';
+  showSection('chats');
+}
+function gsGoTeam(){ toggleGlobalSearch(); showSection('teams'); }
 
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
