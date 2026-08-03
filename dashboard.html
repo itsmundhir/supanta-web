@@ -1315,7 +1315,7 @@ function initAriaScope(){
   if(currentUser.companyId){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>Scoped to ${co}`;
-    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA. I can only see and discuss <strong>${co}</strong>'s data — tickets, chats and knowledge base — never another company's. I can also take action for you: create tickets, add documents to your knowledge base, and more — just ask.</div>`;
+    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA — your assistant for <strong>${co}</strong>. Ask me anything, or ask me to do something, like "create a ticket for a broken checkout" or "add this doc to the knowledge base". How can I help today?</div>`;
     inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA — or tell it what to do…';
   }else{
     statusEl.innerHTML=`<span class="live-dot" style="background:var(--warning)"></span>Not linked to a business`;
