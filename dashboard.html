@@ -397,7 +397,7 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="aria-chat-hdr">
       <div class="aria-chat-hdr-left">
         <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
-        <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status"><span class="live-dot"></span>Online</div></div>
+        <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status" id="aria-scope-status"><span class="live-dot"></span>Online</div></div>
       </div>
       <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
     </div>
@@ -406,7 +406,7 @@ input:checked + .slider::before{transform:translateX(18px)}
     </div>
     <div class="aria-chat-input-row">
       <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
-      <button class="aria-send-btn" onclick="sendAriaMsg()">Send</button>
+      <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     </div>
   </div>
   <button class="aria-trigger-btn" onclick="toggleAriaChat()">
@@ -437,10 +437,19 @@ async function boot(){
     id:sbUser.id,
     email:sbUser.email,
     name:profile?.full_name||sbUser.email.split('@')[0],
+    companyId:profile?.client_id||null,
+    companyName:null
   };
+  // Every business only ever sees its own client_id — this is what keeps ARIA and the
+  // knowledge base scoped to a single company and stops data crossing between businesses.
+  if(currentUser.companyId){
+    try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
+  }
   initTheme();
   loadState();
+  if(currentUser.companyName && (!STATE.profile.companyName || STATE.profile.companyName==='Your Company'))STATE.profile.companyName=currentUser.companyName;
   renderShell();
+  initAriaScope();
   showSection('pulse');
   document.getElementById('auth-gate').style.display='none';
   document.getElementById('app').classList.add('ready');
@@ -500,6 +509,14 @@ function defaultState(){
       {id:'CHT-091',customer:'Priya Patel',channel:'X',status:'archived',last:'Resolved via email instead',owner:'Nomsa Dube',messages:[
         {who:'customer',text:'Anyone there? Been waiting on a reply for my ticket.',time:'Mon'},
         {who:'agent',text:'Hi Priya, apologies for the delay — I\'ve moved this to email so we can share account details securely.',time:'Mon'}
+      ]},
+      {id:'CHT-107',customer:'Thandeka Nkosi',channel:'Facebook',status:'active',last:'Is the blue one back in stock?',owner:'Zanele Mokoena',messages:[
+        {who:'customer',text:'Is the blue one back in stock?',time:'14:02'},
+        {who:'aria',text:'Yes — the blue variant was restocked this morning. Want me to send you the link?',time:'14:03'}
+      ]},
+      {id:'CHT-105',customer:'David Kim',channel:'Phone',status:'done',last:'Call completed — 4m 12s',owner:'Liam Dlamini',messages:[
+        {who:'customer',text:'(Call transcript) Hi, I need help cancelling my subscription.',time:'13:10'},
+        {who:'agent',text:'(Call transcript) No problem, I\'ve processed the cancellation — you\'ll get a confirmation email shortly.',time:'13:14'}
       ]}
     ],
     tickets:[
@@ -674,10 +691,13 @@ function removeTeamMember(id){
 }
 
 // ─── CHATS ───────────────────────────────────────────────
-let _chatTab='active', _activeChatId=null, _chatSearch='';
+let _chatTab='active', _activeChatId=null, _chatSearch='', _chatChannel='all';
+const CHAT_CHANNELS=['WhatsApp','Email','Instagram','X','Facebook','Phone'];
 function chatFilteredList(){
   const q=_chatSearch.trim().toLowerCase();
-  return STATE.chats.filter(c=>c.status===_chatTab && (!q||c.customer.toLowerCase().includes(q)||c.last.toLowerCase().includes(q)||c.channel.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)));
+  return STATE.chats.filter(c=>c.status===_chatTab
+    && (_chatChannel==='all'||c.channel===_chatChannel)
+    && (!q||c.customer.toLowerCase().includes(q)||c.last.toLowerCase().includes(q)||c.channel.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)||c.id.toLowerCase().includes(q)));
 }
 function renderChats(){
   const list=chatFilteredList();
@@ -686,12 +706,18 @@ function renderChats(){
   <div class="tabs">
     ${['active','archived','done'].map(t=>`<button class="tab-btn ${t===_chatTab?'active':''}" onclick="setChatTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
   </div>
+  <div style="font-size:.7rem;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-bottom:.5rem">All channels, one inbox</div>
+  <div class="tabs" style="margin-bottom:1rem;padding-bottom:0;border-bottom:none">
+    <button class="tab-btn ${_chatChannel==='all'?'active':''}" onclick="setChatChannel('all')">All</button>
+    ${CHAT_CHANNELS.map(ch=>`<button class="tab-btn ${_chatChannel===ch?'active':''}" onclick="setChatChannel('${ch}')">${INT_ICONS[ch.toLowerCase()]||''} ${ch}</button>`).join('')}
+  </div>
   <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
   <div class="chat-layout">
     <div class="chat-list" id="chat-list-wrap">${chatListHtml(list)}</div>
     <div id="chat-panel-wrap">${renderChatPanel(list.find(c=>c.id===_activeChatId))}</div>
   </div>`;
 }
+function setChatChannel(ch){_chatChannel=ch;_activeChatId=null;renderSection();}
 function chatListHtml(list){
   list=list||chatFilteredList();
   if(!list.length)return '<div class="empty-state">No chats match.</div>';
@@ -1035,10 +1061,13 @@ let _kbId=100;
 async function uploadKbDocs(){
   const files=document.getElementById('kb-file-input').files;
   if(!files.length){toast('Choose at least one file','var(--danger)');return;}
+  if(!currentUser.companyId){toast('Your account isn\'t linked to a business — contact support before adding documents','var(--danger)');return;}
   const today=new Date().toISOString().slice(0,10);
   Array.from(files).forEach(f=>{
     STATE.kbDocs.push({id:++_kbId,name:f.name,size:Math.round(f.size/1024)+' KB',added:today});
-    if(_sb){ try{ _sb.from('knowledge_base').insert({title:f.name,content:'',category:'client_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
+    // client_id scopes this document to THIS business only — required so ARIA never
+    // surfaces it while answering another company's questions.
+    if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:currentUser.companyId,title:f.name,content:'',category:'client_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
   });
   saveState();document.getElementById('kb-file-input').value='';renderSection();
   toast("Document(s) added to ARIA's knowledge base",'var(--green)');
@@ -1057,14 +1086,34 @@ function toast(msg,color){
 }
 
 // ─── ARIA WIDGET (connects to api.supanta.com, same as the public site) ───
+// IMPORTANT: every request is scoped with THIS business's client_id (from
+// user_profiles.client_id via Supabase auth). ARIA must never be called
+// without it and must never reuse another company's id — that's what
+// stops knowledge/context leaking between businesses sharing the platform.
 const ARIA_SESSION_ID=(crypto.randomUUID?crypto.randomUUID():(Date.now()+'-'+Math.random().toString(36).slice(2)));
-const ARIA_SUPANTA_CLIENT_ID='30aa317f-05fd-4e14-b979-98a9348933df';
+function initAriaScope(){
+  const statusEl=document.getElementById('aria-scope-status');
+  const msgs=document.getElementById('aria-msgs');
+  const inp=document.getElementById('aria-input');
+  const btn=document.getElementById('aria-send-btn');
+  if(currentUser.companyId){
+    const co=currentUser.companyName||STATE.profile.companyName||'your business';
+    statusEl.innerHTML=`<span class="live-dot"></span>Scoped to ${co}`;
+    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA. I can only see and discuss <strong>${co}</strong>'s data — tickets, chats and knowledge base — never another company's.</div>`;
+    inp.disabled=false;btn.disabled=false;inp.placeholder='Ask ARIA…';
+  }else{
+    statusEl.innerHTML=`<span class="live-dot" style="background:var(--warning)"></span>Not linked to a business`;
+    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Your account isn't linked to a business yet, so I can't answer company-specific questions here — this keeps me from ever mixing up data between businesses. Please contact support to get your workspace connected.</div>`;
+    inp.disabled=true;btn.disabled=true;inp.placeholder='ARIA unavailable — no business linked';
+  }
+}
 function toggleAriaChat(){
   const b=document.getElementById('aria-chat-box');
   b.classList.toggle('open');
-  if(b.classList.contains('open'))document.getElementById('aria-input').focus();
+  if(b.classList.contains('open')&&!document.getElementById('aria-input').disabled)document.getElementById('aria-input').focus();
 }
 async function sendAriaMsg(){
+  if(!currentUser.companyId)return;
   const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
   const msgs=document.getElementById('aria-msgs');
   msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;
@@ -1075,7 +1124,7 @@ async function sendAriaMsg(){
     const res=await fetch('https://api.supanta.com/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:ARIA_SUPANTA_CLIENT_ID,message:msg,context:'dashboard',user_email:currentUser?currentUser.email:null})
+      body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:currentUser.companyId,message:msg,context:'dashboard',user_email:currentUser.email})
     });
     if(!res.ok)throw new Error('bad response');
     const data=await res.json();
