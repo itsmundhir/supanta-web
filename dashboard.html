@@ -49,30 +49,35 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 #app.ready{display:flex}
 
 /* SIDEBAR */
-.sidebar{width:250px;background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:50;transition:transform .25s ease}
-.sb-logo{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-size:1rem;font-weight:700;padding:1.25rem;border-bottom:1px solid var(--border)}
-.sb-user{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.7rem}
+.sidebar{width:76px;background:var(--bg-2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:150;transition:width .22s var(--ease,ease);overflow:hidden;box-shadow:0 0 0 rgba(0,0,0,0)}
+.sidebar:hover,.sidebar:focus-within{width:250px;box-shadow:8px 0 32px rgba(0,0,0,.28)}
+.sb-logo{display:flex;align-items:center;gap:10px;font-family:var(--fd);font-size:1rem;font-weight:700;padding:1.25rem;border-bottom:1px solid var(--border);white-space:nowrap}
+.sb-user{padding:.9rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.7rem;white-space:nowrap}
 .avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;flex-shrink:0;background-size:cover;background-position:center;font-family:var(--fd);color:#04121f;background-color:var(--accent)}
 .sb-user-name{font-size:.83rem;font-weight:600}
 .sb-user-title{font-size:.72rem;color:var(--text-3);margin-top:1px}
-.sb-nav{flex:1;padding:1rem 0;overflow-y:auto}
-.nav-sec-lbl{font-size:.62rem;font-weight:700;color:var(--text-3);letter-spacing:.1em;text-transform:uppercase;padding:.6rem 1.25rem .4rem}
-.nav-item{display:flex;align-items:center;gap:.7rem;padding:.65rem 1.5rem;font-size:.85rem;color:var(--text-2);cursor:pointer;transition:background .2s,color .2s;border-right:2px solid transparent}
+.sb-nav{flex:1;padding:1rem 0;overflow-y:auto;overflow-x:hidden}
+.nav-sec-lbl{font-size:.62rem;font-weight:700;color:var(--text-3);letter-spacing:.1em;text-transform:uppercase;padding:.6rem 1.25rem .4rem;white-space:nowrap}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.65rem 1.5rem;font-size:.85rem;color:var(--text-2);cursor:pointer;transition:background .2s,color .2s;border-right:2px solid transparent;white-space:nowrap}
 .nav-item:hover{background:var(--bg-3);color:var(--text)}
 .nav-item.active{background:rgba(0,194,255,.08);color:var(--accent);border-color:var(--accent)}
 .nav-ico{width:18px;height:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .nav-badge{margin-left:auto;font-size:.65rem;font-weight:700;background:var(--danger);color:#fff;padding:1px 6px;border-radius:100px}
 .sb-bottom{border-top:1px solid var(--border);padding:.6rem 0}
-.sb-foot{padding:1rem 1.25rem}
-.btn-logout{width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;color:var(--text-2);padding:.6rem;font-size:.78rem;cursor:pointer;transition:color .2s,border-color .2s}
+.sb-foot{padding:1rem 1.25rem;white-space:nowrap}
+.btn-logout{width:100%;background:var(--bg-3);border:1px solid var(--border);border-radius:8px;color:var(--text-2);padding:.6rem;font-size:.78rem;cursor:pointer;transition:color .2s,border-color .2s;overflow:hidden;white-space:nowrap}
 .btn-logout:hover{color:var(--danger);border-color:rgba(255,77,109,.35)}
+.lbl{opacity:0;transition:opacity .12s ease}
+.sidebar:hover .lbl,.sidebar:focus-within .lbl{opacity:1}
+.nolbl{display:inline;transition:opacity .12s ease}
+.sidebar:hover .nolbl,.sidebar:focus-within .nolbl{display:none}
 
 .sidebar-mobile-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:301;width:40px;height:40px;border-radius:10px;background:var(--bg-2);border:1px solid var(--border-light);color:var(--text);align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
 .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:290}
 .sidebar-backdrop.open{display:block}
 
 /* MAIN */
-.main{flex:1;margin-left:250px;min-height:100vh;background:var(--bg)}
+.main{flex:1;margin-left:76px;min-height:100vh;background:var(--bg)}
 .topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 2rem;border-bottom:1px solid var(--border);background:var(--bg);z-index:40}
 .page-title{font-family:var(--fd);font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
 .page-sub{font-size:.78rem;color:var(--text-3);margin-top:2px}
@@ -212,8 +217,10 @@ input:checked + .slider::before{transform:translateX(18px)}
 
 @media(max-width:900px){
   .grid-2,.grid-3,.grid-4,.kanban,.chat-layout{grid-template-columns:1fr}
-  .sidebar{transform:translateX(-100%);z-index:300}
+  .sidebar{width:250px;transform:translateX(-100%);z-index:300}
   .sidebar.open{transform:translateX(0)}
+  .sidebar .lbl{opacity:1}
+  .sidebar .nolbl{display:none}
   .main{margin-left:0}
   .sidebar-mobile-toggle{display:flex}
   .content{padding:1.1rem}
@@ -228,25 +235,25 @@ input:checked + .slider::before{transform:translateX(18px)}
 
 <div id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="sb-logo"><svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg)"/></svg> Supanta</div>
+    <div class="sb-logo"><svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg)"/></svg> <span class="lbl">Supanta</span></div>
     <div class="sb-user">
       <div class="avatar" id="sb-avatar"></div>
-      <div style="min-width:0"><div class="sb-user-name" id="sb-user-name">—</div><div class="sb-user-title" id="sb-user-title">—</div></div>
+      <div class="lbl" style="min-width:0"><div class="sb-user-name" id="sb-user-name">—</div><div class="sb-user-title" id="sb-user-title">—</div></div>
     </div>
     <nav class="sb-nav">
-      <div class="nav-sec-lbl">Workspace</div>
-      <div class="nav-item" data-sec="pulse" onclick="showSection('pulse')"><span class="nav-ico">◔</span> Pulse</div>
-      <div class="nav-item" data-sec="teams" onclick="showSection('teams')"><span class="nav-ico">◎</span> Teams</div>
-      <div class="nav-item" data-sec="chats" onclick="showSection('chats')"><span class="nav-ico">◈</span> Chats</div>
-      <div class="nav-item" data-sec="tickets" onclick="showSection('tickets')"><span class="nav-ico">▤</span> Tickets</div>
-      <div class="nav-item" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> Integrations</div>
+      <div class="nav-sec-lbl lbl">Workspace</div>
+      <div class="nav-item" data-sec="pulse" onclick="showSection('pulse')"><span class="nav-ico">◔</span> <span class="lbl">Pulse</span></div>
+      <div class="nav-item" data-sec="teams" onclick="showSection('teams')"><span class="nav-ico">◎</span> <span class="lbl">Teams</span></div>
+      <div class="nav-item" data-sec="chats" onclick="showSection('chats')"><span class="nav-ico">◈</span> <span class="lbl">Chats</span></div>
+      <div class="nav-item" data-sec="tickets" onclick="showSection('tickets')"><span class="nav-ico">▤</span> <span class="lbl">Tickets</span></div>
+      <div class="nav-item" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
       <div class="sb-bottom">
-        <div class="nav-sec-lbl">General</div>
-        <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico">🔔</span> Notifications <span class="nav-badge" id="notif-nav-badge" style="display:none"></span></div>
-        <div class="nav-item" data-sec="settings" onclick="showSection('settings')"><span class="nav-ico">⚙</span> Settings</div>
+        <div class="nav-sec-lbl lbl">General</div>
+        <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico">🔔</span> <span class="lbl">Notifications</span> <span class="nav-badge lbl" id="notif-nav-badge" style="display:none"></span></div>
+        <div class="nav-item" data-sec="settings" onclick="showSection('settings')"><span class="nav-ico">⚙</span> <span class="lbl">Settings</span></div>
       </div>
     </nav>
-    <div class="sb-foot"><button class="btn-logout" onclick="doLogout()">Sign Out</button></div>
+    <div class="sb-foot"><button class="btn-logout" onclick="doLogout()"><span class="lbl">Sign Out</span><span class="nolbl">⏻</span></button></div>
   </aside>
   <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
   <button class="sidebar-mobile-toggle" id="sidebar-mobile-toggle" onclick="toggleSidebar()" aria-label="Toggle menu">
