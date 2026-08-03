@@ -223,6 +223,52 @@ input:checked + .slider::before{transform:translateX(18px)}
 .toast.show{display:flex}
 .toast-accent{width:4px;align-self:stretch;border-radius:4px;flex-shrink:0}
 
+/* ARIA WIDGET */
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.2s ease-in-out infinite;display:inline-block}
+.aria-widget{position:fixed;bottom:1.75rem;right:1.75rem;z-index:400;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem)}
+.aria-chat-box{width:340px;max-height:calc(100vh - 7rem);background:var(--bg-2);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:none;flex-direction:column}
+.aria-chat-box.open{display:flex}
+.aria-chat-hdr{background:var(--bg-3);border-bottom:1px solid var(--border);padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
+.aria-chat-hdr-left{display:flex;align-items:center;gap:.65rem}
+.aria-chat-av{width:30px;height:30px;border-radius:50%;background:rgba(0,194,255,.12);border:1px solid rgba(0,194,255,.3);display:flex;align-items:center;justify-content:center}
+.aria-chat-name{font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--text)}
+.aria-chat-status{font-size:.65rem;color:var(--green);display:flex;align-items:center;gap:4px}
+.aria-chat-close{background:none;border:none;color:var(--text-3);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .2s;line-height:1}
+.aria-chat-close:hover{color:var(--text)}
+.aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;flex:1;min-height:120px;max-height:340px;overflow-y:auto}
+.aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55}
+.aria-msg-bot{background:var(--bg-3);color:var(--text-2);align-self:flex-start;border-bottom-left-radius:3px}
+.aria-msg-user{background:rgba(0,194,255,.12);color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid rgba(0,194,255,.2)}
+.aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3)}
+.aria-chat-input{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
+.aria-chat-input:focus{border-color:var(--accent)}
+.aria-chat-input::placeholder{color:var(--text-3)}
+.aria-send-btn{background:var(--accent);color:#04121f;border:none;border-radius:8px;padding:.5rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:var(--fd);transition:opacity .2s}
+.aria-send-btn:hover{opacity:.85}
+.aria-trigger-btn{background:var(--accent);color:#04121f;border:none;border-radius:100px;padding:.7rem 1.35rem;font-family:var(--fd);font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.55rem;box-shadow:0 8px 30px rgba(0,194,255,.35);transition:transform .2s,box-shadow .2s}
+.aria-trigger-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,194,255,.45)}
+.aria-trigger-pulse{width:8px;height:8px;border-radius:50%;background:rgba(4,18,31,.5);animation:pulse-dot 1.5s ease-in-out infinite}
+@media(max-width:900px){.aria-chat-box{width:calc(100vw - 3rem)}.aria-widget{right:1rem;bottom:1rem}}
+
+/* CONTEXT MENU */
+.ctx-menu{position:fixed;z-index:800;background:var(--bg-2);border:1px solid var(--border-light);border-radius:10px;box-shadow:var(--shadow);padding:.35rem;min-width:180px;display:none}
+.ctx-menu.open{display:block}
+.ctx-item{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;font-size:.82rem;color:var(--text-2);border-radius:7px;cursor:pointer;transition:background .15s}
+.ctx-item:hover{background:var(--bg-3);color:var(--text)}
+.ctx-item.danger:hover{color:var(--danger)}
+.ctx-sep{height:1px;background:var(--border);margin:.3rem 0}
+
+/* TEAM CHAT (groups) */
+.groups-layout{display:grid;grid-template-columns:280px 1fr;gap:1.1rem;align-items:start}
+.group-list{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.group-row{display:flex;align-items:center;gap:.7rem;padding:.85rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.group-row:last-child{border-bottom:none}
+.group-row:hover,.group-row.active{background:var(--bg-3)}
+.group-icon{width:36px;height:36px;border-radius:9px;background:var(--bg-4);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.member-pick{display:flex;flex-direction:column;gap:.4rem;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:.5rem}
+.member-pick label{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:var(--text);font-weight:400;cursor:pointer;padding:.3rem .2rem}
+
 @media(max-width:900px){
   .grid-2,.grid-3,.grid-4,.kanban,.chat-layout{grid-template-columns:1fr}
   .sidebar{width:250px;transform:translateX(-100%);z-index:300}
@@ -326,7 +372,47 @@ input:checked + .slider::before{transform:translateX(18px)}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-add-group">
+  <div class="modal-box">
+    <div class="modal-hdr"><div class="modal-title">New Group</div><button class="modal-close" onclick="closeModal('modal-add-group')">✕</button></div>
+    <div class="form-group"><label>Group Name</label><input class="rb-input" id="ng-name" placeholder="e.g. Support Team"/></div>
+    <div class="form-group"><label>Members</label><div class="member-pick" id="ng-members"></div></div>
+    <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="addGroup()">Create Group</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"><div class="toast-accent" id="toast-accent"></div><div id="toast-msg"></div></div>
+
+<!-- CONTEXT MENU (chat rows) -->
+<div class="ctx-menu" id="chat-ctx-menu">
+  <div class="ctx-item" id="ctx-download"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Transcript</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-archive"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archive</div>
+  <div class="ctx-item" id="ctx-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Mark as Done</div>
+</div>
+
+<!-- ARIA WIDGET -->
+<div class="aria-widget" id="aria-widget">
+  <div class="aria-chat-box" id="aria-chat-box">
+    <div class="aria-chat-hdr">
+      <div class="aria-chat-hdr-left">
+        <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+        <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status"><span class="live-dot"></span>Online</div></div>
+      </div>
+      <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
+    </div>
+    <div class="aria-chat-msgs" id="aria-msgs">
+      <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account.</div>
+    </div>
+    <div class="aria-chat-input-row">
+      <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+      <button class="aria-send-btn" onclick="sendAriaMsg()">Send</button>
+    </div>
+  </div>
+  <button class="aria-trigger-btn" onclick="toggleAriaChat()">
+    <span class="aria-trigger-pulse"></span> Ask ARIA
+  </button>
+</div>
 
 <script>
 // ─── SUPABASE (shared project with public site) ────────────
@@ -384,6 +470,15 @@ function defaultState(){
       {id:2,name:'Nomsa Dube',email:'nomsa@company.com',role:'Support Lead',type:'human',color:'#6b5bff'},
       {id:3,name:'Liam Dlamini',email:'liam@company.com',role:'Support Agent',type:'human',color:'#00d4aa'},
       {id:4,name:'Zanele Mokoena',email:'zanele@company.com',role:'Support Agent',type:'human',color:'#f5a623'}
+    ],
+    groups:[
+      {id:1,name:'General',members:[1,2,3,4],messages:[
+        {from:'Nomsa Dube',text:'Morning team — heads up, BrandCo has a product launch this week so expect higher volume.',time:'08:31'},
+        {from:'Liam Dlamini',text:'Noted, thanks for the heads up 👍',time:'08:33'}
+      ]},
+      {id:2,name:'Escalations',members:[1,2,3],messages:[
+        {from:'ARIA',text:'Escalated CHT-102 (Sarah Lee) — possible duplicate billing charge.',time:'11:03'}
+      ]}
     ],
     chats:[
       {id:'CHT-101',customer:'Alex Johnson',channel:'WhatsApp',status:'active',last:'Can you check my order status?',owner:'Nomsa Dube',messages:[
@@ -538,7 +633,8 @@ function refocusSearch(id){
 }
 let _teamSearch='';
 function renderTeams(){
-  return `
+  if(_teamsTab==='groups')return renderTeamsTabs()+renderGroups();
+  return renderTeamsTabs()+`
   <div class="toolbar-row">
     <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="team-search" placeholder="Search team members…" value="${_teamSearch}" oninput="filterTeams(this.value)"/></div>
     <button class="btn btn-acc" onclick="openModal('modal-add-member')">+ Add to Team</button>
@@ -600,7 +696,7 @@ function chatListHtml(list){
   list=list||chatFilteredList();
   if(!list.length)return '<div class="empty-state">No chats match.</div>';
   return list.map(c=>`
-        <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}">
+        <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}" oncontextmenu="openChatCtxMenu(event,'${c.id}')">
           ${avatarHtml(c.customer,'#1a2d47',36)}
           <div class="chat-row-body">
             <div class="chat-row-name">${c.customer} <span class="chan-pill">${c.channel}</span></div>
@@ -958,6 +1054,131 @@ function toast(msg,color){
   ta.style.background=color||'var(--accent)'; tm.textContent=msg;
   t.classList.add('show'); clearTimeout(window._toastTimer);
   window._toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ─── ARIA WIDGET (connects to api.supanta.com, same as the public site) ───
+const ARIA_SESSION_ID=(crypto.randomUUID?crypto.randomUUID():(Date.now()+'-'+Math.random().toString(36).slice(2)));
+const ARIA_SUPANTA_CLIENT_ID='30aa317f-05fd-4e14-b979-98a9348933df';
+function toggleAriaChat(){
+  const b=document.getElementById('aria-chat-box');
+  b.classList.toggle('open');
+  if(b.classList.contains('open'))document.getElementById('aria-input').focus();
+}
+async function sendAriaMsg(){
+  const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
+  const msgs=document.getElementById('aria-msgs');
+  msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;
+  inp.value='';msgs.scrollTop=msgs.scrollHeight;
+  const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='…';
+  msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
+  try{
+    const res=await fetch('https://api.supanta.com/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:ARIA_SUPANTA_CLIENT_ID,message:msg,context:'dashboard',user_email:currentUser?currentUser.email:null})
+    });
+    if(!res.ok)throw new Error('bad response');
+    const data=await res.json();
+    document.getElementById('aria-typing')?.remove();
+    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${data.reply}</div>`;
+  }catch(e){
+    document.getElementById('aria-typing')?.remove();
+    msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">Sorry, I'm having trouble connecting right now — try again shortly.</div>`;
+  }
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ─── CHAT CONTEXT MENU (right-click a chat row) ──────────
+let _ctxChatId=null;
+function openChatCtxMenu(e,chatId){
+  e.preventDefault();
+  _ctxChatId=chatId;
+  const menu=document.getElementById('chat-ctx-menu');
+  const x=Math.min(e.clientX,window.innerWidth-200), y=Math.min(e.clientY,window.innerHeight-160);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+  menu.classList.add('open');
+}
+function closeChatCtxMenu(){ document.getElementById('chat-ctx-menu').classList.remove('open'); _ctxChatId=null; }
+document.getElementById('ctx-download').addEventListener('click',()=>{ if(_ctxChatId)downloadChat(_ctxChatId); closeChatCtxMenu(); });
+document.getElementById('ctx-archive').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'archived'); closeChatCtxMenu(); });
+document.getElementById('ctx-done').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'done'); closeChatCtxMenu(); });
+document.addEventListener('click',e=>{ if(!e.target.closest('.ctx-menu'))closeChatCtxMenu(); });
+document.addEventListener('scroll',closeChatCtxMenu,true);
+function setChatStatus(id,status){
+  const c=STATE.chats.find(x=>x.id===id); if(!c)return;
+  c.status=status; saveState();
+  toast(status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`,'var(--accent)');
+  if(currentSection==='chats')renderSection();
+}
+
+// ─── TEAMS: GROUPS (internal chat, Slack-style) ──────────
+let _teamsTab='members', _activeGroupId=null;
+function renderTeamsTabs(){
+  return `<div class="tabs">
+    <button class="tab-btn ${_teamsTab==='members'?'active':''}" onclick="setTeamsTab('members')">Members</button>
+    <button class="tab-btn ${_teamsTab==='groups'?'active':''}" onclick="setTeamsTab('groups')">Groups</button>
+  </div>`;
+}
+function setTeamsTab(t){_teamsTab=t;renderSection();}
+function renderGroups(){
+  const groups=STATE.groups||[];
+  if(!_activeGroupId||!groups.find(g=>g.id===_activeGroupId))_activeGroupId=groups[0]?groups[0].id:null;
+  return `
+  <div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-acc" onclick="openAddGroup()">+ New Group</button></div>
+  <div class="groups-layout">
+    <div class="group-list">
+      ${groups.length?groups.map(g=>`
+        <div class="group-row ${g.id===_activeGroupId?'active':''}" onclick="_activeGroupId=${g.id};renderSection()">
+          <div class="group-icon">#</div>
+          <div style="min-width:0"><div style="font-weight:600;font-size:.85rem">${g.name}</div><div style="font-size:.72rem;color:var(--text-3)">${g.members.length} members</div></div>
+        </div>`).join(''):'<div class="empty-state">No groups yet.</div>'}
+    </div>
+    <div>${renderGroupChat(groups.find(g=>g.id===_activeGroupId))}</div>
+  </div>`;
+}
+function renderGroupChat(g){
+  if(!g)return '<div class="chat-panel"><div class="empty-state" style="margin:auto">Create a group to start chatting</div></div>';
+  const memberNames=g.members.map(id=>{const m=STATE.team.find(x=>x.id===id);return m?m.name:'';}).filter(Boolean);
+  return `
+  <div class="chat-panel">
+    <div class="chat-panel-hd">
+      <div><div style="font-weight:600;font-size:.9rem"># ${g.name}</div><div style="font-size:.72rem;color:var(--text-3)">${memberNames.join(', ')}</div></div>
+    </div>
+    <div class="chat-msgs" id="group-msgs">
+      ${g.messages.length?g.messages.map(m=>`
+        <div class="cm ${m.from===currentUser.name?'right':'left'}">
+          <div class="cm-bubble ${m.from===currentUser.name?'cm-agent':'cm-customer'}">
+            <div class="cm-meta">${m.from} · ${m.time}</div>${m.text}
+          </div>
+        </div>`).join(''):'<div class="empty-state">No messages yet — say hi 👋</div>'}
+    </div>
+    <div class="aria-chat-input-row" style="background:transparent;border-top:1px solid var(--border)">
+      <input class="aria-chat-input" id="group-msg-input" placeholder="Message #${g.name}…" onkeydown="if(event.key==='Enter')sendGroupMsg(${g.id})"/>
+      <button class="aria-send-btn" onclick="sendGroupMsg(${g.id})">Send</button>
+    </div>
+  </div>`;
+}
+function sendGroupMsg(gid){
+  const inp=document.getElementById('group-msg-input'); const text=inp.value.trim(); if(!text)return;
+  const g=(STATE.groups||[]).find(x=>x.id===gid); if(!g)return;
+  g.messages.push({from:currentUser.name,text,time:new Date().toTimeString().slice(0,5)});
+  saveState(); inp.value=''; renderSection();
+  setTimeout(()=>{ const box=document.getElementById('group-msgs'); if(box)box.scrollTop=box.scrollHeight; },0);
+}
+let _grpId=100;
+function openAddGroup(){
+  document.getElementById('ng-name').value='';
+  document.getElementById('ng-members').innerHTML=STATE.team.map(m=>`<label><input type="checkbox" value="${m.id}"/> ${m.name} <span style="color:var(--text-3);font-size:.72rem">— ${m.role}</span></label>`).join('');
+  openModal('modal-add-group');
+}
+function addGroup(){
+  const name=document.getElementById('ng-name').value.trim();
+  if(!name){toast('Group name is required','var(--danger)');return;}
+  const members=Array.from(document.querySelectorAll('#ng-members input:checked')).map(el=>parseInt(el.value,10));
+  if(!STATE.groups)STATE.groups=[];
+  STATE.groups.push({id:++_grpId,name,members,messages:[]});
+  saveState();closeModal('modal-add-group');_activeGroupId=_grpId;renderSection();
+  toast(`#${name} created`,'var(--green)');
 }
 </script>
 </body>
