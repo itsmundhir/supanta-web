@@ -2017,6 +2017,11 @@ function renderSettingsTab(t){
       <div class="card-title">Company Name</div>
       <div class="form-group"><input class="rb-input" id="set-company-name" value="${STATE.profile.companyName||''}"/></div>
       <button class="btn btn-acc" onclick="saveCompany()">Save Changes</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Export Your Data</div>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Download everything this dashboard has for your business — tickets, conversations, team, invoices, knowledge base and activity log — as a single JSON file.</p>
+      <button class="btn btn-ghost" onclick="exportAllData()">Download All Data (JSON)</button>
     </div>`;
   if(t==='display')return `
     <div class="card">
@@ -2168,6 +2173,25 @@ async function disableMfa(factorId){
 function saveCompany(){
   STATE.profile.companyName=document.getElementById('set-company-name').value.trim();
   saveState();toast('Company info saved','var(--green)');
+}
+function exportAllData(){
+  const payload={
+    exportedAt:new Date().toISOString(),
+    company:STATE.profile.companyName||null,
+    tickets:STATE.tickets,
+    chats:STATE.chats.map(c=>({id:c.id,customer:c.customer,channel:c.channel,status:c.status,owner:c.owner,messages:c.messages})),
+    team:STATE.team.map(m=>({name:m.name,email:m.email,role:m.role,type:m.type})),
+    invoices:STATE.invoices,
+    knowledgeBase:STATE.kbDocs,
+    activityLog:STATE.activity||[]
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(STATE.profile.companyName||'supanta-data').replace(/[^a-z0-9]+/gi,'_')+'_export_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('Export downloaded','var(--green)');
+  logActivity('Exported company data');
 }
 let _kbId=100;
 async function uploadKbDocs(){
