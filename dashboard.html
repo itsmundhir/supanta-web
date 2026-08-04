@@ -1377,13 +1377,65 @@ function downloadChat(id){
 // ─── TICKETS ─────────────────────────────────────────────
 let _ticketSearch='';
 const TK_COLS=['active','archived','done'], TK_LABELS={active:'Active',archived:'Archived',done:'Done'};
+let _selectedTickets=new Set();
 function renderTickets(){
   return `
   <div class="toolbar-row">
     <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="ticket-search" placeholder="Search tickets by subject, client, ID or owner…" value="${_ticketSearch}" oninput="filterTickets(this.value)"/></div>
     <button class="btn btn-acc" onclick="openAddTicket()">+ New Ticket</button>
   </div>
+  <div id="bulk-bar-wrap">${bulkBarHtml()}</div>
   <div class="kanban" id="kanban-wrap">${kanbanHtml()}</div>`;
+}
+function bulkBarHtml(){
+  if(!_selectedTickets.size)return '';
+  const n=_selectedTickets.size;
+  return `<div class="card" style="display:flex;align-items:center;gap:.9rem;padding:.8rem 1.1rem;margin-bottom:1rem;background:var(--bg-3)">
+    <div style="font-size:.84rem;font-weight:600">${n} ticket${n===1?'':'s'} selected</div>
+    <select class="rb-select" style="width:auto;padding:.4rem .6rem" onchange="if(this.value){bulkReassignTickets(this.value);this.value='';}">
+      <option value="">Reassign to…</option>
+      ${STATE.team.map(m=>`<option value="${m.name}">${m.name}</option>`).join('')}
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="bulkMoveTickets('active')">Mark Active</button>
+    <button class="btn btn-ghost btn-sm" onclick="bulkMoveTickets('archived')">Archive</button>
+    <button class="btn btn-ghost btn-sm" onclick="bulkMoveTickets('done')">Mark Done</button>
+    <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="clearTicketSelection()">Clear</button>
+  </div>`;
+}
+function toggleTicketSelect(id,checked){
+  if(checked)_selectedTickets.add(id); else _selectedTickets.delete(id);
+  document.getElementById('bulk-bar-wrap').innerHTML=bulkBarHtml();
+  document.getElementById('kanban-wrap').innerHTML=kanbanHtml();
+  wireKanban();
+}
+function clearTicketSelection(){
+  _selectedTickets.clear();
+  document.getElementById('bulk-bar-wrap').innerHTML='';
+  document.getElementById('kanban-wrap').innerHTML=kanbanHtml();
+  wireKanban();
+}
+function bulkMoveTickets(status){
+  const ids=[..._selectedTickets]; if(!ids.length)return;
+  const prev={};
+  ids.forEach(id=>{ const t=STATE.tickets.find(x=>x.id===id); if(t)prev[id]=t.status; });
+  ids.forEach(id=>moveTicket(id,status,null,true));
+  _selectedTickets.clear();
+  renderSection();
+  toastUndo(`${ids.length} ticket${ids.length===1?'':'s'} marked ${status}`,'var(--accent)',()=>{
+    ids.forEach(id=>{ if(prev[id])moveTicket(id,prev[id],null,true); });
+    renderSection();
+  });
+}
+function bulkReassignTickets(owner){
+  const ids=[..._selectedTickets]; if(!ids.length||!owner)return;
+  const prev={};
+  ids.forEach(id=>{ const t=STATE.tickets.find(x=>x.id===id); if(t)prev[id]=t.owner; });
+  ids.forEach(id=>reassignTicket(id,owner));
+  _selectedTickets.clear();
+  renderSection();
+  toastUndo(`${ids.length} ticket${ids.length===1?'':'s'} reassigned to ${owner}`,'var(--accent)',()=>{
+    ids.forEach(id=>{ if(prev[id])reassignTicket(id,prev[id]); });
+  });
 }
 function ticketFilteredList(){
   const q=_ticketSearch.trim().toLowerCase();
@@ -1401,7 +1453,10 @@ function kanbanHtml(){
         <div class="kanban-body" data-col="${col}">
           ${items.map(t=>`
             <div class="tk-card" draggable="true" data-id="${t.id}">
-              <div class="tk-card-top"><span class="tk-id" style="cursor:pointer;text-decoration:underline" onclick="openTicketDetail('${t.id}')">${t.id}</span><span class="badge badge-${t.priority==='high'?'high':t.priority==='med'?'med':'low'}">${t.priority}</span></div>
+              <div class="tk-card-top">
+                <span style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" ${_selectedTickets.has(t.id)?'checked':''} onclick="event.stopPropagation();toggleTicketSelect('${t.id}',this.checked)" onchange="event.stopPropagation()"/><span class="tk-id" style="cursor:pointer;text-decoration:underline" onclick="openTicketDetail('${t.id}')">${t.id}</span></span>
+                <span class="badge badge-${t.priority==='high'?'high':t.priority==='med'?'med':'low'}">${t.priority}</span>
+              </div>
               <div class="tk-subject" style="cursor:pointer" onclick="openTicketDetail('${t.id}')">${t.subject}</div>
               ${isOverdue(t)?`<div style="font-size:.68rem;color:var(--danger);font-weight:700;margin-bottom:.4rem">⚠ Overdue — due ${fmtDueDate(t.dueAt)}</div>`:t.dueAt&&t.status==='active'?`<div style="font-size:.68rem;color:var(--text-3);margin-bottom:.4rem">Due ${fmtDueDate(t.dueAt)}</div>`:''}
               <div class="tk-foot">
