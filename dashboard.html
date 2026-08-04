@@ -165,7 +165,7 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .chat-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:460px}
 .chat-panel-hd{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .chat-msgs{flex:1;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;max-height:480px;overflow-y:auto}
-.cm{display:flex}
+.cm{display:flex;align-items:flex-end;gap:.5rem}
 .cm.left{justify-content:flex-start}.cm.right{justify-content:flex-end}
 .cm-bubble{max-width:74%;border-radius:12px;padding:.65rem .9rem;border:1px solid var(--border);font-size:.84rem;line-height:1.55}
 .cm-customer{background:var(--bg-3)}
@@ -705,11 +705,11 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
-    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title').eq('client_id',currentUser.companyId).order('created_at',{ascending:true});
+    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title,avatar_url').eq('client_id',currentUser.companyId).order('created_at',{ascending:true});
     if(profiles&&profiles.length){
       const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
       const agents=STATE.team.filter(m=>m.type==='agent');
-      const humans=profiles.map((p,i)=>({id:++_teamId,dbId:p.id,name:p.full_name||p.email,email:p.email,role:p.job_title||'Team Member',type:'human',color:colors[i%colors.length]}));
+      const humans=profiles.map((p,i)=>({id:++_teamId,dbId:p.id,name:p.full_name||p.email,email:p.email,role:p.job_title||'Team Member',type:'human',color:colors[i%colors.length],avatar:p.avatar_url||null}));
       STATE.team=[...agents,...humans];
     }
   }catch(e){}
@@ -1287,16 +1287,31 @@ function wireChatList(){
     row.addEventListener('click',()=>{ _activeChatId=row.dataset.id; renderSection(); });
   });
 }
+// The agent who actually handled it (not a generic "Agent" label) — same
+// path for a live chat reply and a call transcript line, since a call is
+// just a chat on the Phone channel under the hood.
+function messageSenderInfo(m,c){
+  if(m.who==='customer')return {name:c.customer,avatarHtml:avatarHtml(c.customer,'#1a2d47',26)};
+  if(m.who==='aria')return {name:'ARIA',avatarHtml:`<div class="avatar" style="width:26px;height:26px;background-color:rgba(107,91,255,.15);border:1px solid rgba(107,91,255,.4)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>`};
+  const agentName=m.agentName||c.owner||'Agent';
+  const member=STATE.team.find(t=>t.name===agentName);
+  const avHtml=member&&member.avatar
+    ?`<div class="avatar" style="width:26px;height:26px;background-image:url(${member.avatar})"></div>`
+    :avatarHtml(agentName,member?member.color:'#00c2ff',26);
+  return {name:agentName,avatarHtml:avHtml};
+}
 function messageHtml(m,c){
   const side=m.who==='customer'?'left':'right';
   const cls=m.who==='customer'?'cm-customer':m.who==='aria'?'cm-aria':'cm-agent';
-  const who=m.who==='customer'?c.customer:m.who==='aria'?'ARIA':'Agent';
+  const sender=messageSenderInfo(m,c);
   return `<div class="cm ${side}">
+    ${side==='left'?sender.avatarHtml:''}
     <div class="cm-bubble ${cls}">
-      <div class="cm-meta">${who} · ${m.time}</div>
+      <div class="cm-meta">${sender.name} · ${m.time}</div>
       ${m.text||''}
       ${m.image?`<img class="cm-img" src="${m.image}" alt="attachment"/>`:''}
     </div>
+    ${side==='right'?sender.avatarHtml:''}
   </div>`;
 }
 function ariaSuggestions(c){
@@ -1382,7 +1397,7 @@ function sendReply(chatId){
   const inp=document.getElementById('reply-input');
   const text=inp.value.trim();
   if(!text && !_pendingReplyImage)return;
-  const msg={who:'agent',text,time:nowTime()};
+  const msg={who:'agent',text,time:nowTime(),agentName:currentUser.name};
   if(_pendingReplyImage)msg.image=_pendingReplyImage;
   c.messages.push(msg);
   c.last=text||'📷 Image';
@@ -1479,7 +1494,7 @@ function deleteSavedResponse(id){
 }
 function downloadChat(id){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
-  const txt=`Conversation ${c.id} — ${c.customer} (${c.channel})\n\n`+c.messages.map(m=>`[${m.time}] ${m.who==='customer'?c.customer:m.who==='aria'?'ARIA':'Agent'}: ${m.text}`).join('\n');
+  const txt=`Conversation ${c.id} — ${c.customer} (${c.channel})\n\n`+c.messages.map(m=>`[${m.time}] ${messageSenderInfo(m,c).name}: ${m.text}`).join('\n');
   const blob=new Blob([txt],{type:'text/plain'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=id+'_transcript.txt';a.click();
   toast('Transcript downloaded','var(--accent)');
@@ -2617,6 +2632,13 @@ function handlePicUpload(input,field){
     STATE.profile[field]=e.target.result; saveState();
     renderShell(); renderSection();
     toast('Picture updated','var(--green)');
+    // Personal photo (not the company one) syncs to the shared profile row so
+    // teammates actually see it — on chat/call messages you've sent, in Teams,
+    // wherever your name shows up for someone other than you.
+    if(field==='avatar'){
+      const me=STATE.team.find(m=>m.name===currentUser.name); if(me)me.avatar=e.target.result;
+      if(currentUser.companyId&&_sb){ try{ _sb.from('user_profiles').update({avatar_url:e.target.result}).eq('id',currentUser.id); }catch(err){} }
+    }
   };
   reader.readAsDataURL(file);
 }
