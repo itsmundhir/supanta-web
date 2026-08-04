@@ -362,6 +362,16 @@ input:checked + .slider::before{transform:translateX(18px)}
 .kanban-col-menu{position:absolute;top:calc(100% + 4px);right:0;background:var(--bg-2);border:1px solid var(--border-light);border-radius:10px;box-shadow:var(--shadow);padding:.35rem;min-width:150px;display:none;z-index:50}
 .kanban-col-menu.open{display:block}
 .kanban-col-add{background:transparent;border:1px dashed var(--border-light);display:flex;align-items:flex-start;padding:.6rem}
+.label-pill{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:100px;color:#04121f;cursor:pointer;margin:0 .35rem .35rem 0}
+.label-pill.off{opacity:.35}
+.label-pill .lp-x{cursor:pointer;opacity:.7}
+.label-pill .lp-x:hover{opacity:1}
+.tk-card-labels{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:.4rem}
+.tk-card-label-dot{width:28px;height:7px;border-radius:100px}
+.cf-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}
+.cf-row label{flex:0 0 130px;font-size:.78rem;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quick-add-card{margin-top:.5rem}
+.quick-add-card textarea{width:100%;resize:none;min-height:56px}
 @media(max-width:900px){.chart-card-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -467,9 +477,22 @@ input:checked + .slider::before{transform:translateX(18px)}
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hdr">
       <div><div class="modal-title" id="td-title">Ticket</div><div style="font-size:.78rem;color:var(--text-3);margin-top:.2rem" id="td-sub"></div></div>
-      <button class="modal-close" onclick="closeModal('modal-ticket-detail')">✕</button>
+      <div style="display:flex;align-items:center;gap:.4rem">
+        <button class="btn btn-ghost btn-sm" id="td-forward-btn" onclick="openForwardToChat()">Forward to Chat</button>
+        <button class="btn btn-ghost btn-sm" id="td-delete-btn" onclick="deleteTicketConfirm()" style="color:var(--danger)">Delete</button>
+        <button class="modal-close" onclick="closeModal('modal-ticket-detail')">✕</button>
+      </div>
     </div>
     <div id="td-body"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-forward-chat">
+  <div class="modal-box">
+    <div class="modal-hdr"><div class="modal-title">Forward to Chat</div><button class="modal-close" onclick="closeModal('modal-forward-chat')">✕</button></div>
+    <div class="form-group"><label>Conversation</label><select class="rb-select" id="fwd-chat-select"></select></div>
+    <div class="form-group"><label>Message</label><textarea class="rb-input" id="fwd-chat-message" rows="4" style="resize:vertical"></textarea></div>
+    <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="submitForwardToChat()">Send</button>
   </div>
 </div>
 
@@ -633,7 +656,7 @@ async function loadRemoteData(){
   try{
     const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
     if(tks&&tks.length){
-      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null}));
+      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null,labelIds:r.label_ids||[],customFields:r.custom_fields||{}}));
     }
   }catch(e){}
   try{
@@ -647,6 +670,14 @@ async function loadRemoteData(){
       const defaults=STATE.ticketLists;
       _sb.from('ticket_lists').insert(defaults.map(l=>({id:l.id,client_id:currentUser.companyId,name:l.name,kind:l.kind,position:l.position}))).then(()=>{}).catch(()=>{});
     }
+  }catch(e){}
+  try{
+    const {data:labels}=await _sb.from('ticket_labels').select('*').eq('client_id',currentUser.companyId).order('position',{ascending:true});
+    if(labels&&labels.length)STATE.ticketLabels=labels.map(l=>({id:l.id,name:l.name,color:l.color,position:l.position}));
+  }catch(e){}
+  try{
+    const {data:fields}=await _sb.from('ticket_custom_fields').select('*').eq('client_id',currentUser.companyId).order('position',{ascending:true});
+    if(fields&&fields.length)STATE.ticketCustomFields=fields.map(f=>({id:f.id,name:f.name,position:f.position}));
   }catch(e){}
   try{
     const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',currentUser.companyId).order('issue_date',{ascending:false});
@@ -831,6 +862,8 @@ function defaultState(){
       {id:'archived',name:'Archived',kind:'archived',position:1},
       {id:'done',name:'Done',kind:'done',position:2}
     ],
+    ticketLabels:[],
+    ticketCustomFields:[],
     ticketChecklists:{
       'SUP-1042':[
         {id:1,title:'Steps for Order Processing',items:[
@@ -853,6 +886,8 @@ function loadState(){
   }catch(e){ STATE=defaultState(); }
   // Backfills fields added after some users' state was already saved locally.
   if(!STATE.ticketLists)STATE.ticketLists=defaultState().ticketLists;
+  if(!STATE.ticketLabels)STATE.ticketLabels=[];
+  if(!STATE.ticketCustomFields)STATE.ticketCustomFields=[];
 }
 function saveState(){ localStorage.setItem(LS_KEY+'_'+currentUser.id,JSON.stringify(STATE)); }
 
@@ -1526,7 +1561,8 @@ function fmtDueDate(iso,withTime){
 }
 function kanbanHtml(){
   const all=ticketFilteredList();
-  const cols=ticketListsSorted().map(list=>{
+  const sorted=ticketListsSorted();
+  const cols=sorted.map((list,idx)=>{
     const items=all.filter(t=>t.status===list.id);
     return `<div class="kanban-col">
         <div class="kanban-col-hd">
@@ -1535,6 +1571,8 @@ function kanbanHtml(){
             <button class="btn-icon-sm" onclick="toggleKanbanColMenu(event,'${list.id}')" title="List options">⋯</button>
             <div class="kanban-col-menu" id="kanban-col-menu-${list.id}">
               <div class="ctx-item" onclick="renameTicketList('${list.id}')">Rename</div>
+              ${idx>0?`<div class="ctx-item" onclick="moveTicketList('${list.id}',-1)">Move Left</div>`:''}
+              ${idx<sorted.length-1?`<div class="ctx-item" onclick="moveTicketList('${list.id}',1)">Move Right</div>`:''}
               <div class="ctx-item" onclick="deleteTicketList('${list.id}')">Delete list</div>
             </div>
           </span>
@@ -1542,6 +1580,7 @@ function kanbanHtml(){
         <div class="kanban-body" data-col="${list.id}">
           ${items.map(t=>`
             <div class="tk-card" draggable="true" data-id="${t.id}">
+              ${(t.labelIds&&t.labelIds.length)?`<div class="tk-card-labels">${t.labelIds.map(lid=>{const l=(STATE.ticketLabels||[]).find(x=>x.id===lid);return l?`<span class="tk-card-label-dot" style="background:${l.color}" title="${l.name}"></span>`:'';}).join('')}</div>`:''}
               <div class="tk-card-top">
                 <span style="display:flex;align-items:center;gap:.4rem"><input type="checkbox" ${_selectedTickets.has(t.id)?'checked':''} onclick="event.stopPropagation();toggleTicketSelect('${t.id}',this.checked)" onchange="event.stopPropagation()"/><span class="tk-id" style="cursor:pointer;text-decoration:underline" onclick="openTicketDetail('${t.id}')">${t.id}</span></span>
                 <span class="badge badge-${t.priority==='high'?'high':t.priority==='med'?'med':'low'}">${t.priority}</span>
@@ -1555,6 +1594,14 @@ function kanbanHtml(){
                 </select>
               </div>
             </div>`).join('')}
+          <div class="quick-add-card" id="qa-card-${list.id}" style="display:none">
+            <textarea class="rb-input" id="qa-card-input-${list.id}" placeholder="Enter a title for this card…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitQuickAddCard('${list.id}');}"></textarea>
+            <div style="display:flex;gap:.4rem;margin-top:.4rem">
+              <button class="btn btn-acc btn-sm" onclick="submitQuickAddCard('${list.id}')">Add Card</button>
+              <button class="btn btn-ghost btn-sm" onclick="hideQuickAddCard('${list.id}')">Cancel</button>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;margin-top:.4rem" onclick="showQuickAddCard('${list.id}')" id="qa-card-trigger-${list.id}">+ Add a card</button>
         </div>
       </div>`;
   }).join('');
@@ -1709,6 +1756,16 @@ async function openTicketDetail(id){
     <div class="form-group"><label>Subject</label><div style="font-size:.9rem;color:var(--text)">${t.subject}</div></div>
     <div id="td-csat-wrap">${ticketCsatHtml(t)}</div>
     <div class="chart-card-hd" style="margin-top:1.25rem">
+      <div class="card-title" style="margin-bottom:0">Labels</div>
+      <button class="btn btn-ghost btn-sm" onclick="promptAddLabel('${t.id}')">+ New Label</button>
+    </div>
+    <div id="td-labels">${ticketLabelsHtml(t)}</div>
+    <div class="chart-card-hd" style="margin-top:1.25rem">
+      <div class="card-title" style="margin-bottom:0">Custom Fields</div>
+      <button class="btn btn-ghost btn-sm" onclick="promptAddCustomField('${t.id}')">+ Add Field</button>
+    </div>
+    <div id="td-custom-fields">${ticketCustomFieldsHtml(t)}</div>
+    <div class="chart-card-hd" style="margin-top:1.25rem">
       <div class="card-title" style="margin-bottom:0">Checklists</div>
       <button class="btn btn-ghost btn-sm" onclick="promptAddChecklist('${t.id}')">+ Add Checklist</button>
     </div>
@@ -1847,6 +1904,174 @@ function deleteChecklistItem(ticketId,clId,itemId){
   saveState();
   refreshChecklistsUi(ticketId);
   if(item&&item.dbId&&_sb){ try{ _sb.from('ticket_checklist_items').delete().eq('id',item.dbId); }catch(e){} }
+}
+
+// ─── TICKET LABELS (board-level definitions, per-ticket attach/detach) ───
+const LABEL_COLORS=['#00d4aa','#00c2ff','#6b5bff','#f5a623','#ff4d6d','#e1306c','#25D366','#8a9ab5'];
+let _lbId=100;
+function promptAddLabel(ticketId){
+  const name=prompt('Label name:'); if(!name)return;
+  const color=LABEL_COLORS[(STATE.ticketLabels||[]).length%LABEL_COLORS.length];
+  if(!STATE.ticketLabels)STATE.ticketLabels=[];
+  const label={id:'lb-'+(++_lbId)+'-'+Date.now(),name,color,position:STATE.ticketLabels.length};
+  STATE.ticketLabels.push(label);
+  saveState();
+  refreshLabelsUi(ticketId);
+  if(currentUser.companyId&&_sb){
+    _sb.from('ticket_labels').insert({id:label.id,client_id:currentUser.companyId,name,color,position:label.position}).then(()=>{}).catch(()=>{});
+  }
+}
+function toggleTicketLabel(ticketId,labelId){
+  const t=STATE.tickets.find(x=>x.id===ticketId); if(!t)return;
+  if(!t.labelIds)t.labelIds=[];
+  t.labelIds=t.labelIds.includes(labelId)?t.labelIds.filter(x=>x!==labelId):[...t.labelIds,labelId];
+  saveState();
+  refreshLabelsUi(ticketId);
+  if(currentSection==='tickets')renderSection();
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({label_ids:t.labelIds}).eq('id',t.dbId); }catch(e){} }
+}
+function deleteTicketLabel(ticketId,labelId){
+  if(!confirm('Delete this label? It will be removed from every ticket.'))return;
+  STATE.ticketLabels=(STATE.ticketLabels||[]).filter(l=>l.id!==labelId);
+  STATE.tickets.forEach(t=>{ if(t.labelIds)t.labelIds=t.labelIds.filter(x=>x!==labelId); });
+  saveState();
+  refreshLabelsUi(ticketId);
+  if(currentSection==='tickets')renderSection();
+  if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_labels').delete().eq('id',labelId); }catch(e){} }
+}
+function ticketLabelsHtml(t){
+  const labels=STATE.ticketLabels||[];
+  if(!labels.length)return '<div class="empty-state">No labels yet — click "+ New Label" to create one.</div>';
+  const active=t.labelIds||[];
+  return labels.map(l=>`<span class="label-pill ${active.includes(l.id)?'':'off'}" style="background:${l.color}" onclick="toggleTicketLabel('${t.id}','${l.id}')">${l.name}<span class="lp-x" onclick="event.stopPropagation();deleteTicketLabel('${t.id}','${l.id}')">✕</span></span>`).join('');
+}
+function refreshLabelsUi(ticketId){
+  const t=STATE.tickets.find(x=>x.id===ticketId); if(!t)return;
+  const box=document.getElementById('td-labels'); if(box)box.innerHTML=ticketLabelsHtml(t);
+}
+
+// ─── TICKET CUSTOM FIELDS (board-level field definitions, per-ticket values) ───
+let _cfId=100;
+function promptAddCustomField(ticketId){
+  const name=prompt('Field name (e.g. "Tracking Number", "Courier"):'); if(!name)return;
+  if(!STATE.ticketCustomFields)STATE.ticketCustomFields=[];
+  const field={id:'cf-'+(++_cfId)+'-'+Date.now(),name,position:STATE.ticketCustomFields.length};
+  STATE.ticketCustomFields.push(field);
+  saveState();
+  refreshCustomFieldsUi(ticketId);
+  if(currentUser.companyId&&_sb){
+    _sb.from('ticket_custom_fields').insert({id:field.id,client_id:currentUser.companyId,name,position:field.position}).then(()=>{}).catch(()=>{});
+  }
+}
+function setCustomFieldValue(ticketId,fieldId,value){
+  const t=STATE.tickets.find(x=>x.id===ticketId); if(!t)return;
+  if(!t.customFields)t.customFields={};
+  t.customFields[fieldId]=value;
+  saveState();
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({custom_fields:t.customFields}).eq('id',t.dbId); }catch(e){} }
+}
+function deleteCustomField(ticketId,fieldId){
+  if(!confirm('Delete this field? It will be removed from every ticket.'))return;
+  STATE.ticketCustomFields=(STATE.ticketCustomFields||[]).filter(f=>f.id!==fieldId);
+  STATE.tickets.forEach(t=>{ if(t.customFields)delete t.customFields[fieldId]; });
+  saveState();
+  refreshCustomFieldsUi(ticketId);
+  if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_custom_fields').delete().eq('id',fieldId); }catch(e){} }
+}
+function ticketCustomFieldsHtml(t){
+  const fields=STATE.ticketCustomFields||[];
+  if(!fields.length)return '<div class="empty-state">No custom fields yet — click "+ Add Field" to create one.</div>';
+  const vals=t.customFields||{};
+  return fields.map(f=>`<div class="cf-row">
+    <label title="${f.name}">${f.name}</label>
+    <input class="rb-input" value="${vals[f.id]||''}" onchange="setCustomFieldValue('${t.id}','${f.id}',this.value)"/>
+    <span class="saved-del" onclick="deleteCustomField('${t.id}','${f.id}')">✕</span>
+  </div>`).join('');
+}
+function refreshCustomFieldsUi(ticketId){
+  const t=STATE.tickets.find(x=>x.id===ticketId); if(!t)return;
+  const box=document.getElementById('td-custom-fields'); if(box)box.innerHTML=ticketCustomFieldsHtml(t);
+}
+
+// ─── DELETE TICKET (real, permanent — unlike status moves this has no undo,
+// so it's gated behind an explicit confirm rather than a toast Undo) ───
+function deleteTicketConfirm(){
+  const id=document.getElementById('td-title').textContent;
+  const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  if(!confirm(`Permanently delete ${t.id}? This can't be undone.`))return;
+  STATE.tickets=STATE.tickets.filter(x=>x.id!==id);
+  if(STATE.ticketChecklists)delete STATE.ticketChecklists[id];
+  if(STATE.ticketComments)delete STATE.ticketComments[id];
+  saveState();
+  closeModal('modal-ticket-detail');
+  renderSection();
+  toast(`${id} deleted`,'var(--danger)');
+  logActivity('Deleted ticket',id);
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').delete().eq('id',t.dbId); }catch(e){} }
+}
+
+// ─── QUICK-ADD CARD (per-list "+ Add a card", Trello-style — bypasses the
+// full New Ticket modal for the common case of just typing a subject) ───
+function showQuickAddCard(listId){
+  const el=document.getElementById('qa-card-'+listId); if(el)el.style.display='block';
+  const trigger=document.getElementById('qa-card-trigger-'+listId); if(trigger)trigger.style.display='none';
+  const inp=document.getElementById('qa-card-input-'+listId); if(inp)inp.focus();
+}
+function hideQuickAddCard(listId){
+  const el=document.getElementById('qa-card-'+listId); if(el)el.style.display='none';
+  const trigger=document.getElementById('qa-card-trigger-'+listId); if(trigger)trigger.style.display='flex';
+  const inp=document.getElementById('qa-card-input-'+listId); if(inp)inp.value='';
+}
+function submitQuickAddCard(listId){
+  const inp=document.getElementById('qa-card-input-'+listId);
+  const subject=inp?inp.value.trim():''; if(!subject)return;
+  const t={id:'SUP-'+(++_tkSeq),subject,client:'—',owner:currentUser.name,status:listId,priority:'med',dueAt:null};
+  STATE.tickets.unshift(t);
+  saveState();
+  persistNewTicket(t);
+  logActivity('Created ticket',t.id);
+  hideQuickAddCard(listId);
+  renderSection();
+  if(inp)inp.value='';
+}
+
+// ─── REORDER LISTS (move left/right from the "⋯" menu) ───
+function moveTicketList(listId,dir){
+  const sorted=ticketListsSorted();
+  const idx=sorted.findIndex(l=>l.id===listId);
+  const swapWith=idx+dir;
+  if(idx<0||swapWith<0||swapWith>=sorted.length)return;
+  const a=sorted[idx],b=sorted[swapWith];
+  const tmp=a.position; a.position=b.position; b.position=tmp;
+  saveState();
+  if(currentSection==='tickets')renderSection();
+  if(currentUser.companyId&&_sb){
+    try{ _sb.from('ticket_lists').update({position:a.position}).eq('id',a.id); }catch(e){}
+    try{ _sb.from('ticket_lists').update({position:b.position}).eq('id',b.id); }catch(e){}
+  }
+}
+
+// ─── FORWARD A TICKET INTO A CHAT ───
+function openForwardToChat(){
+  const id=document.getElementById('td-title').textContent;
+  const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  const sel=document.getElementById('fwd-chat-select');
+  sel.innerHTML=STATE.chats.map(c=>`<option value="${c.id}">${c.customer} — ${c.channel}</option>`).join('');
+  document.getElementById('fwd-chat-message').value=`Re: ticket ${t.id} — ${t.subject}\nStatus: ${listName(t.status)}${t.owner?` · Owner: ${t.owner}`:''}`;
+  openModal('modal-forward-chat');
+}
+function submitForwardToChat(){
+  const chatId=document.getElementById('fwd-chat-select').value;
+  const text=document.getElementById('fwd-chat-message').value.trim();
+  const c=STATE.chats.find(x=>x.id===chatId);
+  if(!c||!text){toast('Pick a conversation and a message','var(--danger)');return;}
+  c.messages.push({who:'agent',text,time:nowTime()});
+  c.last=text;
+  saveState();
+  closeModal('modal-forward-chat');
+  toast(`Forwarded to ${c.customer}`,'var(--green)');
+  logActivity('Forwarded ticket to chat',`${document.getElementById('td-title').textContent} → ${c.customer}`);
+  if(currentSection==='chats')renderSection();
 }
 function setTicketDueDate(id,value){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
