@@ -345,6 +345,16 @@ input:checked + .slider::before{transform:translateX(18px)}
 .data-table th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700;padding:.5rem .25rem;border-bottom:1px solid var(--border)}
 .data-table td{padding:.55rem .25rem;border-bottom:1px solid var(--border);color:var(--text-2)}
 .data-table tr:last-child td{border-bottom:none}
+.cl-block{margin-bottom:1.1rem}
+.cl-block-hd{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.cl-block-title{font-weight:600;font-size:.86rem;flex:1}
+.cl-progress-track{height:6px;border-radius:100px;background:var(--bg-3);overflow:hidden;margin-bottom:.6rem}
+.cl-progress-fill{height:100%;border-radius:100px;background:var(--green);transition:width .3s ease}
+.cl-item{display:flex;align-items:flex-start;gap:.5rem;padding:.35rem 0}
+.cl-item-text{font-size:.83rem;flex:1;line-height:1.5}
+.cl-item-text.done{text-decoration:line-through;color:var(--text-3)}
+.cl-link-chip{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:var(--accent);background:rgba(0,194,255,.1);padding:2px 8px;border-radius:100px;margin-left:.4rem;text-decoration:none}
+.cl-add-row{display:flex;gap:.4rem;margin-top:.3rem}
 @media(max-width:900px){.chart-card-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -796,7 +806,20 @@ function defaultState(){
       {id:'INV-0512',date:'2026-05-01',dueDate:'2026-05-15',amount:'$2,500.00',status:'Paid'},
       {id:'INV-0411',date:'2026-04-01',dueDate:'2026-04-15',amount:'$2,500.00',status:'Paid'},
       {id:'INV-0611',date:'2026-06-01',dueDate:'2026-06-15',amount:'$2,500.00',status:'Due'}
-    ]
+    ],
+    ticketChecklists:{
+      'SUP-1042':[
+        {id:1,title:'Steps for Order Processing',items:[
+          {id:1,text:'Confirm refund amount with customer',link:null,done:true},
+          {id:2,text:'Process refund via payment provider',link:null,done:false},
+          {id:3,text:'Update order status',link:null,done:false}
+        ]},
+        {id:2,title:'Links',items:[
+          {id:4,text:'Order details',link:'https://example.com/orders/4521',done:false},
+          {id:5,text:'Refund policy',link:'https://example.com/refund-policy',done:false}
+        ]}
+      ]
+    }
   };
 }
 function loadState(){
@@ -1593,6 +1616,11 @@ async function openTicketDetail(id){
     <div class="form-group"><label>Due Date & Time</label><input class="rb-input" type="datetime-local" id="td-due" value="${dueFieldValue(t)}" onchange="setTicketDueDate('${t.id}',this.value)"/></div>
     <div class="form-group"><label>Subject</label><div style="font-size:.9rem;color:var(--text)">${t.subject}</div></div>
     <div id="td-csat-wrap">${ticketCsatHtml(t)}</div>
+    <div class="chart-card-hd" style="margin-top:1.25rem">
+      <div class="card-title" style="margin-bottom:0">Checklists</div>
+      <button class="btn btn-ghost btn-sm" onclick="promptAddChecklist('${t.id}')">+ Add Checklist</button>
+    </div>
+    <div id="td-checklists" style="margin-bottom:.5rem"><div class="empty-state">Loading…</div></div>
     <div class="card-title" style="margin-top:1.25rem">Comments</div>
     <div id="td-comments" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;margin-bottom:.85rem"><div class="empty-state">Loading…</div></div>
     <div style="display:flex;gap:.5rem">
@@ -1601,6 +1629,7 @@ async function openTicketDetail(id){
     </div>`;
   openModal('modal-ticket-detail');
   await loadTicketComments(t);
+  await loadTicketChecklists(t);
 }
 function ticketCsatHtml(t){
   if(t.status!=='done')return '';
@@ -1622,6 +1651,110 @@ function setTicketCsat(id,csat){
   if(currentSection==='pulse')renderSection();
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({csat}).eq('id',t.dbId); }catch(e){} }
   toast('Rating saved','var(--accent)');
+}
+// ─── TICKET CHECKLISTS (title + checkbox items, optionally each with a link —
+// modeled on how support teams already track fulfillment steps in Trello) ───
+let _clId=100,_ciId=100;
+async function loadTicketChecklists(t){
+  const box=document.getElementById('td-checklists'); if(!box)return;
+  if(t.dbId&&_sb){
+    try{
+      const {data:lists}=await _sb.from('ticket_checklists').select('*').eq('ticket_id',t.dbId).order('position',{ascending:true});
+      const checklists=[];
+      for(const l of (lists||[])){
+        const {data:items}=await _sb.from('ticket_checklist_items').select('*').eq('checklist_id',l.id).order('position',{ascending:true});
+        checklists.push({id:++_clId,dbId:l.id,title:l.title,items:(items||[]).map(i=>({id:++_ciId,dbId:i.id,text:i.text,link:i.link,done:i.done}))});
+      }
+      if(!STATE.ticketChecklists)STATE.ticketChecklists={};
+      if(checklists.length)STATE.ticketChecklists[t.id]=checklists;
+      box.innerHTML=checklistsHtml(t.id);
+      return;
+    }catch(e){}
+  }
+  box.innerHTML=checklistsHtml(t.id);
+}
+function checklistsHtml(ticketId){
+  const lists=(STATE.ticketChecklists&&STATE.ticketChecklists[ticketId])||[];
+  if(!lists.length)return '<div class="empty-state">No checklists yet.</div>';
+  return lists.map(cl=>{
+    const total=cl.items.length, done=cl.items.filter(i=>i.done).length;
+    const pct=total?Math.round((done/total)*100):0;
+    return `<div class="cl-block">
+      <div class="cl-block-hd">
+        <div class="cl-block-title">${cl.title}</div>
+        <button class="btn btn-ghost btn-sm" onclick="deleteChecklist('${ticketId}',${cl.id})">Delete</button>
+      </div>
+      <div class="cl-progress-track"><div class="cl-progress-fill" style="width:${pct}%"></div></div>
+      ${cl.items.map(i=>`
+        <div class="cl-item">
+          <input type="checkbox" ${i.done?'checked':''} onchange="toggleChecklistItem('${ticketId}',${cl.id},${i.id},this.checked)"/>
+          <div class="cl-item-text ${i.done?'done':''}">${i.text}${i.link?`<a class="cl-link-chip" href="${i.link}" target="_blank" rel="noopener">🔗 Link</a>`:''}</div>
+          <span class="saved-del" onclick="deleteChecklistItem('${ticketId}',${cl.id},${i.id})">✕</span>
+        </div>`).join('')}
+      <div class="cl-add-row">
+        <input class="rb-input" id="cl-item-input-${cl.id}" placeholder="Add an item…" onkeydown="if(event.key==='Enter')addChecklistItem('${ticketId}',${cl.id})"/>
+        <button class="btn btn-ghost btn-sm" onclick="addChecklistItem('${ticketId}',${cl.id})">Add</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function refreshChecklistsUi(ticketId){
+  const box=document.getElementById('td-checklists'); if(box)box.innerHTML=checklistsHtml(ticketId);
+}
+function promptAddChecklist(ticketId){
+  const title=prompt('Checklist name:','Steps'); if(!title)return;
+  const t=STATE.tickets.find(x=>x.id===ticketId); if(!t)return;
+  if(!STATE.ticketChecklists)STATE.ticketChecklists={};
+  if(!STATE.ticketChecklists[ticketId])STATE.ticketChecklists[ticketId]=[];
+  const cl={id:++_clId,title,items:[]};
+  STATE.ticketChecklists[ticketId].push(cl);
+  saveState();
+  refreshChecklistsUi(ticketId);
+  if(t.dbId&&currentUser.companyId&&_sb){
+    _sb.from('ticket_checklists').insert({ticket_id:t.dbId,client_id:currentUser.companyId,title,position:STATE.ticketChecklists[ticketId].length}).select().single()
+      .then(({data,error})=>{ if(!error&&data)cl.dbId=data.id; }).catch(()=>{});
+  }
+}
+function deleteChecklist(ticketId,clId){
+  const lists=STATE.ticketChecklists&&STATE.ticketChecklists[ticketId]; if(!lists)return;
+  const cl=lists.find(x=>x.id===clId);
+  STATE.ticketChecklists[ticketId]=lists.filter(x=>x.id!==clId);
+  saveState();
+  refreshChecklistsUi(ticketId);
+  if(cl&&cl.dbId&&_sb){ try{ _sb.from('ticket_checklists').delete().eq('id',cl.dbId); }catch(e){} }
+}
+function addChecklistItem(ticketId,clId){
+  const inp=document.getElementById('cl-item-input-'+clId); const raw=inp?inp.value.trim():''; if(!raw)return;
+  const urlMatch=raw.match(/https?:\/\/\S+/);
+  const link=urlMatch?urlMatch[0]:null;
+  const text=link?raw.replace(link,'').trim()||link:raw;
+  const lists=STATE.ticketChecklists&&STATE.ticketChecklists[ticketId]; if(!lists)return;
+  const cl=lists.find(x=>x.id===clId); if(!cl)return;
+  const item={id:++_ciId,text,link,done:false};
+  cl.items.push(item);
+  saveState();
+  refreshChecklistsUi(ticketId);
+  if(cl.dbId&&currentUser.companyId&&_sb){
+    _sb.from('ticket_checklist_items').insert({checklist_id:cl.dbId,client_id:currentUser.companyId,text,link,done:false,position:cl.items.length}).select().single()
+      .then(({data,error})=>{ if(!error&&data)item.dbId=data.id; }).catch(()=>{});
+  }
+}
+function toggleChecklistItem(ticketId,clId,itemId,done){
+  const lists=STATE.ticketChecklists&&STATE.ticketChecklists[ticketId]; if(!lists)return;
+  const cl=lists.find(x=>x.id===clId); if(!cl)return;
+  const item=cl.items.find(x=>x.id===itemId); if(!item)return;
+  item.done=done; saveState();
+  refreshChecklistsUi(ticketId);
+  if(item.dbId&&_sb){ try{ _sb.from('ticket_checklist_items').update({done}).eq('id',item.dbId); }catch(e){} }
+}
+function deleteChecklistItem(ticketId,clId,itemId){
+  const lists=STATE.ticketChecklists&&STATE.ticketChecklists[ticketId]; if(!lists)return;
+  const cl=lists.find(x=>x.id===clId); if(!cl)return;
+  const item=cl.items.find(x=>x.id===itemId);
+  cl.items=cl.items.filter(x=>x.id!==itemId);
+  saveState();
+  refreshChecklistsUi(ticketId);
+  if(item&&item.dbId&&_sb){ try{ _sb.from('ticket_checklist_items').delete().eq('id',item.dbId); }catch(e){} }
 }
 function setTicketDueDate(id,value){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
