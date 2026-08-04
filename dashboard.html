@@ -647,6 +647,17 @@ async function boot(){
   renderShell();
   renderSection();
   subscribeRealtime();
+  handleEmailConnectRedirect();
+}
+function handleEmailConnectRedirect(){
+  const params=new URLSearchParams(window.location.search);
+  const result=params.get('email_connect');
+  if(!result)return;
+  const msg=params.get('msg')||'';
+  toast(result==='success'?('Email connected — '+msg):('Could not connect email — '+msg),result==='success'?'var(--green)':'var(--danger)');
+  params.delete('email_connect');params.delete('msg');
+  const qs=params.toString();
+  window.history.replaceState({},'',window.location.pathname+(qs?'?'+qs:''));
 }
 function activeClientId(){ return _viewingClientId||currentUser.companyId; }
 async function loadStaffCompanies(){
@@ -857,6 +868,10 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
+    const {data:ec}=await _sb.from('client_email_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _emailConnection=ec||null;
+  }catch(e){ _emailConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -899,6 +914,7 @@ let currentUser=null, currentSection='pulse';
 const LS_KEY='supanta_dash_state_v1';
 let STATE=null;
 let _viewingClientId=null, _staffCompanies=[], _staffNotifCounts={};
+let _emailConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -2450,7 +2466,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2462,6 +2478,21 @@ function intGridHtml(){
           <span class="slider"></span>
         </label>
       </div>`).join('')}
+  </div>`;
+}
+function emailIntegrationCardHtml(i){
+  const conn=_emailConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.email_address||'—'}</strong> via ${conn.method==='gmail_oauth'?'Google':'IMAP'}.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectEmail()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openEmailConnectModal()">Connect</button>`}
   </div>`;
 }
 function filterIntegrations(v){
@@ -2477,6 +2508,70 @@ function toggleIntegration(key,checked,actor){
     _sb.from('integration_connections').upsert({client_id:activeClientId(),integration_key:key,connected:checked,updated_at:new Date().toISOString()},{onConflict:'client_id,integration_key'}).then(()=>{}).catch(()=>{});
   }
   logActivity(checked?'Connected integration':'Disconnected integration',i.name,actor);
+}
+function openEmailConnectModal(){
+  document.getElementById('ci-title').textContent='Connect Email';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect a support mailbox so inbound email becomes conversations here, and replies send from the same address.</p>
+    <button class="btn btn-acc" style="width:100%;margin-bottom:1rem" onclick="startGmailConnect()">Connect with Google</button>
+    <div style="display:flex;align-items:center;gap:.75rem;margin:1rem 0;color:var(--text-3);font-size:.7rem;font-weight:700;letter-spacing:.04em"><div style="flex:1;height:1px;background:var(--border)"></div>OR CONNECT VIA IMAP<div style="flex:1;height:1px;background:var(--border)"></div></div>
+    <div class="form-group"><label>Email Address</label><input class="rb-input" id="em-email" placeholder="support@yourcompany.com"/></div>
+    <div class="form-group"><label>IMAP Host</label><input class="rb-input" id="em-imap-host" placeholder="imap.gmail.com"/></div>
+    <div class="form-group"><label>IMAP Port</label><input class="rb-input" id="em-imap-port" value="993"/></div>
+    <div class="form-group"><label>Username</label><input class="rb-input" id="em-imap-user"/></div>
+    <div class="form-group"><label>Password / App Password</label><input class="rb-input" type="password" id="em-imap-pass"/></div>
+    <div class="form-group"><label>SMTP Host <span style="color:var(--text-3);font-weight:400">(optional, defaults to IMAP host)</span></label><input class="rb-input" id="em-smtp-host"/></div>
+    <div class="form-group"><label>SMTP Port <span style="color:var(--text-3);font-weight:400">(optional, default 587)</span></label><input class="rb-input" id="em-smtp-port"/></div>
+    <button class="btn btn-ghost" style="width:100%" id="em-imap-submit" onclick="submitImapConnect()">Test &amp; Connect</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function startGmailConnect(){
+  if(!_sb)return;
+  toast('Opening Google…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('email-oauth-start',{body:{}});
+    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    window.location.href=data.url;
+  }catch(e){
+    toast('Could not start Google connect — '+(e.message||e),'var(--danger)');
+  }
+}
+async function submitImapConnect(){
+  const btn=document.getElementById('em-imap-submit');
+  const email_address=document.getElementById('em-email').value.trim();
+  const imap_host=document.getElementById('em-imap-host').value.trim();
+  const imap_port=document.getElementById('em-imap-port').value.trim();
+  const imap_username=document.getElementById('em-imap-user').value.trim();
+  const imap_password=document.getElementById('em-imap-pass').value;
+  const smtp_host=document.getElementById('em-smtp-host').value.trim();
+  const smtp_port=document.getElementById('em-smtp-port').value.trim();
+  if(!email_address||!imap_host||!imap_port||!imap_username||!imap_password){
+    toast('Fill in email, host, port, username and password','var(--danger)');return;
+  }
+  btn.disabled=true;btn.textContent='Testing connection…';
+  try{
+    const {data,error}=await _sb.functions.invoke('email-save-imap',{body:{email_address,imap_host,imap_port,imap_username,imap_password,smtp_host:smtp_host||undefined,smtp_port:smtp_port||undefined}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('Email connected','var(--green)');
+    closeModal('modal-connect-int');
+    await loadRemoteData();
+    renderSection();
+  }catch(e){
+    toast(e.message||'Could not connect that mailbox','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function disconnectEmail(){
+  if(!confirm('Disconnect email? Inbound mail will stop syncing until you reconnect.'))return;
+  if(_emailConnection&&_sb){
+    try{ await _sb.from('client_email_connections').update({status:'disconnected'}).eq('id',_emailConnection.id); }catch(e){}
+  }
+  _emailConnection=null;
+  toast('Email disconnected','var(--accent)');
+  renderSection();
 }
 
 // ─── NOTIFICATIONS ───────────────────────────────────────
