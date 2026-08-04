@@ -606,6 +606,12 @@ async function loadRemoteData(){
       STATE.groups=mapped;
     }
   }catch(e){}
+  try{
+    const {data:acts}=await _sb.from('client_activity_log').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false}).limit(100);
+    if(acts&&acts.length){
+      STATE.activity=acts.map(r=>({id:++_activityId,dbId:r.id,actor:r.actor_name,action:r.action,target:r.target,time:new Date(r.created_at).toLocaleString()}));
+    }
+  }catch(e){}
   saveState();
 }
 async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='index.html'; }
@@ -706,6 +712,12 @@ function defaultState(){
     kbDocs:[
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
       {id:2,name:'Product FAQ — Spring Catalog.docx',size:'88 KB',added:'2026-05-11'}
+    ],
+    activity:[
+      {id:1,actor:'Zanele Mokoena',action:'Reassigned ticket',target:'SUP-1039 → Zanele Mokoena',time:'2 hr ago'},
+      {id:2,actor:'ARIA',action:'Created ticket',target:'SUP-1042',time:'5 hr ago'},
+      {id:3,actor:'Nomsa Dube',action:'Marked chat done',target:'Marcus Webb',time:'Yesterday'},
+      {id:4,actor:'demo',action:'Added team member',target:'Zanele Mokoena',time:'2 days ago'}
     ],
     wisePayee:{name:'Supanta (Pty) Ltd',email:'payments@supanta.com',reference:'Use your invoice number as the payment reference'},
     invoices:[
@@ -955,6 +967,7 @@ async function addTeamMember(){
     saveState();closeModal('modal-add-member');
     ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
     renderSection();toast(`${name} added to the team`,'var(--green)');
+    logActivity('Added AI agent to team',name);
     return;
   }
   if(!email){toast('Email is required to invite a teammate','var(--danger)');return;}
@@ -970,6 +983,7 @@ async function addTeamMember(){
     toast(`Invite sent to ${email}`,'var(--green)');
     STATE.team.push({id:++_teamId,name,email,role,type:'human',color:colors[STATE.team.length%colors.length]});
     saveState();renderSection();
+    logActivity('Invited team member',`${name} (${email})`);
   }catch(e){
     toast('Could not send invite — '+e.message,'var(--danger)');
   }
@@ -990,6 +1004,7 @@ async function removeTeamMember(id){
     }
   }
   STATE.team=STATE.team.filter(x=>x.id!==id);saveState();renderSection();toast('Member removed','var(--accent)');
+  logActivity('Removed team member',m.name);
 }
 
 // ─── CHATS ───────────────────────────────────────────────
@@ -1312,12 +1327,13 @@ function persistNewTicket(t){
     created_by:currentUser.id
   }).select().single().then(({data,error})=>{ if(!error&&data)t.dbId=data.id; }).catch(()=>{});
 }
-function createTicket({subject,client,owner,priority}){
+function createTicket({subject,client,owner,priority,actor}){
   const t={id:'SUP-'+(++_tkSeq),subject,client:client||'—',owner,status:'active',priority};
   STATE.tickets.unshift(t);
   saveState();
   persistNewTicket(t);
   pushNotification(`New ticket ${t.id} opened${client&&client!=='—'?` for ${client}`:''}: "${subject}"`);
+  logActivity('Created ticket',t.id,actor);
   return t;
 }
 function addTicket(){
@@ -1331,15 +1347,17 @@ function addTicket(){
   document.getElementById('nt-subject').value='';document.getElementById('nt-client').value='';
   renderSection();toast('Ticket created','var(--green)');
 }
-function reassignTicket(id,owner){
+function reassignTicket(id,owner,actor){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   t.owner=owner;saveState();toast(`Reassigned to ${owner}`,'var(--accent)');
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({owner_name:owner,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
+  logActivity('Reassigned ticket',`${id} → ${owner}`,actor);
 }
-function moveTicket(id,status){
+function moveTicket(id,status,actor){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   t.status=status;saveState();renderSection();
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({status,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
+  logActivity(`Marked ticket ${status}`,id,actor);
 }
 function setTicketPriority(id,priority){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
@@ -1464,17 +1482,28 @@ function renderIntegrations(){
       </div>`).join('')}
   </div>`;
 }
-function toggleIntegration(key,checked){
+function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
   i.connected=checked;saveState();
   toast(checked?`${i.name} connected`:`${i.name} disconnected`,checked?'var(--green)':'var(--accent)');
   if(currentUser.companyId&&_sb){
     _sb.from('integration_connections').upsert({client_id:currentUser.companyId,integration_key:key,connected:checked,updated_at:new Date().toISOString()},{onConflict:'client_id,integration_key'}).then(()=>{}).catch(()=>{});
   }
+  logActivity(checked?'Connected integration':'Disconnected integration',i.name,actor);
 }
 
 // ─── NOTIFICATIONS ───────────────────────────────────────
+let _notifTab='notifications';
+function setNotifTab(t){_notifTab=t;renderSection();}
 function renderNotifications(){
+  return `
+  <div class="tabs" style="margin-bottom:1.1rem">
+    <button class="tab-btn ${_notifTab==='notifications'?'active':''}" onclick="setNotifTab('notifications')">Notifications</button>
+    <button class="tab-btn ${_notifTab==='activity'?'active':''}" onclick="setNotifTab('activity')">Activity Log</button>
+  </div>
+  ${_notifTab==='activity'?renderActivityLog():renderNotifList()}`;
+}
+function renderNotifList(){
   return `
   <div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-ghost" onclick="markAllRead()">Mark all as read</button></div>
   <div class="card" style="padding:0">
@@ -1485,7 +1514,19 @@ function renderNotifications(){
       </div>`).join(''):'<div class="empty-state">You\'re all caught up.</div>'}
   </div>`;
 }
-let _notifId=100;
+function renderActivityLog(){
+  const list=STATE.activity||[];
+  return `
+  <div class="card-sub" style="margin-top:0">Who did what, across your whole team — including ARIA</div>
+  <div class="card" style="padding:0">
+    ${list.length?list.map(a=>`
+      <div class="notif-item read" style="cursor:default">
+        <div class="notif-dot" style="background:${a.actor==='ARIA'?'var(--accent-2)':'var(--accent)'}"></div>
+        <div><div><strong>${a.actor}</strong> ${a.action}${a.target?` — <span style="color:var(--text-2)">${a.target}</span>`:''}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.25rem">${a.time}</div></div>
+      </div>`).join(''):'<div class="empty-state">No activity recorded yet.</div>'}
+  </div>`;
+}
+let _notifId=100, _activityId=100;
 function pushNotification(text){
   const n={id:++_notifId,text,time:'Just now',read:false};
   STATE.notifications.unshift(n);
@@ -1496,6 +1537,18 @@ function pushNotification(text){
   }
   renderShell();
   if(currentSection==='notifications')renderSection();
+}
+// Records a "who did what" entry — actorName defaults to the signed-in user,
+// but is passed explicitly as 'ARIA' when the assistant performs the action itself.
+function logActivity(action,target,actorName){
+  const a={id:++_activityId,actor:actorName||currentUser.name,action,target:target||'',time:'Just now'};
+  (STATE.activity=STATE.activity||[]).unshift(a);
+  saveState();
+  if(currentUser.companyId&&_sb){
+    _sb.from('client_activity_log').insert({client_id:currentUser.companyId,actor_name:a.actor,action,target:target||null}).select().single()
+      .then(({data,error})=>{ if(!error&&data)a.dbId=data.id; }).catch(()=>{});
+  }
+  if(currentSection==='notifications'&&_notifTab==='activity')renderSection();
 }
 function markRead(id){
   const n=STATE.notifications.find(x=>x.id===id);
@@ -1761,6 +1814,7 @@ async function confirmMfaEnroll(){
     toast('Two-factor authentication enabled','var(--green)');
     _mfaEnrollFactorId=null;
     refreshMfaStatus();
+    logActivity('Enabled two-factor authentication',currentUser.name);
   }catch(e){
     toast('Incorrect code — try again','var(--danger)');
   }
@@ -1777,6 +1831,7 @@ async function disableMfa(factorId){
     if(error)throw error;
     toast('Two-factor authentication turned off','var(--accent)');
     refreshMfaStatus();
+    logActivity('Disabled two-factor authentication',currentUser.name);
   }catch(e){
     toast('Could not turn off 2FA — '+e.message,'var(--danger)');
   }
@@ -1800,6 +1855,7 @@ async function uploadKbDocs(){
   });
   saveState();document.getElementById('kb-file-input').value='';renderSection();
   toast("Document(s) added to ARIA's knowledge base",'var(--green)');
+  logActivity('Added to knowledge base',Array.from(files).map(f=>f.name).join(', '));
 }
 function removeKbDoc(id){ STATE.kbDocs=STATE.kbDocs.filter(d=>d.id!==id); saveState();renderSection(); }
 
@@ -1880,6 +1936,7 @@ function addFileToKnowledgeBase(file){
   if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:currentUser.companyId,title:file.name,content:'',category:'aria_chat_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
   saveState();
   if(currentSection==='settings')renderSection();
+  logActivity('Added to knowledge base',file.name,'ARIA');
 }
 
 // ─── ARIA TASK ROUTER — lets ARIA perform actions, not just answer questions ───
@@ -1907,7 +1964,7 @@ function tryAriaAction(text,file){
     subject=subject.replace(/^(about|regarding|:)\s*/i,'').trim();
     if(/\burgent\b|\bhigh priority\b/i.test(subject)){priority='high';subject=subject.replace(/,?\s*(urgent|high priority)\.?$/i,'').trim();}
     if(!subject)subject='New ticket from ARIA';
-    const newTk=createTicket({subject,client,owner:currentUser.name,priority});
+    const newTk=createTicket({subject,client,owner:currentUser.name,priority,actor:'ARIA'});
     if(currentSection==='tickets')renderSection();
     return `Done — I've opened <strong>${newTk.id}</strong>${client!=='—'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
   }
@@ -1938,6 +1995,7 @@ function tryAriaAction(text,file){
           _sb.from('group_members').insert({group_id:data.id,member_name:'ARIA',is_agent:true}).then(()=>{}).catch(()=>{});
         }).catch(()=>{});
     }
+    logActivity('Created group',name,'ARIA');
     return `Done — I've created the <strong>#${name}</strong> group. Add teammates to it from Teams → Groups.`;
   }
 
@@ -1948,12 +2006,13 @@ function tryAriaAction(text,file){
     if(kind==='ticket'){
       const tk=STATE.tickets.find(x=>x.id.toUpperCase()===id);
       if(!tk)return `I couldn't find a ticket with ID ${id}.`;
-      moveTicket(tk.id,status);
+      moveTicket(tk.id,status,'ARIA');
       return `Done — ${tk.id} is now marked ${status}.`;
     }else{
       const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
       if(!ch)return `I couldn't find a chat with ID ${id}.`;
       ch.status=status; saveState(); if(currentSection==='chats')renderSection();
+      logActivity(`Marked chat ${status}`,ch.customer,'ARIA');
       return `Done — the conversation with ${ch.customer} is now marked ${status}.`;
     }
   }
@@ -1970,6 +2029,7 @@ function tryAriaAction(text,file){
     if(dbId&&currentUser.companyId&&_sb){
       _sb.functions.invoke('remove-team-member',{body:{user_id:dbId}}).catch(()=>{});
     }
+    logActivity('Removed team member',member.name,'ARIA');
     return `Done — I've removed ${member.name} from the team.`;
   }
 
@@ -1979,7 +2039,7 @@ function tryAriaAction(text,file){
     const owner=t.match(/to\s+(.+)$/i)[1].trim().replace(/[.!]+$/,'');
     const tk=STATE.tickets.find(x=>x.id.toLowerCase()===idRaw.toLowerCase());
     if(!tk)return `I couldn't find a ticket with ID ${idRaw.toUpperCase()}.`;
-    reassignTicket(tk.id,owner);
+    reassignTicket(tk.id,owner,'ARIA');
     if(currentSection==='tickets')renderSection();
     return `Done — ${tk.id} is now assigned to ${owner}.`;
   }
@@ -1991,7 +2051,7 @@ function tryAriaAction(text,file){
     const key=aliasMap[m[2].trim().replace(/\s+/g,'')];
     const i=key&&STATE.integrations.find(x=>x.key===key);
     if(i){
-      toggleIntegration(key,wantConnect);
+      toggleIntegration(key,wantConnect,'ARIA');
       if(currentSection==='integrations')renderSection();
       return `Done — ${i.name} is now ${wantConnect?'connected':'disconnected'}.`;
     }
@@ -2129,6 +2189,7 @@ function setChatStatus(id,status){
   c.status=status; saveState();
   toast(status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`,'var(--accent)');
   if(currentSection==='chats')renderSection();
+  logActivity(`Marked chat ${status}`,c.customer);
 }
 
 // ─── TEAMS: GROUPS (internal chat, Slack-style) ──────────
@@ -2204,6 +2265,7 @@ function addGroup(){
   STATE.groups.push(g);
   saveState();closeModal('modal-add-group');_activeGroupId=_grpId;renderSection();
   toast(`#${name} created`,'var(--green)');
+  logActivity('Created group',name);
   if(currentUser.companyId&&_sb){
     _sb.from('groups').insert({client_id:currentUser.companyId,name,created_by:currentUser.id}).select().single()
       .then(({data,error})=>{
