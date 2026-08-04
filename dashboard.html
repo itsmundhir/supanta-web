@@ -71,6 +71,27 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .nolbl{display:inline;transition:opacity .12s ease}
 .sidebar:hover .nolbl,.sidebar:focus-within .nolbl{display:none}
 
+/* Staff-only cross-company switcher — hidden entirely for regular client accounts */
+.sb-switcher{padding:0 .6rem .75rem;border-bottom:1px solid var(--border);position:relative}
+.switcher-btn{width:100%;display:flex;align-items:center;gap:.55rem;background:var(--bg-3);border:1px solid var(--border-light);border-radius:9px;padding:.5rem .6rem;cursor:pointer;white-space:nowrap;overflow:hidden}
+.switcher-btn:hover{border-color:var(--accent)}
+.sb-switcher-eyebrow{font-size:.58rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);font-weight:700}
+.sb-switcher-name{font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:118px}
+#switcher-chev{flex-shrink:0;transition:transform .15s;color:var(--text-3)}
+.sb-switcher.open #switcher-chev{transform:rotate(180deg)}
+.switcher-menu{position:absolute;left:.6rem;right:.6rem;top:calc(100% - .3rem);background:var(--bg-2);border:1px solid var(--border-light);border-radius:11px;box-shadow:var(--shadow);z-index:200;overflow:hidden;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .16s,transform .16s}
+.sb-switcher.open .switcher-menu{opacity:1;transform:translateY(0);pointer-events:auto}
+.switcher-search{padding:.5rem;border-bottom:1px solid var(--border)}
+.switcher-search input{width:100%;background:var(--bg-3);border:1px solid var(--border-light);border-radius:7px;color:var(--text);font-family:inherit;font-size:.78rem;padding:.4rem .55rem;outline:none}
+.switcher-list{max-height:260px;overflow-y:auto}
+.switcher-item{display:flex;align-items:center;gap:.5rem;padding:.5rem .7rem;cursor:pointer;font-size:.8rem}
+.switcher-item:hover{background:var(--bg-3)}
+.switcher-item .avatar{width:20px;height:20px;font-size:.6rem}
+.switcher-item .co-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.switcher-item.current{background:rgba(0,194,255,.08)}
+.switcher-item.current .co-name{color:var(--accent)}
+.switcher-item .current-tag{font-size:.62rem;color:var(--text-3);flex-shrink:0}
+
 .sidebar-mobile-toggle{display:none;position:fixed;top:1rem;left:1rem;z-index:301;width:40px;height:40px;border-radius:10px;background:var(--bg-2);border:1px solid var(--border-light);color:var(--text);align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow)}
 .sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:290}
 .sidebar-backdrop.open{display:block}
@@ -386,6 +407,21 @@ input:checked + .slider::before{transform:translateX(18px)}
       <div class="avatar" id="sb-avatar"></div>
       <div class="lbl" style="min-width:0"><div class="sb-user-name" id="sb-user-name">—</div><div class="sb-user-title" id="sb-user-title">—</div></div>
     </div>
+    <div class="sb-switcher" id="sb-switcher" style="display:none">
+      <div class="switcher-btn" onclick="toggleCompanySwitcher(event)">
+        <div class="avatar" id="switcher-avatar" style="width:24px;height:24px;font-size:.66rem"></div>
+        <div class="lbl" style="min-width:0;flex:1">
+          <div class="sb-switcher-eyebrow">Viewing</div>
+          <div class="sb-switcher-name" id="switcher-company-name">—</div>
+        </div>
+        <span class="nav-badge lbl" id="switcher-badge" style="display:none;margin-left:0"></span>
+        <svg class="lbl" id="switcher-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="switcher-menu" onclick="event.stopPropagation()">
+        <div class="switcher-search"><input type="text" placeholder="Search companies…" oninput="renderCompanySwitcherList(this.value)"/></div>
+        <div class="switcher-list" id="switcher-list"></div>
+      </div>
+    </div>
     <nav class="sb-nav">
       <div class="nav-sec-lbl lbl">Workspace</div>
       <div class="nav-item" data-sec="pulse" onclick="showSection('pulse')"><span class="nav-ico">◔</span> <span class="lbl">Pulse</span></div>
@@ -584,16 +620,21 @@ async function boot(){
     email:sbUser.email,
     name:profile?.full_name||sbUser.email.split('@')[0],
     companyId:profile?.client_id||null,
-    companyName:null
+    companyName:null,
+    role:profile?.role||null,
+    isStaff:['admin','super_admin'].includes(profile?.role)
   };
   // Every business only ever sees its own client_id — this is what keeps ARIA and the
   // knowledge base scoped to a single company and stops data crossing between businesses.
+  // Staff accounts (role admin/super_admin) are the one exception: they can switch which
+  // company's client_id they're viewing via the sidebar switcher (see activeClientId()).
   if(currentUser.companyId){
     try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
   }
   initTheme();
   loadState();
   if(currentUser.companyName && (!STATE.profile.companyName || STATE.profile.companyName==='Your Company'))STATE.profile.companyName=currentUser.companyName;
+  if(currentUser.isStaff)await loadStaffCompanies();
   renderShell();
   initAriaScope();
   showSection('pulse');
@@ -604,15 +645,104 @@ async function boot(){
   renderSection();
   subscribeRealtime();
 }
+// Every data query in this file is scoped to activeClientId() rather than
+// currentUser.companyId directly — for a normal client account the two are always
+// the same, but a staff account can point activeClientId() at a different company
+// via the sidebar switcher (switchViewingCompany) without touching their own account.
+function activeClientId(){ return _viewingClientId||currentUser.companyId; }
+async function loadStaffCompanies(){
+  try{
+    const {data:cos}=await _sb.from('clients').select('id,company_name').order('company_name',{ascending:true});
+    if(cos)_staffCompanies=cos.map(c=>({id:c.id,name:c.company_name||'Unnamed'}));
+  }catch(e){}
+  await refreshStaffNotifCounts();
+}
+async function refreshStaffNotifCounts(){
+  if(!currentUser.isStaff||!_sb)return;
+  try{
+    const {data:notifs}=await _sb.from('notifications').select('client_id').eq('read',false);
+    const counts={};
+    (notifs||[]).forEach(n=>{ if(n.client_id)counts[n.client_id]=(counts[n.client_id]||0)+1; });
+    _staffNotifCounts=counts;
+  }catch(e){}
+}
+function switcherColor(id){
+  const palette=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d','#8a9ab5'];
+  let h=0; for(let i=0;i<(id||'').length;i++)h=(h*31+id.charCodeAt(i))>>>0;
+  return palette[h%palette.length];
+}
+function renderCompanySwitcher(){
+  const wrap=document.getElementById('sb-switcher');
+  if(!wrap)return;
+  if(!currentUser.isStaff){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const viewingId=activeClientId();
+  const current=_staffCompanies.find(c=>c.id===viewingId);
+  const name=current?current.name:(currentUser.companyName||'My Workspace');
+  document.getElementById('switcher-company-name').textContent=name;
+  const avEl=document.getElementById('switcher-avatar');
+  avEl.style.backgroundImage='none'; avEl.textContent=initialsOf(name);
+  const myCount=_staffNotifCounts[viewingId]||0;
+  const badge=document.getElementById('switcher-badge');
+  if(myCount>0){ badge.style.display='inline-block'; badge.textContent=myCount; }
+  else badge.style.display='none';
+  renderCompanySwitcherList(document.querySelector('#sb-switcher .switcher-search input')?.value||'');
+}
+function renderCompanySwitcherList(filter){
+  const listEl=document.getElementById('switcher-list');
+  if(!listEl)return;
+  const viewingId=activeClientId();
+  const q=(filter||'').toLowerCase().trim();
+  const items=_staffCompanies.filter(c=>c.name.toLowerCase().includes(q));
+  listEl.innerHTML=items.map(c=>{
+    const isCurrent=c.id===viewingId;
+    const count=_staffNotifCounts[c.id]||0;
+    return `<div class="switcher-item ${isCurrent?'current':''}" onclick="switchViewingCompany('${c.id}')">
+      <div class="avatar" style="background-color:${switcherColor(c.id)}">${initialsOf(c.name)}</div>
+      <span class="co-name">${c.name}</span>
+      ${count>0?`<span class="nav-badge" style="margin-left:0">${count}</span>`:''}
+      ${isCurrent?`<span class="current-tag">current</span>`:''}
+    </div>`;
+  }).join('')||`<div style="padding:.75rem;font-size:.78rem;color:var(--text-3)">No companies found</div>`;
+}
+function toggleCompanySwitcher(e){
+  if(e)e.stopPropagation();
+  document.getElementById('sb-switcher').classList.toggle('open');
+}
+document.addEventListener('click',()=>{ const w=document.getElementById('sb-switcher'); if(w)w.classList.remove('open'); });
+function resetStateForCompanySwitch(){
+  const d=defaultState();
+  STATE.tickets=[]; STATE.ticketLists=d.ticketLists; STATE.ticketLabels=[]; STATE.ticketCustomFields=[];
+  STATE.ticketChecklists={}; STATE.notifications=[]; STATE.invoices=[];
+  STATE.team=[d.team[0]]; STATE.savedResponses=[]; STATE.groups=[]; STATE.activity=[];
+  STATE.integrations=d.integrations.map(i=>({...i,connected:false}));
+  _selectedTickets.clear();
+}
+async function switchViewingCompany(clientId){
+  if(clientId===activeClientId()){ document.getElementById('sb-switcher').classList.remove('open'); return; }
+  _viewingClientId=(clientId===currentUser.companyId)?null:clientId;
+  document.getElementById('sb-switcher').classList.remove('open');
+  const co=_staffCompanies.find(c=>c.id===clientId);
+  toast('Switching to '+(co?co.name:'company')+'…','var(--accent)');
+  resetStateForCompanySwitch();
+  await loadRemoteData();
+  subscribeRealtime();
+  renderShell();
+  showSection(currentSection||'pulse');
+  refreshStaffNotifCounts().then(renderCompanySwitcher);
+}
 // Live sync: without this, a teammate's ticket move or a new notification only
 // shows up for everyone else on their next full reload. Subscribes to Postgres
 // changes on this business's own rows only (client_id filter mirrors the RLS
 // scoping already enforced server-side) and patches STATE in place.
+let _realtimeChannel=null;
 function subscribeRealtime(){
-  if(!currentUser.companyId||!_sb||typeof _sb.channel!=='function')return;
+  if(_realtimeChannel){ try{ _sb.removeChannel(_realtimeChannel); }catch(e){} _realtimeChannel=null; }
+  const cid=activeClientId();
+  if(!cid||!_sb||typeof _sb.channel!=='function')return;
   try{
-    const filter=`client_id=eq.${currentUser.companyId}`;
-    _sb.channel('client-'+currentUser.companyId)
+    const filter=`client_id=eq.${cid}`;
+    _realtimeChannel=_sb.channel('client-'+cid)
       .on('postgres_changes',{event:'*',schema:'public',table:'tickets',filter},handleTicketRealtime)
       .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter},handleNotificationRealtime)
       .subscribe();
@@ -665,15 +795,15 @@ function handleNotificationRealtime(payload){
 // business has no rows there yet, the bundled demo data stays on screen so
 // the dashboard never looks empty; any ticket created from here on is real.
 async function loadRemoteData(){
-  if(!currentUser.companyId||!_sb)return;
+  if(!activeClientId()||!_sb)return;
   try{
-    const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
+    const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
     if(tks&&tks.length){
       STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null,labelIds:r.label_ids||[],customFields:r.custom_fields||{}}));
     }
   }catch(e){}
   try{
-    const {data:lists}=await _sb.from('ticket_lists').select('*').eq('client_id',currentUser.companyId).order('position',{ascending:true});
+    const {data:lists}=await _sb.from('ticket_lists').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
     if(lists&&lists.length){
       STATE.ticketLists=lists.map(l=>({id:l.id,name:l.name,kind:l.kind,position:l.position}));
     }else{
@@ -681,31 +811,31 @@ async function loadRemoteData(){
       // defaults server-side (same ids the demo tickets already reference)
       // so renames/adds from here on survive a reload.
       const defaults=STATE.ticketLists;
-      _sb.from('ticket_lists').insert(defaults.map(l=>({id:l.id,client_id:currentUser.companyId,name:l.name,kind:l.kind,position:l.position}))).then(()=>{}).catch(()=>{});
+      _sb.from('ticket_lists').insert(defaults.map(l=>({id:l.id,client_id:activeClientId(),name:l.name,kind:l.kind,position:l.position}))).then(()=>{}).catch(()=>{});
     }
   }catch(e){}
   try{
-    const {data:labels}=await _sb.from('ticket_labels').select('*').eq('client_id',currentUser.companyId).order('position',{ascending:true});
+    const {data:labels}=await _sb.from('ticket_labels').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
     if(labels&&labels.length)STATE.ticketLabels=labels.map(l=>({id:l.id,name:l.name,color:l.color,position:l.position}));
   }catch(e){}
   try{
-    const {data:fields}=await _sb.from('ticket_custom_fields').select('*').eq('client_id',currentUser.companyId).order('position',{ascending:true});
+    const {data:fields}=await _sb.from('ticket_custom_fields').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
     if(fields&&fields.length)STATE.ticketCustomFields=fields.map(f=>({id:f.id,name:f.name,position:f.position}));
   }catch(e){}
   try{
-    const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',currentUser.companyId).order('issue_date',{ascending:false});
+    const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',activeClientId()).order('issue_date',{ascending:false});
     if(invs&&invs.length){
       STATE.invoices=invs.map(r=>({id:r.display_id,dbId:r.id,date:r.issue_date,dueDate:r.due_date,amount:(r.currency==='USD'?'$':r.currency+' ')+Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}),status:r.status}));
     }
   }catch(e){}
   try{
-    const {data:notifs}=await _sb.from('notifications').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
+    const {data:notifs}=await _sb.from('notifications').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
     if(notifs&&notifs.length){
       STATE.notifications=notifs.map(r=>({id:++_notifId,dbId:r.id,text:r.text,time:new Date(r.created_at).toLocaleString(),read:r.read}));
     }
   }catch(e){}
   try{
-    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title,avatar_url').eq('client_id',currentUser.companyId).order('created_at',{ascending:true});
+    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title,avatar_url').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(profiles&&profiles.length){
       const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
       const agents=STATE.team.filter(m=>m.type==='agent');
@@ -714,19 +844,19 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
-    const {data:sr}=await _sb.from('saved_responses').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
+    const {data:sr}=await _sb.from('saved_responses').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
     if(sr&&sr.length){
       STATE.savedResponses=sr.map(r=>({id:++_savedRespId,dbId:r.id,label:r.label,text:r.text}));
     }
   }catch(e){}
   try{
-    const {data:ic}=await _sb.from('integration_connections').select('*').eq('client_id',currentUser.companyId);
+    const {data:ic}=await _sb.from('integration_connections').select('*').eq('client_id',activeClientId());
     if(ic&&ic.length){
       ic.forEach(row=>{ const i=STATE.integrations.find(x=>x.key===row.integration_key); if(i)i.connected=row.connected; });
     }
   }catch(e){}
   try{
-    const {data:grps}=await _sb.from('groups').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:true});
+    const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
       for(const grow of grps){
@@ -743,7 +873,7 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
-    const {data:acts}=await _sb.from('client_activity_log').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false}).limit(100);
+    const {data:acts}=await _sb.from('client_activity_log').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false}).limit(100);
     if(acts&&acts.length){
       STATE.activity=acts.map(r=>({id:++_activityId,dbId:r.id,actor:r.actor_name,action:r.action,target:r.target,time:new Date(r.created_at).toLocaleString()}));
     }
@@ -767,6 +897,9 @@ function setTheme(t){
 let currentUser=null, currentSection='pulse';
 const LS_KEY='supanta_dash_state_v1';
 let STATE=null;
+// Cross-company access for Supanta staff (role admin/super_admin): _viewingClientId
+// overrides currentUser.companyId as the scope for all data queries when set.
+let _viewingClientId=null, _staffCompanies=[], _staffNotifCounts={};
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -902,7 +1035,13 @@ function loadState(){
   if(!STATE.ticketLabels)STATE.ticketLabels=[];
   if(!STATE.ticketCustomFields)STATE.ticketCustomFields=[];
 }
-function saveState(){ localStorage.setItem(LS_KEY+'_'+currentUser.id,JSON.stringify(STATE)); }
+function saveState(){
+  // While a staff account is viewing another company's data, none of it belongs in
+  // this staff member's own local cache — persisting it would leak between accounts
+  // and clobber their own saved state next time they load their own company.
+  if(_viewingClientId&&_viewingClientId!==currentUser.companyId)return;
+  localStorage.setItem(LS_KEY+'_'+currentUser.id,JSON.stringify(STATE));
+}
 
 // ─── SHELL / NAV ─────────────────────────────────────────
 function renderShell(){
@@ -915,6 +1054,7 @@ function renderShell(){
   document.getElementById('sb-user-name').textContent=currentUser.name;
   document.getElementById('sb-user-title').textContent=STATE.profile.title||'Team Member';
   refreshNotifBadges();
+  renderCompanySwitcher();
 }
 function refreshNotifBadges(){
   const unread=STATE.notifications.filter(n=>!n.read).length;
@@ -1195,7 +1335,7 @@ async function addTeamMember(){
     return;
   }
   if(!email){toast('Email is required to invite a teammate','var(--danger)');return;}
-  if(!currentUser.companyId||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
+  if(!activeClientId()||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
   const btn=document.querySelector('#modal-add-member .btn-acc');
   if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
   try{
@@ -1480,8 +1620,8 @@ function saveCurrentAsResponse(){
   saveState();
   const p=document.getElementById('saved-pop'); if(p)p.innerHTML=renderSavedPopHtml();
   toast('Saved response added','var(--green)');
-  if(currentUser.companyId&&_sb){
-    _sb.from('saved_responses').insert({client_id:currentUser.companyId,label,text,created_by:currentUser.id}).select().single()
+  if(activeClientId()&&_sb){
+    _sb.from('saved_responses').insert({client_id:activeClientId(),label,text,created_by:currentUser.id}).select().single()
       .then(({data,error})=>{ if(!error&&data)r.dbId=data.id; }).catch(()=>{});
   }
 }
@@ -1657,8 +1797,8 @@ function promptAddTicketList(){
   saveState();
   if(currentSection==='tickets')renderSection();
   logActivity('Added ticket list',name);
-  if(currentUser.companyId&&_sb){
-    _sb.from('ticket_lists').insert({id:list.id,client_id:currentUser.companyId,name,kind:kindInput,position}).then(()=>{}).catch(()=>{});
+  if(activeClientId()&&_sb){
+    _sb.from('ticket_lists').insert({id:list.id,client_id:activeClientId(),name,kind:kindInput,position}).then(()=>{}).catch(()=>{});
   }
 }
 function renameTicketList(listId){
@@ -1666,7 +1806,7 @@ function renameTicketList(listId){
   const name=prompt('Rename list:',list.name); if(!name||name===list.name)return;
   list.name=name; saveState();
   if(currentSection==='tickets')renderSection();
-  if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_lists').update({name}).eq('id',listId); }catch(e){} }
+  if(activeClientId()&&_sb){ try{ _sb.from('ticket_lists').update({name}).eq('id',listId); }catch(e){} }
 }
 function deleteTicketList(listId){
   const list=listById(listId); if(!list)return;
@@ -1680,7 +1820,7 @@ function deleteTicketList(listId){
   saveState();
   if(currentSection==='tickets')renderSection();
   logActivity('Deleted ticket list',list.name);
-  if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_lists').delete().eq('id',listId); }catch(e){} }
+  if(activeClientId()&&_sb){ try{ _sb.from('ticket_lists').delete().eq('id',listId); }catch(e){} }
 }
 function filterTickets(v){
   _ticketSearch=v;
@@ -1698,9 +1838,9 @@ let _tkSeq=1043;
 // write scoped to this business's client_id; a ticket only gets a `dbId` once
 // that write confirms, so reassign/move only try to sync rows that made it in.
 function persistNewTicket(t){
-  if(!currentUser.companyId||!_sb)return;
+  if(!activeClientId()||!_sb)return;
   _sb.from('tickets').insert({
-    client_id:currentUser.companyId,
+    client_id:activeClientId(),
     display_id:t.id,
     subject:t.subject,
     customer_name:t.client,
@@ -1919,8 +2059,8 @@ function promptAddChecklist(ticketId){
   STATE.ticketChecklists[ticketId].push(cl);
   saveState();
   refreshChecklistsUi(ticketId);
-  if(t.dbId&&currentUser.companyId&&_sb){
-    _sb.from('ticket_checklists').insert({ticket_id:t.dbId,client_id:currentUser.companyId,title,position:STATE.ticketChecklists[ticketId].length}).select().single()
+  if(t.dbId&&activeClientId()&&_sb){
+    _sb.from('ticket_checklists').insert({ticket_id:t.dbId,client_id:activeClientId(),title,position:STATE.ticketChecklists[ticketId].length}).select().single()
       .then(({data,error})=>{ if(!error&&data)cl.dbId=data.id; }).catch(()=>{});
   }
 }
@@ -1943,8 +2083,8 @@ function addChecklistItem(ticketId,clId){
   cl.items.push(item);
   saveState();
   refreshChecklistsUi(ticketId);
-  if(cl.dbId&&currentUser.companyId&&_sb){
-    _sb.from('ticket_checklist_items').insert({checklist_id:cl.dbId,client_id:currentUser.companyId,text,link,done:false,position:cl.items.length}).select().single()
+  if(cl.dbId&&activeClientId()&&_sb){
+    _sb.from('ticket_checklist_items').insert({checklist_id:cl.dbId,client_id:activeClientId(),text,link,done:false,position:cl.items.length}).select().single()
       .then(({data,error})=>{ if(!error&&data)item.dbId=data.id; }).catch(()=>{});
   }
 }
@@ -1977,8 +2117,8 @@ function promptAddLabel(ticketId){
   STATE.ticketLabels.push(label);
   saveState();
   refreshLabelsUi(ticketId);
-  if(currentUser.companyId&&_sb){
-    _sb.from('ticket_labels').insert({id:label.id,client_id:currentUser.companyId,name,color,position:label.position}).then(()=>{}).catch(()=>{});
+  if(activeClientId()&&_sb){
+    _sb.from('ticket_labels').insert({id:label.id,client_id:activeClientId(),name,color,position:label.position}).then(()=>{}).catch(()=>{});
   }
 }
 function toggleTicketLabel(ticketId,labelId){
@@ -1999,7 +2139,7 @@ function deleteTicketLabel(ticketId,labelId){
   refreshLabelsUi(ticketId);
   refreshTicketDetailSummary(ticketId);
   if(currentSection==='tickets')renderSection();
-  if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_labels').delete().eq('id',labelId); }catch(e){} }
+  if(activeClientId()&&_sb){ try{ _sb.from('ticket_labels').delete().eq('id',labelId); }catch(e){} }
 }
 function ticketLabelsHtml(t){
   const labels=STATE.ticketLabels||[];
@@ -2021,8 +2161,8 @@ function promptAddCustomField(ticketId){
   STATE.ticketCustomFields.push(field);
   saveState();
   refreshCustomFieldsUi(ticketId);
-  if(currentUser.companyId&&_sb){
-    _sb.from('ticket_custom_fields').insert({id:field.id,client_id:currentUser.companyId,name,position:field.position}).then(()=>{}).catch(()=>{});
+  if(activeClientId()&&_sb){
+    _sb.from('ticket_custom_fields').insert({id:field.id,client_id:activeClientId(),name,position:field.position}).then(()=>{}).catch(()=>{});
   }
 }
 function setCustomFieldValue(ticketId,fieldId,value){
@@ -2038,7 +2178,7 @@ function deleteCustomField(ticketId,fieldId){
   STATE.tickets.forEach(t=>{ if(t.customFields)delete t.customFields[fieldId]; });
   saveState();
   refreshCustomFieldsUi(ticketId);
-  if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_custom_fields').delete().eq('id',fieldId); }catch(e){} }
+  if(activeClientId()&&_sb){ try{ _sb.from('ticket_custom_fields').delete().eq('id',fieldId); }catch(e){} }
 }
 function ticketCustomFieldsHtml(t){
   const fields=STATE.ticketCustomFields||[];
@@ -2107,7 +2247,7 @@ function moveTicketList(listId,dir){
   const tmp=a.position; a.position=b.position; b.position=tmp;
   saveState();
   if(currentSection==='tickets')renderSection();
-  if(currentUser.companyId&&_sb){
+  if(activeClientId()&&_sb){
     try{ _sb.from('ticket_lists').update({position:a.position}).eq('id',a.id); }catch(e){}
     try{ _sb.from('ticket_lists').update({position:b.position}).eq('id',b.id); }catch(e){}
   }
@@ -2146,8 +2286,8 @@ function submitForwardToChat(){
     saveState();
     toast(`Forwarded to #${g.name}`,'var(--green)');
     logActivity('Forwarded ticket',`${ticketId} → #${g.name}`);
-    if(g.dbId&&currentUser.companyId&&_sb){
-      try{ _sb.from('group_messages').insert({group_id:g.dbId,client_id:currentUser.companyId,sender_name:currentUser.name,text}); }catch(e){}
+    if(g.dbId&&activeClientId()&&_sb){
+      try{ _sb.from('group_messages').insert({group_id:g.dbId,client_id:activeClientId(),sender_name:currentUser.name,text}); }catch(e){}
     }
     if(currentSection==='teams')renderSection();
   }
@@ -2188,8 +2328,8 @@ async function addTicketComment(id){
   saveState();
   const box=document.getElementById('td-comments');
   if(box){ if(box.querySelector('.empty-state'))box.innerHTML=''; box.innerHTML+=commentHtml(c); box.scrollTop=box.scrollHeight; }
-  if(t.dbId&&currentUser.companyId&&_sb){
-    try{ await _sb.from('ticket_comments').insert({ticket_id:t.dbId,client_id:currentUser.companyId,author_name:currentUser.name,text}); }catch(e){}
+  if(t.dbId&&activeClientId()&&_sb){
+    try{ await _sb.from('ticket_comments').insert({ticket_id:t.dbId,client_id:activeClientId(),author_name:currentUser.name,text}); }catch(e){}
   }
 }
 function wireKanban(){
@@ -2293,8 +2433,8 @@ function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
   i.connected=checked;saveState();
   toast(checked?`${i.name} connected`:`${i.name} disconnected`,checked?'var(--green)':'var(--accent)');
-  if(currentUser.companyId&&_sb){
-    _sb.from('integration_connections').upsert({client_id:currentUser.companyId,integration_key:key,connected:checked,updated_at:new Date().toISOString()},{onConflict:'client_id,integration_key'}).then(()=>{}).catch(()=>{});
+  if(activeClientId()&&_sb){
+    _sb.from('integration_connections').upsert({client_id:activeClientId(),integration_key:key,connected:checked,updated_at:new Date().toISOString()},{onConflict:'client_id,integration_key'}).then(()=>{}).catch(()=>{});
   }
   logActivity(checked?'Connected integration':'Disconnected integration',i.name,actor);
 }
@@ -2407,8 +2547,8 @@ function pushNotification(text){
   const n={id:++_notifId,text,time:'Just now',read:false};
   STATE.notifications.unshift(n);
   saveState();
-  if(currentUser.companyId&&_sb){
-    _sb.from('notifications').insert({client_id:currentUser.companyId,text,read:false}).select().single()
+  if(activeClientId()&&_sb){
+    _sb.from('notifications').insert({client_id:activeClientId(),text,read:false}).select().single()
       .then(({data,error})=>{ if(!error&&data)n.dbId=data.id; }).catch(()=>{});
   }
   renderShell();
@@ -2420,8 +2560,8 @@ function logActivity(action,target,actorName){
   const a={id:++_activityId,actor:actorName||currentUser.name,action,target:target||'',time:'Just now'};
   (STATE.activity=STATE.activity||[]).unshift(a);
   saveState();
-  if(currentUser.companyId&&_sb){
-    _sb.from('client_activity_log').insert({client_id:currentUser.companyId,actor_name:a.actor,action,target:target||null}).select().single()
+  if(activeClientId()&&_sb){
+    _sb.from('client_activity_log').insert({client_id:activeClientId(),actor_name:a.actor,action,target:target||null}).select().single()
       .then(({data,error})=>{ if(!error&&data)a.dbId=data.id; }).catch(()=>{});
   }
   if(currentSection==='notifications'&&_notifTab==='activity')renderSection();
@@ -2765,13 +2905,13 @@ let _kbId=100;
 async function uploadKbDocs(){
   const files=document.getElementById('kb-file-input').files;
   if(!files.length){toast('Choose at least one file','var(--danger)');return;}
-  if(!currentUser.companyId){toast('Your account isn\'t linked to a business — contact support before adding documents','var(--danger)');return;}
+  if(!activeClientId()){toast('Your account isn\'t linked to a business — contact support before adding documents','var(--danger)');return;}
   const today=new Date().toISOString().slice(0,10);
   Array.from(files).forEach(f=>{
     STATE.kbDocs.push({id:++_kbId,name:f.name,size:Math.round(f.size/1024)+' KB',added:today});
     // client_id scopes this document to THIS business only — required so ARIA never
     // surfaces it while answering another company's questions.
-    if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:currentUser.companyId,title:f.name,content:'',category:'client_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
+    if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:activeClientId(),title:f.name,content:'',category:'client_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
   });
   saveState();document.getElementById('kb-file-input').value='';renderSection();
   toast("Document(s) added to ARIA's knowledge base",'var(--green)');
@@ -2813,7 +2953,7 @@ function initAriaScope(){
   const inp=document.getElementById('aria-input');
   const btn=document.getElementById('aria-send-btn');
   const attachBtn=document.getElementById('aria-attach-btn');
-  if(currentUser.companyId){
+  if(activeClientId()){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>${co}`;
     msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA — your assistant for <strong>${co}</strong>. Ask me anything, or ask me to do something, like "create a ticket for a broken checkout" or "add this doc to the knowledge base". How can I help today?</div>`;
@@ -2832,7 +2972,7 @@ function initAriaScope(){
 // re-checks (and re-shows if still unresolved) on every session boot
 // rather than being asked once and forgotten.
 async function maybeSuggestMfa(){
-  if(!_sb||!currentUser.companyId)return;
+  if(!_sb||!activeClientId())return;
   try{
     const {data}=await _sb.auth.mfa.listFactors();
     const has2fa=(data?.totp||[]).some(f=>f.status==='verified');
@@ -2864,7 +3004,7 @@ function clearAriaAttachment(){
 function addFileToKnowledgeBase(file){
   const today=new Date().toISOString().slice(0,10);
   STATE.kbDocs.push({id:++_kbId,name:file.name,size:Math.round(file.size/1024)+' KB',added:today});
-  if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:currentUser.companyId,title:file.name,content:'',category:'aria_chat_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
+  if(_sb){ try{ _sb.from('knowledge_base').insert({client_id:activeClientId(),title:file.name,content:'',category:'aria_chat_upload',approval_status:'approved',submitted_by_name:currentUser.name,is_active:true}); }catch(e){} }
   saveState();
   if(currentSection==='settings')renderSection();
   logActivity('Added to knowledge base',file.name,'ARIA');
@@ -2918,8 +3058,8 @@ function tryAriaAction(text,file){
     const g={id:++_grpId,name,members:['ARIA'],messages:[]};
     STATE.groups.push(g);
     saveState(); if(currentSection==='teams')renderSection();
-    if(currentUser.companyId&&_sb){
-      _sb.from('groups').insert({client_id:currentUser.companyId,name,created_by:currentUser.id}).select().single()
+    if(activeClientId()&&_sb){
+      _sb.from('groups').insert({client_id:activeClientId(),name,created_by:currentUser.id}).select().single()
         .then(({data,error})=>{
           if(error||!data)return;
           g.dbId=data.id;
@@ -2958,7 +3098,7 @@ function tryAriaAction(text,file){
     const dbId=member.dbId;
     STATE.team=STATE.team.filter(x=>x.id!==member.id);
     saveState(); if(currentSection==='teams')renderSection();
-    if(dbId&&currentUser.companyId&&_sb){
+    if(dbId&&activeClientId()&&_sb){
       _sb.functions.invoke('remove-team-member',{body:{user_id:dbId}}).catch(()=>{});
     }
     logActivity('Removed team member',member.name,'ARIA');
@@ -3029,7 +3169,7 @@ function ariaAppend(who,html){
 }
 
 async function sendAriaMsg(){
-  if(!currentUser.companyId)return;
+  if(!activeClientId())return;
   const inp=document.getElementById('aria-input');
   const msg=inp.value.trim();
   const file=_ariaPendingFile;
@@ -3058,7 +3198,7 @@ async function sendAriaMsg(){
       const res=await fetch('https://api.supanta.com/chat',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:currentUser.companyId,message:msg||'What do you see in this image?',context:'dashboard',user_email:currentUser.email,image:imageDataUrl,image_name:file.name})
+        body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:activeClientId(),message:msg||'What do you see in this image?',context:'dashboard',user_email:currentUser.email,image:imageDataUrl,image_name:file.name})
       });
       if(!res.ok)throw new Error('bad response');
       const data=await res.json();
@@ -3080,7 +3220,7 @@ async function sendAriaMsg(){
     const res=await fetch('https://api.supanta.com/chat',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:currentUser.companyId,message:msg,context:'dashboard',user_email:currentUser.email})
+      body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:activeClientId(),message:msg,context:'dashboard',user_email:currentUser.email})
     });
     if(!res.ok)throw new Error('bad response');
     const data=await res.json();
@@ -3183,8 +3323,8 @@ function sendGroupMsg(gid){
   g.messages.push({from:currentUser.name,text,time:new Date().toTimeString().slice(0,5)});
   saveState(); inp.value=''; renderSection();
   setTimeout(()=>{ const box=document.getElementById('group-msgs'); if(box)box.scrollTop=box.scrollHeight; },0);
-  if(g.dbId&&currentUser.companyId&&_sb){
-    try{ _sb.from('group_messages').insert({group_id:g.dbId,client_id:currentUser.companyId,sender_name:currentUser.name,text}); }catch(e){}
+  if(g.dbId&&activeClientId()&&_sb){
+    try{ _sb.from('group_messages').insert({group_id:g.dbId,client_id:activeClientId(),sender_name:currentUser.name,text}); }catch(e){}
   }
 }
 let _grpId=100;
@@ -3204,8 +3344,8 @@ function addGroup(){
   saveState();closeModal('modal-add-group');_activeGroupId=_grpId;renderSection();
   toast(`#${name} created`,'var(--green)');
   logActivity('Created group',name);
-  if(currentUser.companyId&&_sb){
-    _sb.from('groups').insert({client_id:currentUser.companyId,name,created_by:currentUser.id}).select().single()
+  if(activeClientId()&&_sb){
+    _sb.from('groups').insert({client_id:activeClientId(),name,created_by:currentUser.id}).select().single()
       .then(({data,error})=>{
         if(error||!data)return;
         g.dbId=data.id;
