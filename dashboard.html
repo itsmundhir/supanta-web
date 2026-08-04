@@ -1545,13 +1545,21 @@ function channelBrandColor(key){
   return 'var(--accent)';
 }
 const INT_ICONS=new Proxy({},{get:(_,key)=>channelIconSvg(key,20)});
+let _intSearch='';
 function renderIntegrations(){
   return `
   <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:10px;padding:.9rem 1.1rem;font-size:.8rem;color:var(--warning);margin-bottom:1.25rem">
     Reminder: Phone / voice call routing still needs to be integrated. Also remember to set up official accounts on every social platform below before going live.
   </div>
-  <div class="grid-3">
-    ${STATE.integrations.map(i=>`
+  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="int-search" placeholder="Search integrations by name…" value="${_intSearch}" oninput="filterIntegrations(this.value)"/></div>
+  <div id="int-grid-wrap">${intGridHtml()}</div>`;
+}
+function intGridHtml(){
+  const q=_intSearch.trim().toLowerCase();
+  const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
+  if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
+  return `<div class="grid-3">
+    ${list.map(i=>`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -1564,6 +1572,11 @@ function renderIntegrations(){
         </label>
       </div>`).join('')}
   </div>`;
+}
+function filterIntegrations(v){
+  _intSearch=v;
+  document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+  refocusSearch('int-search');
 }
 function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
@@ -1633,7 +1646,7 @@ function activityNavFor(a){
     return {section:'teams',tab:'groups',groupName:target};
   }
   if(action.includes('integration')){
-    return {section:'integrations'};
+    return {section:'integrations',integrationName:target};
   }
   if(action.includes('knowledge base')){
     return {section:'settings',tab:'kb'};
@@ -1669,6 +1682,11 @@ function goToActivity(id){
   if(nav.section==='settings'){
     showSection('settings');
     if(nav.tab){_settingsTab=nav.tab;renderSection();}
+    return;
+  }
+  if(nav.section==='integrations'){
+    const i=nav.integrationName&&STATE.integrations.find(x=>x.name===nav.integrationName);
+    if(i){gsGoIntegration(i.key);}else{showSection('integrations');}
     return;
   }
   showSection(nav.section);
@@ -1769,12 +1787,22 @@ function runGlobalSearch(v){
   const iv=(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
     .map(i=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoInvoices()"><div class="notif-dot" style="background:var(--green)"></div><div><div>${i.id} · ${i.amount}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">Due ${i.dueDate} · ${i.status}</div></div></div>`);
 
-  const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm)+gsGroup('Notifications',nt)+gsGroup('Knowledge Base',kb)+gsGroup('Invoices',iv);
+  const ig=STATE.integrations.filter(i=>i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q)).slice(0,5)
+    .map(i=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoIntegration('${i.key}')"><div class="notif-dot" style="background:${i.color==='#ffffff'?'var(--text)':i.color}"></div><div><div>${i.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${i.comingSoon?'Coming soon':i.connected?'Connected':'Not connected'}</div></div></div>`);
+
+  const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm)+gsGroup('Notifications',nt)+gsGroup('Knowledge Base',kb)+gsGroup('Invoices',iv)+gsGroup('Integrations',ig);
   box.innerHTML=html||'<div class="empty-state">No matches for "'+v+'"</div>';
 }
 function gsGoNotifications(){ closeGlobalSearch(); showSection('notifications'); }
 function gsGoKb(){ closeGlobalSearch(); showSection('settings'); _settingsTab='kb'; renderSection(); }
 function gsGoInvoices(){ closeGlobalSearch(); showSection('settings'); _settingsTab='invoices'; renderSection(); }
+function gsGoIntegration(key){
+  closeGlobalSearch();
+  const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
+  _intSearch='';showSection('integrations');
+  document.getElementById('int-search').value=i.name;
+  filterIntegrations(i.name);
+}
 function gsGoTicket(id){
   closeGlobalSearch();
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
