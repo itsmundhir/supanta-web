@@ -722,7 +722,7 @@ function defaultState(){
     activity:[
       {id:1,actor:'Zanele Mokoena',action:'Reassigned ticket',target:'SUP-1039 → Zanele Mokoena',time:'2 hr ago'},
       {id:2,actor:'ARIA',action:'Created ticket',target:'SUP-1042',time:'5 hr ago'},
-      {id:3,actor:'Nomsa Dube',action:'Marked chat done',target:'Marcus Webb',time:'Yesterday'},
+      {id:3,actor:'Nomsa Dube',action:'Marked chat done',target:'Marcus Webb (CHT-098)',time:'Yesterday'},
       {id:4,actor:'demo',action:'Added team member',target:'Zanele Mokoena',time:'2 days ago'}
     ],
     wisePayee:{name:'Supanta (Pty) Ltd',email:'payments@supanta.com',reference:'Use your invoice number as the payment reference'},
@@ -1564,14 +1564,78 @@ function renderNotifList(){
 function renderActivityLog(){
   const list=STATE.activity||[];
   return `
-  <div class="card-sub" style="margin-top:0">Who did what, across your whole team — including ARIA</div>
+  <div class="card-sub" style="margin-top:0">Who did what, across your whole team — including ARIA. Click an entry to jump there.</div>
   <div class="card" style="padding:0">
-    ${list.length?list.map(a=>`
-      <div class="notif-item read" style="cursor:default">
+    ${list.length?list.map(a=>{
+      const clickable=!!activityNavFor(a);
+      return `
+      <div class="notif-item read" style="cursor:${clickable?'pointer':'default'}" ${clickable?`onclick="goToActivity(${a.id})"`:''}>
         <div class="notif-dot" style="background:${a.actor==='ARIA'?'var(--accent-2)':'var(--accent)'}"></div>
         <div><div><strong>${a.actor}</strong> ${a.action}${a.target?` — <span style="color:var(--text-2)">${a.target}</span>`:''}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.25rem">${a.time}</div></div>
-      </div>`).join(''):'<div class="empty-state">No activity recorded yet.</div>'}
+        ${clickable?`<div style="margin-left:auto;color:var(--text-3);font-size:.72rem;flex-shrink:0">View →</div>`:''}
+      </div>`;
+    }).join(''):'<div class="empty-state">No activity recorded yet.</div>'}
   </div>`;
+}
+// Works out, from an activity-log entry's action/target text, where to jump — reused
+// for both the "clickable" affordance check and the actual navigation.
+function activityNavFor(a){
+  const action=(a.action||'').toLowerCase();
+  const target=a.target||'';
+  if(action.includes('ticket')){
+    const m=target.match(/SUP-\d+/i);
+    return m?{section:'tickets',ticketId:m[0]}:{section:'tickets'};
+  }
+  if(action.includes('chat')){
+    const m=target.match(/\(([^)]+)\)\s*$/);
+    return m?{section:'chats',chatId:m[1]}:{section:'chats'};
+  }
+  if(action.includes('team member')||action.includes('ai agent')){
+    return {section:'teams',tab:'members'};
+  }
+  if(action.includes('group')){
+    return {section:'teams',tab:'groups',groupName:target};
+  }
+  if(action.includes('integration')){
+    return {section:'integrations'};
+  }
+  if(action.includes('knowledge base')){
+    return {section:'settings',tab:'kb'};
+  }
+  if(action.includes('two-factor')){
+    return {section:'settings',tab:'security'};
+  }
+  return null;
+}
+function goToActivity(id){
+  const a=(STATE.activity||[]).find(x=>x.id===id); if(!a)return;
+  const nav=activityNavFor(a); if(!nav)return;
+  if(nav.section==='tickets'){
+    if(nav.ticketId)gsGoTicket(nav.ticketId); else showSection('tickets');
+    return;
+  }
+  if(nav.section==='chats'){
+    if(nav.chatId)gsGoChat(nav.chatId); else showSection('chats');
+    return;
+  }
+  if(nav.section==='teams'){
+    showSection('teams');
+    if(nav.tab){
+      _teamsTab=nav.tab;
+      if(nav.tab==='groups'&&nav.groupName){
+        const g=(STATE.groups||[]).find(x=>x.name===nav.groupName);
+        if(g)_activeGroupId=g.id;
+      }
+      renderSection();
+    }
+    return;
+  }
+  if(nav.section==='settings'){
+    showSection('settings');
+    if(nav.tab){_settingsTab=nav.tab;renderSection();}
+    return;
+  }
+  showSection(nav.section);
 }
 let _notifId=100, _activityId=100;
 function pushNotification(text){
@@ -1638,6 +1702,9 @@ function toggleGlobalSearch(){
     setTimeout(()=>document.getElementById('global-search-input').focus(),10);
   }
 }
+// Always closes (never opens) — used by the gsGoX "jump to result" helpers, which
+// may be invoked from places other than the search panel itself (e.g. the Activity Log).
+function closeGlobalSearch(){ document.getElementById('global-search-panel').classList.remove('open'); }
 document.addEventListener('click',e=>{
   const p=document.getElementById('global-search-panel');
   if(p&&p.classList.contains('open')&&!p.contains(e.target)&&!e.target.closest('.icon-btn'))p.classList.remove('open');
@@ -1669,23 +1736,23 @@ function runGlobalSearch(v){
   const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm)+gsGroup('Notifications',nt)+gsGroup('Knowledge Base',kb)+gsGroup('Invoices',iv);
   box.innerHTML=html||'<div class="empty-state">No matches for "'+v+'"</div>';
 }
-function gsGoNotifications(){ toggleGlobalSearch(); showSection('notifications'); }
-function gsGoKb(){ toggleGlobalSearch(); showSection('settings'); _settingsTab='kb'; renderSection(); }
-function gsGoInvoices(){ toggleGlobalSearch(); showSection('settings'); _settingsTab='invoices'; renderSection(); }
+function gsGoNotifications(){ closeGlobalSearch(); showSection('notifications'); }
+function gsGoKb(){ closeGlobalSearch(); showSection('settings'); _settingsTab='kb'; renderSection(); }
+function gsGoInvoices(){ closeGlobalSearch(); showSection('settings'); _settingsTab='invoices'; renderSection(); }
 function gsGoTicket(id){
-  toggleGlobalSearch();
+  closeGlobalSearch();
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   _ticketSearch='';showSection('tickets');
   document.getElementById('ticket-search').value=t.subject;
   filterTickets(t.subject);
 }
 function gsGoChat(id){
-  toggleGlobalSearch();
+  closeGlobalSearch();
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
   _chatTab=c.status;_activeChatId=c.id;_chatSearch='';
   showSection('chats');
 }
-function gsGoTeam(){ toggleGlobalSearch(); showSection('teams'); }
+function gsGoTeam(){ closeGlobalSearch(); showSection('teams'); }
 
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
@@ -2059,7 +2126,7 @@ function tryAriaAction(text,file){
       const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
       if(!ch)return `I couldn't find a chat with ID ${id}.`;
       ch.status=status; saveState(); if(currentSection==='chats')renderSection();
-      logActivity(`Marked chat ${status}`,ch.customer,'ARIA');
+      logActivity(`Marked chat ${status}`,`${ch.customer} (${ch.id})`,'ARIA');
       return `Done — the conversation with ${ch.customer} is now marked ${status}.`;
     }
   }
@@ -2236,7 +2303,7 @@ function setChatStatus(id,status){
   c.status=status; saveState();
   toast(status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`,'var(--accent)');
   if(currentSection==='chats')renderSection();
-  logActivity(`Marked chat ${status}`,c.customer);
+  logActivity(`Marked chat ${status}`,`${c.customer} (${c.id})`);
 }
 
 // ─── TEAMS: GROUPS (internal chat, Slack-style) ──────────
