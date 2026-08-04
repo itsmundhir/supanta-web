@@ -2055,13 +2055,35 @@ async function sendAriaMsg(){
     ariaAppend('bot',actionReply);
     return;
   }
+  const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='…';
+  msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
+
+  if(file && file.type && file.type.startsWith('image/')){
+    // Actually sends the image to ARIA's real backend for analysis rather than
+    // pretending to have "seen" it — if the backend can't look at it, we say so.
+    try{
+      const imageDataUrl=await fileToBase64(file);
+      const res=await fetch('https://api.supanta.com/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:currentUser.companyId,message:msg||'What do you see in this image?',context:'dashboard',user_email:currentUser.email,image:imageDataUrl,image_name:file.name})
+      });
+      if(!res.ok)throw new Error('bad response');
+      const data=await res.json();
+      document.getElementById('aria-typing')?.remove();
+      ariaAppend('bot',data.reply||`I received <strong>${file.name}</strong> but couldn't analyze it just now — say the word if you'd like me to add it to your knowledge base instead.`);
+    }catch(e){
+      document.getElementById('aria-typing')?.remove();
+      ariaAppend('bot',`I couldn't analyze <strong>${file.name}</strong> right now — try again shortly, or say the word if you'd like me to add it to your knowledge base instead.`);
+    }
+    return;
+  }
   if(file){
+    document.getElementById('aria-typing')?.remove();
     ariaAppend('bot',`Got <strong>${file.name}</strong> — say the word if you'd like me to add it to your knowledge base, or ask me anything about it.`);
     return;
   }
 
-  const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='…';
-  msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
   try{
     const res=await fetch('https://api.supanta.com/chat',{
       method:'POST',
@@ -2076,6 +2098,14 @@ async function sendAriaMsg(){
     document.getElementById('aria-typing')?.remove();
     ariaAppend('bot',"Sorry, I'm having trouble connecting right now — try again shortly.");
   }
+}
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(reader.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // ─── CHAT CONTEXT MENU (right-click a chat row) ──────────
