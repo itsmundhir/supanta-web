@@ -549,6 +549,48 @@ async function boot(){
   await loadRemoteData();
   renderShell();
   renderSection();
+  subscribeRealtime();
+}
+// Live sync: without this, a teammate's ticket move or a new notification only
+// shows up for everyone else on their next full reload. Subscribes to Postgres
+// changes on this business's own rows only (client_id filter mirrors the RLS
+// scoping already enforced server-side) and patches STATE in place.
+function subscribeRealtime(){
+  if(!currentUser.companyId||!_sb||typeof _sb.channel!=='function')return;
+  try{
+    const filter=`client_id=eq.${currentUser.companyId}`;
+    _sb.channel('client-'+currentUser.companyId)
+      .on('postgres_changes',{event:'*',schema:'public',table:'tickets',filter},handleTicketRealtime)
+      .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter},handleNotificationRealtime)
+      .subscribe();
+  }catch(e){}
+}
+function handleTicketRealtime(payload){
+  if(payload.eventType==='DELETE'){
+    const before=STATE.tickets.length;
+    STATE.tickets=STATE.tickets.filter(t=>t.dbId!==payload.old.id);
+    if(STATE.tickets.length!==before){saveState();if(currentSection==='tickets'||currentSection==='pulse')renderSection();}
+    return;
+  }
+  const r=payload.new;
+  let t=STATE.tickets.find(x=>x.dbId===r.id);
+  if(t){
+    t.subject=r.subject;t.client=r.customer_name||'—';t.owner=r.owner_name||'—';
+    t.status=r.status;t.priority=r.priority;t.csat=r.csat||null;t.dueAt=r.due_at||null;
+  }else{
+    STATE.tickets.unshift({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null});
+  }
+  saveState();
+  if(currentSection==='tickets'||currentSection==='pulse')renderSection();
+}
+function handleNotificationRealtime(payload){
+  if(payload.eventType!=='INSERT')return;
+  const r=payload.new;
+  if(STATE.notifications.some(n=>n.dbId===r.id))return;
+  STATE.notifications.unshift({id:++_notifId,dbId:r.id,text:r.text,time:new Date(r.created_at).toLocaleString(),read:r.read});
+  saveState();
+  renderShell();
+  if(currentSection==='notifications')renderSection();
 }
 // Tickets and Notifications are now backed by real Supabase tables (see
 // server-side migrations), scoped to this business via client_id/RLS — so
