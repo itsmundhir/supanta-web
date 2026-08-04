@@ -707,7 +707,16 @@ function defaultState(){
       {key:'x',name:'X (Twitter)',desc:'Monitor mentions and DMs for support requests.',color:'#ffffff',connected:false},
       {key:'facebook',name:'Facebook',desc:'Connect your Page inbox and comments.',color:'#1877F2',connected:false},
       {key:'phone',name:'Phone',desc:'Voice call routing for inbound and outbound support calls.',color:'#f5a623',connected:false},
-      {key:'shopify',name:'Shopify',desc:'Pull order, shipping and customer data directly into chats.',color:'#95BF47',connected:true}
+      {key:'shopify',name:'Shopify',desc:'Pull order, shipping and customer data directly into chats.',color:'#95BF47',connected:true},
+      {key:'telegram',name:'Telegram',desc:'Route Telegram DMs into your shared inbox.',color:'#26A5E4',connected:false},
+      {key:'sms',name:'SMS',desc:'Text-message support for order updates, OTPs and quick replies.',color:'var(--accent)',connected:false},
+      {key:'livechat',name:'Live Chat',desc:'An embeddable widget so visitors can chat with ARIA/agents on your own site.',color:'var(--accent-2)',connected:false},
+      {key:'tiktok',name:'TikTok',desc:'Reply to comments and DMs on your TikTok account.',color:'var(--text)',connected:false},
+      {key:'googlebusiness',name:'Google Business Messages',desc:'Chat with customers directly from your Google Maps/Search listing.',color:'#4285F4',connected:false},
+      {key:'slack',name:'Slack',desc:'Route escalations and notify your team internally in Slack.',color:'#4A154B',connected:false},
+      {key:'zoom',name:'Zoom',desc:'Book and join video calls with customers straight from a ticket.',color:'#2D8CFF',connected:false},
+      {key:'googlecalendar',name:'Google Calendar',desc:'Schedule meetings from chats and sync them to your calendar.',color:'#4285F4',connected:false},
+      {key:'hubspot',name:'HubSpot',desc:'Sync contacts and conversations with your HubSpot CRM.',color:'#FF7A59',connected:false}
     ],
     notifications:[
       {id:1,text:'ARIA escalated a billing dispute from Sarah Lee to Liam Dlamini.',time:'10 min ago',read:false},
@@ -948,7 +957,7 @@ function renderTicketDonut(){
   </div>`;
 }
 
-const CHART_CHANNEL_COLORS={whatsapp:'#25D366',email:'var(--accent)',instagram:'#E1306C',x:'var(--text-2)',facebook:'#1877F2',phone:'var(--warning)',shopify:'#95BF47'};
+const CHART_CHANNEL_COLORS={whatsapp:'#25D366',email:'var(--accent)',instagram:'#E1306C',x:'var(--text-2)',facebook:'#1877F2',phone:'var(--warning)',shopify:'#95BF47',telegram:'#26A5E4',sms:'var(--accent)',livechat:'var(--accent-2)',tiktok:'var(--text)',googlebusiness:'#4285F4'};
 function renderChannelMix(){
   const rows=getChannelMixData().map(d=>[d.label,d.v]);
   if(!rows.length)return '<div class="empty-state">No conversations yet.</div>';
@@ -1056,7 +1065,7 @@ async function removeTeamMember(id){
 
 // ─── CHATS ───────────────────────────────────────────────
 let _chatTab='active', _activeChatId=null, _chatSearch='', _chatChannel='all';
-const CHAT_CHANNELS=['WhatsApp','Email','Instagram','X','Facebook','Phone'];
+const CHAT_CHANNELS=['WhatsApp','Email','Instagram','X','Facebook','Phone','Telegram','SMS','Live Chat','TikTok','Google Business Messages'];
 function chatFilteredList(){
   const q=_chatSearch.trim().toLowerCase();
   return STATE.chats.filter(c=>c.status===_chatTab
@@ -1495,16 +1504,43 @@ const CHANNEL_ICON_PATHS={
   facebook:'<path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/>',
   shopify:'<path d="M15.337 23.979l7.216-1.561s-2.604-17.613-2.625-17.73c-.018-.116-.114-.192-.211-.192s-1.929-.136-1.929-.136-1.275-1.274-1.439-1.411c-.045-.037-.075-.057-.121-.074l-.914 21.104h.023zM11.71 11.305s-.81-.424-1.774-.424c-1.447 0-1.504.906-1.504 1.141 0 1.232 3.24 1.715 3.24 4.629 0 2.295-1.44 3.76-3.406 3.76-2.354 0-3.54-1.465-3.54-1.465l.646-2.086s1.245 1.066 2.28 1.066c.675 0 .975-.545.975-.932 0-1.619-2.654-1.694-2.654-4.359-.034-2.237 1.571-4.416 4.827-4.416 1.257 0 1.875.361 1.875.361l-.945 2.715-.02.01zM11.17.83c.136 0 .271.038.405.135-.984.465-2.064 1.639-2.508 3.992-.656.213-1.293.405-1.889.578C7.697 3.75 8.951.84 11.17.84V.83zm1.235 2.949v.135c-.754.232-1.583.484-2.394.736.466-1.777 1.333-2.645 2.085-2.971.193.501.309 1.176.309 2.1zm.539-2.234c.694.074 1.141.867 1.429 1.755-.349.114-.735.231-1.158.366v-.252c0-.752-.096-1.371-.271-1.871v.002zm2.992 1.289c-.02 0-.06.021-.078.021s-.289.075-.714.21c-.423-1.233-1.176-2.37-2.508-2.37h-.115C12.135.209 11.669 0 11.265 0 8.159 0 6.675 3.877 6.21 5.846c-1.194.365-2.063.636-2.16.674-.675.213-.694.232-.772.87-.075.462-1.83 14.063-1.83 14.063L15.009 24l.927-21.166z"/>',
   email:'<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><polyline points="22,6 12,13 2,6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
-  phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+  phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+  // Official brand marks (Simple Icons, MIT licensed) — verified byte-for-byte via direct fetch.
+  telegram:'<path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>',
+  tiktok:'<path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>',
+  zoom:'<path d="M5.033 14.649H.743a.74.74 0 0 1-.686-.458.74.74 0 0 1 .16-.808L3.19 10.41H1.06A1.06 1.06 0 0 1 0 9.35h3.957c.301 0 .57.18.686.458a.74.74 0 0 1-.161.808L1.51 13.59h2.464c.585 0 1.06.475 1.06 1.06zM24 11.338c0-1.14-.927-2.066-2.066-2.066-.61 0-1.158.265-1.537.686a2.061 2.061 0 0 0-1.536-.686c-1.14 0-2.066.926-2.066 2.066v3.311a1.06 1.06 0 0 0 1.06-1.06v-2.251a1.004 1.004 0 0 1 2.013 0v2.251c0 .586.474 1.06 1.06 1.06v-3.311a1.004 1.004 0 0 1 2.012 0v2.251c0 .586.475 1.06 1.06 1.06zM16.265 12a2.728 2.728 0 1 1-5.457 0 2.728 2.728 0 0 1 5.457 0zm-1.06 0a1.669 1.669 0 1 0-3.338 0 1.669 1.669 0 0 0 3.338 0zm-4.82 0a2.728 2.728 0 1 1-5.458 0 2.728 2.728 0 0 1 5.457 0zm-1.06 0a1.669 1.669 0 1 0-3.338 0 1.669 1.669 0 0 0 3.338 0z"/>',
+  googlecalendar:'<path d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"/>',
+  hubspot:'<path d="M18.164 7.93V5.084a2.198 2.198 0 001.267-1.978v-.067A2.2 2.2 0 0017.238.845h-.067a2.2 2.2 0 00-2.193 2.193v.067a2.196 2.196 0 001.252 1.973l.013.006v2.852a6.22 6.22 0 00-2.969 1.31l.012-.01-7.828-6.095A2.497 2.497 0 104.3 4.656l-.012.006 7.697 5.991a6.176 6.176 0 00-1.038 3.446c0 1.343.425 2.588 1.147 3.607l-.013-.02-2.342 2.343a1.968 1.968 0 00-.58-.095h-.002a2.033 2.033 0 102.033 2.033 1.978 1.978 0 00-.1-.595l.005.014 2.317-2.317a6.247 6.247 0 104.782-11.134l-.036-.005zm-.964 9.378a3.206 3.206 0 113.215-3.207v.002a3.206 3.206 0 01-3.207 3.207z"/>',
+  google:'<path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>',
+  // Generic (non-brand) glyphs — used where the integration is a category/protocol
+  // rather than a single company's mark (SMS, a live-chat widget), or where the
+  // company's official mark couldn't be sourced reliably (Slack — see channelIconSvg).
+  sms:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><line x1="7" y1="9" x2="17" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="7" y1="13" x2="13" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  livechat:'<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
 };
+// Letter-badge fallback for brands whose official mark isn't safe to hand-reproduce
+// (Slack's icon is a multi-color geometric mark not sourced from a verified feed —
+// this shows an honest placeholder in the brand's color instead of a guessed logo).
+const CHANNEL_LETTER_FALLBACK={slack:{letter:'S',color:'#4A154B'}};
+// A few channel names don't map 1:1 to an icon-path key (multi-word labels, or
+// products that share a parent brand's mark) — normalize through this first.
+const CHANNEL_KEY_ALIASES={googlebusinessmessages:'google',googlebusiness:'google',xtwitter:'x'};
+function normalizeChannelKey(key){
+  const k=String(key||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  return CHANNEL_KEY_ALIASES[k]||k;
+}
 function channelIconSvg(key,size){
   size=size||16;
-  const inner=CHANNEL_ICON_PATHS[String(key||'').toLowerCase()];
-  if(!inner)return '';
-  return `<svg fill="currentColor" width="${size}" height="${size}" viewBox="0 0 24 24" style="vertical-align:-3px;flex-shrink:0" aria-hidden="true">${inner}</svg>`;
+  const k=normalizeChannelKey(key);
+  const inner=CHANNEL_ICON_PATHS[k];
+  if(inner)return `<svg fill="currentColor" width="${size}" height="${size}" viewBox="0 0 24 24" style="vertical-align:-3px;flex-shrink:0" aria-hidden="true">${inner}</svg>`;
+  const fb=CHANNEL_LETTER_FALLBACK[k];
+  if(fb)return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:3px;background:${fb.color};color:#fff;font-size:${Math.round(size*.68)}px;font-weight:700;font-family:var(--fd);vertical-align:-3px;flex-shrink:0">${fb.letter}</span>`;
+  return '';
 }
 function channelBrandColor(key){
-  const integ=STATE.integrations.find(x=>x.key===String(key||'').toLowerCase());
+  const k=normalizeChannelKey(key);
+  const integ=STATE.integrations.find(x=>normalizeChannelKey(x.key)===k);
   if(integ)return integ.color==='#ffffff'?'var(--text)':integ.color;
   return 'var(--accent)';
 }
@@ -2161,7 +2197,7 @@ function tryAriaAction(text,file){
   m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
   if(m){
     const wantConnect=m[1]==='connect'||m[1]==='enable'||m[1]==='turn on';
-    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',shopify:'shopify'};
+    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',shopify:'shopify',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',googlebusinessmessages:'googlebusiness',googlebusiness:'googlebusiness',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot'};
     const key=aliasMap[m[2].trim().replace(/\s+/g,'')];
     const i=key&&STATE.integrations.find(x=>x.key===key);
     if(i){
