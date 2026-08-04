@@ -3143,12 +3143,7 @@ function toastUndo(msg,color,undoFn){
   document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); clearTimeout(window._toastTimer); undoFn(); };
 }
 
-// ─── ARIA WIDGET (connects to api.supanta.com, same as the public site) ───
-// IMPORTANT: every request is scoped with THIS business's client_id (from
-// user_profiles.client_id via Supabase auth). ARIA must never be called
-// without it and must never reuse another company's id — that's what
-// stops knowledge/context leaking between businesses sharing the platform.
-const ARIA_SESSION_ID=(crypto.randomUUID?crypto.randomUUID():(Date.now()+'-'+Math.random().toString(36).slice(2)));
+// ─── ARIA WIDGET (calls the client-assistant Supabase Edge Function) ─────
 function initAriaScope(){
   const statusEl=document.getElementById('aria-scope-status');
   const msgs=document.getElementById('aria-msgs');
@@ -3370,13 +3365,22 @@ function ariaAppend(who,html){
   saveAriaHistory();
 }
 
+// client-assistant only wants the last few turns as plain {role,content} text,
+// not the HTML this widget renders — strip tags and the 📎 attachment prefix.
+function ariaPlainHistory(){
+  return _ariaHistory.slice(-8).map(m=>({
+    role:m.who==='user'?'user':'assistant',
+    content:m.html.replace(/<[^>]+>/g,'').trim()
+  })).filter(m=>m.content);
+}
 async function sendAriaMsg(){
-  if(!activeClientId())return;
+  if(!activeClientId()||!_sb)return;
   const inp=document.getElementById('aria-input');
   const msg=inp.value.trim();
   const file=_ariaPendingFile;
   if(!msg && !file)return;
   const msgs=document.getElementById('aria-msgs');
+  const historyBeforeThisMsg=ariaPlainHistory();
   ariaAppend('user',`${file?`📎 <strong>${file.name}</strong>${msg?'<br>':''}`:''}${msg}`);
   inp.value='';clearAriaAttachment();
 
@@ -3392,42 +3396,40 @@ async function sendAriaMsg(){
   const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='…';
   msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
 
+  const body={
+    message: msg || (file?'What can you tell me about this?':''),
+    history: historyBeforeThisMsg,
+    client_id: activeClientId(),
+  };
+
   if(file && file.type && file.type.startsWith('image/')){
-    // Actually sends the image to ARIA's real backend for analysis rather than
-    // pretending to have "seen" it — if the backend can't look at it, we say so.
-    try{
-      const imageDataUrl=await fileToBase64(file);
-      const res=await fetch('https://api.supanta.com/chat',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:activeClientId(),message:msg||'What do you see in this image?',context:'dashboard',user_email:currentUser.email,image:imageDataUrl,image_name:file.name})
-      });
-      if(!res.ok)throw new Error('bad response');
-      const data=await res.json();
+    if(!['image/png','image/jpeg','image/webp','image/gif'].includes(file.type)){
       document.getElementById('aria-typing')?.remove();
-      ariaAppend('bot',data.reply||`I received <strong>${file.name}</strong> but couldn't analyze it just now — say the word if you'd like me to add it to your knowledge base instead.`);
-    }catch(e){
-      document.getElementById('aria-typing')?.remove();
-      ariaAppend('bot',`I couldn't analyze <strong>${file.name}</strong> right now — try again shortly, or say the word if you'd like me to add it to your knowledge base instead.`);
+      ariaAppend('bot',`I can only read PNG, JPEG, WEBP or GIF images right now — <strong>${file.name}</strong> isn't one of those.`);
+      return;
     }
-    return;
-  }
-  if(file){
+    const dataUrl=await fileToBase64(file);
+    body.image={media_type:file.type,data:dataUrl.slice(dataUrl.indexOf(',')+1)};
+  }else if(file && (file.type==='application/pdf'||file.type==='text/plain')){
+    const dataUrl=await fileToBase64(file);
+    body.document={media_type:file.type,data:dataUrl.slice(dataUrl.indexOf(',')+1),name:file.name};
+  }else if(file){
     document.getElementById('aria-typing')?.remove();
-    ariaAppend('bot',`Got <strong>${file.name}</strong> — say the word if you'd like me to add it to your knowledge base, or ask me anything about it.`);
+    ariaAppend('bot',`I can only read images, PDFs, or plain text files right now — <strong>${file.name}</strong> isn't one of those. Say the word if you'd like me to add it to your knowledge base instead.`);
     return;
   }
 
   try{
-    const res=await fetch('https://api.supanta.com/chat',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:activeClientId(),message:msg,context:'dashboard',user_email:currentUser.email})
-    });
-    if(!res.ok)throw new Error('bad response');
-    const data=await res.json();
+    const {data,error}=await _sb.functions.invoke('client-assistant',{body});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
     document.getElementById('aria-typing')?.remove();
-    ariaAppend('bot',data.reply);
+    ariaAppend('bot',data.reply||"Sorry, I couldn't come up with a response just now.");
+    if(data.download){
+      const a=document.createElement('a');
+      a.href='data:'+data.download.mime+';base64,'+data.download.base64;
+      a.download=data.download.filename;a.click();
+    }
   }catch(e){
     document.getElementById('aria-typing')?.remove();
     ariaAppend('bot',"Sorry, I'm having trouble connecting right now — try again shortly.");
