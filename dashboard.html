@@ -565,11 +565,24 @@ function subscribeRealtime(){
       .subscribe();
   }catch(e){}
 }
+// Patches just the kanban board + bulk bar rather than the whole Tickets section —
+// a full renderSection() would blow away the search input's DOM node and steal
+// focus/cursor position from anyone actively typing when a teammate's change lands.
+function refreshTicketsBoard(){
+  const kb=document.getElementById('kanban-wrap');
+  if(kb){ kb.innerHTML=kanbanHtml(); wireKanban(); }
+  const bar=document.getElementById('bulk-bar-wrap');
+  if(bar)bar.innerHTML=bulkBarHtml();
+}
 function handleTicketRealtime(payload){
   if(payload.eventType==='DELETE'){
     const before=STATE.tickets.length;
     STATE.tickets=STATE.tickets.filter(t=>t.dbId!==payload.old.id);
-    if(STATE.tickets.length!==before){saveState();if(currentSection==='tickets'||currentSection==='pulse')renderSection();}
+    if(STATE.tickets.length!==before){
+      saveState();
+      if(currentSection==='tickets')refreshTicketsBoard();
+      if(currentSection==='pulse')renderSection();
+    }
     return;
   }
   const r=payload.new;
@@ -581,7 +594,8 @@ function handleTicketRealtime(payload){
     STATE.tickets.unshift({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null});
   }
   saveState();
-  if(currentSection==='tickets'||currentSection==='pulse')renderSection();
+  if(currentSection==='tickets')refreshTicketsBoard();
+  if(currentSection==='pulse')renderSection();
 }
 function handleNotificationRealtime(payload){
   if(payload.eventType!=='INSERT')return;
@@ -1404,14 +1418,18 @@ function bulkBarHtml(){
 }
 function toggleTicketSelect(id,checked){
   if(checked)_selectedTickets.add(id); else _selectedTickets.delete(id);
-  document.getElementById('bulk-bar-wrap').innerHTML=bulkBarHtml();
-  document.getElementById('kanban-wrap').innerHTML=kanbanHtml();
+  const bar=document.getElementById('bulk-bar-wrap'), kb=document.getElementById('kanban-wrap');
+  if(!bar||!kb)return;
+  bar.innerHTML=bulkBarHtml();
+  kb.innerHTML=kanbanHtml();
   wireKanban();
 }
 function clearTicketSelection(){
   _selectedTickets.clear();
-  document.getElementById('bulk-bar-wrap').innerHTML='';
-  document.getElementById('kanban-wrap').innerHTML=kanbanHtml();
+  const bar=document.getElementById('bulk-bar-wrap'), kb=document.getElementById('kanban-wrap');
+  if(!bar||!kb)return;
+  bar.innerHTML='';
+  kb.innerHTML=kanbanHtml();
   wireKanban();
 }
 function bulkMoveTickets(status){

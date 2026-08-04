@@ -948,6 +948,12 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     let _ariaLastUserMsg = '';
     let _ariaLeadShownForSession = false;
 
+    function toggleAriaChat(){
+      const b=document.getElementById('aria-chat-box');
+      b.classList.toggle('open');
+      if(b.classList.contains('open'))document.getElementById('aria-input').focus();
+    }
+
     async function sendAriaMsg(){
       const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
       const msgs=document.getElementById('aria-msgs');
@@ -1057,6 +1063,10 @@ const SUPABASE_URL = 'https://qzpairbwdmozntmsaryq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cGFpcmJ3ZG1vem50bXNhcnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NjYyMTAsImV4cCI6MjA5NDE0MjIxMH0.UZv426_LewcfGP0k3uYJyW1hsruODnV-t0-jpDxxzg4';
 
 let _appInited=false;
+// Tracks whether the visitor has navigated at all — the async init paths below
+// (Supabase SDK load, the offline-fallback timer) must not silently override a
+// page the user already clicked to once they've moved past the initial load.
+let _navigated=false;
 const _sbScript = document.createElement('script');
 _sbScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
 _sbScript.onload = () => {
@@ -1067,7 +1077,7 @@ _sbScript.onload = () => {
 };
 _sbScript.onerror = () => { console.warn('Supabase SDK blocked — running in public-only mode'); renderPublicFallback(); };
 document.head.appendChild(_sbScript);
-function renderPublicFallback(){ goTo('home'); applyFaqToPage(); }
+function renderPublicFallback(){ if(!_navigated)goTo('home'); applyFaqToPage(); }
 // Safety net for when the Supabase SDK never loads at all — gated on a flag,
 // not nav visibility, since the nav is legitimately hidden on the login page
 // (including mid-2FA) and a visibility check alone would boot a real user
@@ -1077,6 +1087,7 @@ setTimeout(()=>{ if(!_appInited)renderPublicFallback(); }, 2500);
 
 // ─── NAV / PAGE ROUTING ────────────────────────────────────
 function goTo(page){
+  _navigated=true;
   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
   const el=document.getElementById('page-'+page);if(!el)return;
   el.style.display=page==='login'?'flex':'block';
@@ -1243,7 +1254,7 @@ function runAnimations(scope){
 // ─── INIT ─────────────────────────────────────────────────
 async function initApp(){
   _appInited=true;
-  goTo('home');
+  if(!_navigated)goTo('home');
   const {data:{session}}=await window._sb.auth.getSession();
   if(session){
     try{
