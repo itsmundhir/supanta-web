@@ -477,9 +477,15 @@ input:checked + .slider::before{transform:translateX(18px)}
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hdr">
       <div><div class="modal-title" id="td-title">Ticket</div><div style="font-size:.78rem;color:var(--text-3);margin-top:.2rem" id="td-sub"></div></div>
-      <div style="display:flex;align-items:center;gap:.4rem">
-        <button class="btn btn-ghost btn-sm" id="td-forward-btn" onclick="openForwardToChat()">Forward to Chat</button>
-        <button class="btn btn-ghost btn-sm" id="td-delete-btn" onclick="deleteTicketConfirm()" style="color:var(--danger)">Delete</button>
+      <div style="display:flex;align-items:center;gap:.2rem">
+        <span class="kanban-col-menu-wrap">
+          <button class="btn-icon-sm" onclick="toggleTicketDetailMenu(event)" title="More options">⋯</button>
+          <div class="kanban-col-menu" id="td-menu">
+            <div class="ctx-item" onclick="closeTicketDetailMenu();openForwardToChat()">Forward</div>
+            <div class="ctx-item" onclick="closeTicketDetailMenu();openTicketSettings()">Settings</div>
+            <div class="ctx-item" onclick="closeTicketDetailMenu();deleteTicketConfirm()" style="color:var(--danger)">Delete</div>
+          </div>
+        </span>
         <button class="modal-close" onclick="closeModal('modal-ticket-detail')">✕</button>
       </div>
     </div>
@@ -487,10 +493,17 @@ input:checked + .slider::before{transform:translateX(18px)}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-ticket-settings">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-hdr"><div class="modal-title">Ticket Settings</div><button class="modal-close" onclick="closeModal('modal-ticket-settings')">✕</button></div>
+    <div id="ts-body"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-forward-chat">
   <div class="modal-box">
-    <div class="modal-hdr"><div class="modal-title">Forward to Chat</div><button class="modal-close" onclick="closeModal('modal-forward-chat')">✕</button></div>
-    <div class="form-group"><label>Conversation</label><select class="rb-select" id="fwd-chat-select"></select></div>
+    <div class="modal-hdr"><div class="modal-title">Forward</div><button class="modal-close" onclick="closeModal('modal-forward-chat')">✕</button></div>
+    <div class="form-group"><label>Send to</label><select class="rb-select" id="fwd-chat-select"></select></div>
     <div class="form-group"><label>Message</label><textarea class="rb-input" id="fwd-chat-message" rows="4" style="resize:vertical"></textarea></div>
     <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="submitForwardToChat()">Send</button>
   </div>
@@ -1734,37 +1747,41 @@ function setTicketPriority(id,priority){
   t.priority=priority; saveState(); renderSection();
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({priority,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
   toast('Priority updated','var(--accent)');
+  refreshTicketDetailSummary(id);
 }
 
 // ─── TICKET DETAIL (comments) ────────────────────────────
 function ticketPriorityOptions(cur){
   return ['high','med','low'].map(p=>`<option value="${p}" ${p===cur?'selected':''}>${p==='high'?'High':p==='med'?'Medium':'Low'}</option>`).join('');
 }
+function tdSubText(t){ return `${t.client} · Owner: ${t.owner} · ${listName(t.status)} · ${t.priority==='high'?'High':t.priority==='med'?'Medium':'Low'} priority`; }
+function tdLabelSummaryHtml(t){
+  if(!t.labelIds||!t.labelIds.length)return '';
+  return `<div style="margin-bottom:.75rem">${t.labelIds.map(lid=>{const l=(STATE.ticketLabels||[]).find(x=>x.id===lid);return l?`<span class="label-pill" style="background:${l.color}">${l.name}</span>`:'';}).join('')}</div>`;
+}
+// Keeps the main ticket-detail view's subtitle/label line in sync after a
+// change made from the separate Settings modal (priority, list, labels).
+function refreshTicketDetailSummary(ticketId){
+  if(document.getElementById('td-title')?.textContent!==ticketId)return;
+  const t=STATE.tickets.find(x=>x.id===ticketId); if(!t)return;
+  const sub=document.getElementById('td-sub'); if(sub)sub.textContent=tdSubText(t);
+  const lbl=document.getElementById('td-label-summary'); if(lbl)lbl.innerHTML=tdLabelSummaryHtml(t);
+}
+function toggleTicketDetailMenu(e){
+  e.stopPropagation();
+  document.getElementById('td-menu').classList.toggle('open');
+}
+function closeTicketDetailMenu(){ document.getElementById('td-menu').classList.remove('open'); }
+document.addEventListener('click',e=>{ if(!e.target.closest('#td-menu')&&!e.target.closest('[onclick*="toggleTicketDetailMenu"]'))closeTicketDetailMenu(); });
 async function openTicketDetail(id){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   document.getElementById('td-title').textContent=t.id;
-  document.getElementById('td-sub').textContent=`${t.client} · Owner: ${t.owner}`;
+  document.getElementById('td-sub').textContent=tdSubText(t);
   const body=document.getElementById('td-body');
   body.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
-      <div class="form-group" style="margin-bottom:0"><label>Priority</label><select class="rb-select" id="td-priority" onchange="setTicketPriority('${t.id}',this.value)">${ticketPriorityOptions(t.priority)}</select></div>
-      <div class="form-group" style="margin-bottom:0"><label>List</label><select class="rb-select" id="td-status" onchange="tdStatusChange('${t.id}',this.value)">
-        ${ticketListsSorted().map(l=>`<option value="${l.id}" ${l.id===t.status?'selected':''}>${l.name}</option>`).join('')}
-      </select></div>
-    </div>
-    <div class="form-group"><label>Due Date & Time</label><input class="rb-input" type="datetime-local" id="td-due" value="${dueFieldValue(t)}" onchange="setTicketDueDate('${t.id}',this.value)"/></div>
+    <div id="td-label-summary">${tdLabelSummaryHtml(t)}</div>
     <div class="form-group"><label>Subject</label><div style="font-size:.9rem;color:var(--text)">${t.subject}</div></div>
     <div id="td-csat-wrap">${ticketCsatHtml(t)}</div>
-    <div class="chart-card-hd" style="margin-top:1.25rem">
-      <div class="card-title" style="margin-bottom:0">Labels</div>
-      <button class="btn btn-ghost btn-sm" onclick="promptAddLabel('${t.id}')">+ New Label</button>
-    </div>
-    <div id="td-labels">${ticketLabelsHtml(t)}</div>
-    <div class="chart-card-hd" style="margin-top:1.25rem">
-      <div class="card-title" style="margin-bottom:0">Custom Fields</div>
-      <button class="btn btn-ghost btn-sm" onclick="promptAddCustomField('${t.id}')">+ Add Field</button>
-    </div>
-    <div id="td-custom-fields">${ticketCustomFieldsHtml(t)}</div>
     <div class="chart-card-hd" style="margin-top:1.25rem">
       <div class="card-title" style="margin-bottom:0">Checklists</div>
       <button class="btn btn-ghost btn-sm" onclick="promptAddChecklist('${t.id}')">+ Add Checklist</button>
@@ -1780,6 +1797,33 @@ async function openTicketDetail(id){
   await loadTicketComments(t);
   await loadTicketChecklists(t);
 }
+// Everything that's a property of the ticket rather than its content (priority,
+// which list it's in, due date, labels, custom fields) lives here instead of
+// cluttering the main card view — reached via the "⋯" menu's Settings item.
+function openTicketSettings(){
+  const id=document.getElementById('td-title').textContent;
+  const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  const box=document.getElementById('ts-body');
+  box.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+      <div class="form-group" style="margin-bottom:0"><label>Priority</label><select class="rb-select" id="td-priority" onchange="setTicketPriority('${t.id}',this.value)">${ticketPriorityOptions(t.priority)}</select></div>
+      <div class="form-group" style="margin-bottom:0"><label>List</label><select class="rb-select" id="td-status" onchange="tdStatusChange('${t.id}',this.value)">
+        ${ticketListsSorted().map(l=>`<option value="${l.id}" ${l.id===t.status?'selected':''}>${l.name}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="form-group"><label>Due Date & Time</label><input class="rb-input" type="datetime-local" id="td-due" value="${dueFieldValue(t)}" onchange="setTicketDueDate('${t.id}',this.value)"/></div>
+    <div class="chart-card-hd" style="margin-top:1.25rem">
+      <div class="card-title" style="margin-bottom:0">Labels</div>
+      <button class="btn btn-ghost btn-sm" onclick="promptAddLabel('${t.id}')">+ New Label</button>
+    </div>
+    <div id="td-labels">${ticketLabelsHtml(t)}</div>
+    <div class="chart-card-hd" style="margin-top:1.25rem">
+      <div class="card-title" style="margin-bottom:0">Custom Fields</div>
+      <button class="btn btn-ghost btn-sm" onclick="promptAddCustomField('${t.id}')">+ Add Field</button>
+    </div>
+    <div id="td-custom-fields">${ticketCustomFieldsHtml(t)}</div>`;
+  openModal('modal-ticket-settings');
+}
 function ticketCsatHtml(t){
   if(listKind(t.status)!=='done')return '';
   const opts=[['good','👍','Good'],['neutral','😐','Neutral'],['bad','👎','Not satisfied']];
@@ -1792,6 +1836,7 @@ function tdStatusChange(id,status){
   const t=STATE.tickets.find(x=>x.id===id);
   const wrap=document.getElementById('td-csat-wrap');
   if(t&&wrap)wrap.innerHTML=ticketCsatHtml(t);
+  refreshTicketDetailSummary(id);
 }
 function setTicketCsat(id,csat){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
@@ -1927,6 +1972,7 @@ function toggleTicketLabel(ticketId,labelId){
   t.labelIds=t.labelIds.includes(labelId)?t.labelIds.filter(x=>x!==labelId):[...t.labelIds,labelId];
   saveState();
   refreshLabelsUi(ticketId);
+  refreshTicketDetailSummary(ticketId);
   if(currentSection==='tickets')renderSection();
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({label_ids:t.labelIds}).eq('id',t.dbId); }catch(e){} }
 }
@@ -1936,6 +1982,7 @@ function deleteTicketLabel(ticketId,labelId){
   STATE.tickets.forEach(t=>{ if(t.labelIds)t.labelIds=t.labelIds.filter(x=>x!==labelId); });
   saveState();
   refreshLabelsUi(ticketId);
+  refreshTicketDetailSummary(ticketId);
   if(currentSection==='tickets')renderSection();
   if(currentUser.companyId&&_sb){ try{ _sb.from('ticket_labels').delete().eq('id',labelId); }catch(e){} }
 }
@@ -2056,22 +2103,40 @@ function openForwardToChat(){
   const id=document.getElementById('td-title').textContent;
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   const sel=document.getElementById('fwd-chat-select');
-  sel.innerHTML=STATE.chats.map(c=>`<option value="${c.id}">${c.customer} — ${c.channel}</option>`).join('');
+  const chatOpts=STATE.chats.map(c=>`<option value="chat:${c.id}">${c.customer} — ${c.channel}</option>`).join('');
+  const groupOpts=(STATE.groups||[]).map(g=>`<option value="group:${g.id}"># ${g.name}</option>`).join('');
+  sel.innerHTML=(chatOpts?`<optgroup label="Conversations">${chatOpts}</optgroup>`:'')+(groupOpts?`<optgroup label="Team Groups">${groupOpts}</optgroup>`:'');
   document.getElementById('fwd-chat-message').value=`Re: ticket ${t.id} — ${t.subject}\nStatus: ${listName(t.status)}${t.owner?` · Owner: ${t.owner}`:''}`;
   openModal('modal-forward-chat');
 }
 function submitForwardToChat(){
-  const chatId=document.getElementById('fwd-chat-select').value;
+  const target=document.getElementById('fwd-chat-select').value;
   const text=document.getElementById('fwd-chat-message').value.trim();
-  const c=STATE.chats.find(x=>x.id===chatId);
-  if(!c||!text){toast('Pick a conversation and a message','var(--danger)');return;}
-  c.messages.push({who:'agent',text,time:nowTime()});
-  c.last=text;
-  saveState();
+  const ticketId=document.getElementById('td-title').textContent;
+  if(!target||!text){toast('Pick somewhere to send this and a message','var(--danger)');return;}
+  const [kind,rawId]=target.split(':');
+  if(kind==='chat'){
+    const c=STATE.chats.find(x=>x.id===rawId);
+    if(!c){toast('Conversation not found','var(--danger)');return;}
+    c.messages.push({who:'agent',text,time:nowTime()});
+    c.last=text;
+    saveState();
+    toast(`Forwarded to ${c.customer}`,'var(--green)');
+    logActivity('Forwarded ticket',`${ticketId} → ${c.customer}`);
+    if(currentSection==='chats')renderSection();
+  }else{
+    const g=(STATE.groups||[]).find(x=>x.id===Number(rawId));
+    if(!g){toast('Group not found','var(--danger)');return;}
+    g.messages.push({from:currentUser.name,text,time:nowTime()});
+    saveState();
+    toast(`Forwarded to #${g.name}`,'var(--green)');
+    logActivity('Forwarded ticket',`${ticketId} → #${g.name}`);
+    if(g.dbId&&currentUser.companyId&&_sb){
+      try{ _sb.from('group_messages').insert({group_id:g.dbId,client_id:currentUser.companyId,sender_name:currentUser.name,text}); }catch(e){}
+    }
+    if(currentSection==='teams')renderSection();
+  }
   closeModal('modal-forward-chat');
-  toast(`Forwarded to ${c.customer}`,'var(--green)');
-  logActivity('Forwarded ticket to chat',`${document.getElementById('td-title').textContent} → ${c.customer}`);
-  if(currentSection==='chats')renderSection();
 }
 function setTicketDueDate(id,value){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
