@@ -1471,11 +1471,15 @@ function reassignTicket(id,owner,actor){
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({owner_name:owner,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
   logActivity('Reassigned ticket',`${id} → ${owner}`,actor);
 }
-function moveTicket(id,status,actor){
+function moveTicket(id,status,actor,skipUndoToast){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  const prevStatus=t.status;
   t.status=status;saveState();renderSection();
   if(t.dbId&&_sb){ try{ _sb.from('tickets').update({status,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
   logActivity(`Marked ticket ${status}`,id,actor);
+  if(!skipUndoToast&&prevStatus!==status){
+    toastUndo(`${id} marked ${status}`,'var(--accent)',()=>moveTicket(id,prevStatus,actor,true));
+  }
 }
 function setTicketPriority(id,priority){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
@@ -2134,9 +2138,20 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.addEventListener('click',e=>{ if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open'); });
 function toast(msg,color){
   const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');
-  ta.style.background=color||'var(--accent)'; tm.textContent=msg;
+  ta.style.background=color||'var(--accent)'; tm.textContent=msg; tm.innerHTML=msg;
   t.classList.add('show'); clearTimeout(window._toastTimer);
   window._toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+// Same toast, but with a clickable Undo action and a longer window to use it —
+// for cheap, safely-reversible changes (a status flip), not destructive ones.
+function toastUndo(msg,color,undoFn){
+  const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');
+  ta.style.background=color||'var(--accent)';
+  const undoId='toast-undo-'+Date.now();
+  tm.innerHTML=`<span>${msg}</span> <button id="${undoId}" class="btn btn-ghost btn-sm" style="margin-left:.5rem;padding:.15rem .55rem">Undo</button>`;
+  t.classList.add('show'); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>t.classList.remove('show'),6000);
+  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); clearTimeout(window._toastTimer); undoFn(); };
 }
 
 // ─── ARIA WIDGET (connects to api.supanta.com, same as the public site) ───
@@ -2453,12 +2468,18 @@ document.getElementById('ctx-archive').addEventListener('click',()=>{ if(_ctxCha
 document.getElementById('ctx-done').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'done'); closeChatCtxMenu(); });
 document.addEventListener('click',e=>{ if(!e.target.closest('.ctx-menu'))closeChatCtxMenu(); });
 document.addEventListener('scroll',closeChatCtxMenu,true);
-function setChatStatus(id,status){
+function setChatStatus(id,status,skipUndoToast){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
+  const prevStatus=c.status;
   c.status=status; saveState();
-  toast(status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`,'var(--accent)');
   if(currentSection==='chats')renderSection();
   logActivity(`Marked chat ${status}`,`${c.customer} (${c.id})`);
+  const msg=status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`;
+  if(!skipUndoToast&&prevStatus!==status){
+    toastUndo(msg,'var(--accent)',()=>setChatStatus(id,prevStatus,true));
+  }else{
+    toast(msg,'var(--accent)');
+  }
 }
 
 // ─── TEAMS: GROUPS (internal chat, Slack-style) ──────────
