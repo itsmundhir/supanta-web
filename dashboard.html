@@ -261,6 +261,16 @@ input:checked + .slider::before{transform:translateX(18px)}
 .kb-doc-row{display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border);gap:1rem}
 .kb-doc-row:last-child{border-bottom:none}
 
+/* Team Access (super-admin only: which companies each staff member can view) */
+.team-access-row{padding:.9rem 0;border-bottom:1px solid var(--border)}
+.team-access-row:last-child{border-bottom:none}
+.team-access-who{display:flex;align-items:center;gap:.65rem}
+.team-access-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.65rem}
+.ta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.76rem;font-weight:500;background:var(--bg-3);border:1px solid var(--border-light);border-radius:100px;padding:.3rem .5rem .3rem .75rem}
+.ta-chip button{color:var(--text-3);font-size:.85rem;line-height:1;cursor:pointer;padding:0 .1rem}
+.ta-chip button:hover{color:var(--danger)}
+.ta-add-select{margin-top:.6rem;max-width:220px;font-size:.78rem;padding:.4rem .6rem}
+
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(5,13,26,.72);z-index:500;display:none;align-items:center;justify-content:center;padding:1.5rem}
 .modal-overlay.open{display:flex}
@@ -2673,11 +2683,20 @@ function gsGoTeam(){ closeGlobalSearch(); showSection('teams'); }
 let _settingsTab='profile';
 function renderSettings(){
   const tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
+  // Only Super Admins can grant/revoke which companies other staff can view — a
+  // scoped Admin managing their own peers' cross-company access would be a
+  // privilege-escalation path, so the tab doesn't even render for them.
+  if(currentUser.role==='super_admin')tabs.push(['access','Team Access']);
   return `
   <div class="settings-nav">${tabs.map(([k,l])=>`<button class="tab-btn ${k===_settingsTab?'active':''}" onclick="setSettingsTab('${k}')">${l}</button>`).join('')}</div>
   <div id="settings-body">${renderSettingsTab(_settingsTab)}</div>`;
 }
-function setSettingsTab(t){_settingsTab=t;renderSection();}
+function setSettingsTab(t){
+  _settingsTab=t;renderSection();
+  if(t==='access'&&currentUser.role==='super_admin'&&!_teamAccessLoaded){
+    loadTeamAccessData().then(()=>{ if(_settingsTab==='access')renderSection(); });
+  }
+}
 function renderSettingsTab(t){
   if(t==='profile')return `
     <div class="card">
@@ -2763,7 +2782,67 @@ function renderSettingsTab(t){
         ${STATE.invoices.map(i=>`<tr><td style="color:var(--accent)">${i.id}</td><td>${i.date}</td><td>${i.dueDate}</td><td>${i.amount}</td><td><span class="badge ${i.status==='Paid'?'badge-active':i.status==='Overdue'?'badge-high':'badge-med'}">${i.status}</span></td><td style="display:flex;gap:.4rem">${i.status!=='Paid'?`<button class="btn btn-acc btn-sm" onclick="toast('Opening Wise to pay ${i.id}…','var(--accent)')">Pay with Wise</button>`:''}<button class="btn btn-ghost btn-sm" onclick="toast('Downloading ${i.id}...','var(--accent)')">Download</button></td></tr>`).join('')}
       </tbody></table>
     </div>`;
+  if(t==='access')return `
+    <div class="card">
+      <div class="card-title">Team Access</div>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Control which client companies each Supanta staff member can view and manage from the sidebar switcher. Super Admins always see every company; Admins only see the ones assigned here.</p>
+      <div id="team-access-body">${teamAccessBodyHtml()}</div>
+    </div>`;
   return '';
+}
+// ─── TEAM ACCESS (super-admin only) ─────────────────────
+let _teamAccessEmployees=[], _teamAccessCompanies=[], _teamAccessLoaded=false;
+async function loadTeamAccessData(){
+  if(!_sb)return;
+  try{
+    const {data:emps}=await _sb.from('user_profiles').select('id,full_name,email,role,assigned_clients').in('role',['admin','super_admin']).order('full_name',{ascending:true});
+    _teamAccessEmployees=emps||[];
+  }catch(e){}
+  try{
+    const {data:cos}=await _sb.from('clients').select('id,company_name').order('company_name',{ascending:true});
+    _teamAccessCompanies=cos||[];
+  }catch(e){}
+  _teamAccessLoaded=true;
+}
+function teamAccessBodyHtml(){
+  if(!_teamAccessLoaded)return '<div class="empty-state">Loading…</div>';
+  if(!_teamAccessEmployees.length)return '<div class="empty-state">No staff accounts found.</div>';
+  return _teamAccessEmployees.map(e=>{
+    const isSuper=e.role==='super_admin';
+    const assigned=e.assigned_clients||[];
+    const assignedCos=_teamAccessCompanies.filter(c=>assigned.includes(c.id));
+    const unassignedCos=_teamAccessCompanies.filter(c=>!assigned.includes(c.id));
+    return `<div class="team-access-row">
+      <div class="team-access-who">
+        <div class="avatar" style="width:32px;height:32px;font-size:.72rem">${initialsOf(e.full_name||e.email)}</div>
+        <div><div style="font-weight:600;font-size:.85rem">${e.full_name||e.email}</div><div style="font-size:.72rem;color:var(--text-3)">${e.email}</div></div>
+        <span class="badge ${isSuper?'badge-high':'badge-active'}" style="margin-left:auto">${isSuper?'Super Admin':'Admin'}</span>
+      </div>
+      ${isSuper?`<div style="font-size:.78rem;color:var(--text-3);padding:.5rem 0 0">Full access to every company — Super Admins can't be restricted.</div>`:`
+      <div class="team-access-chips">
+        ${assignedCos.length?assignedCos.map(c=>`<span class="ta-chip">${c.company_name}<button onclick="toggleEmployeeCompany('${e.id}','${c.id}',false)" aria-label="Remove ${c.company_name}">×</button></span>`).join(''):'<span style="font-size:.76rem;color:var(--text-3)">No companies assigned yet</span>'}
+      </div>
+      ${unassignedCos.length?`<select class="rb-input ta-add-select" onchange="if(this.value){toggleEmployeeCompany('${e.id}',this.value,true);this.value='';}">
+        <option value="">+ Add company…</option>
+        ${unassignedCos.map(c=>`<option value="${c.id}">${c.company_name}</option>`).join('')}
+      </select>`:''}`}
+    </div>`;
+  }).join('');
+}
+async function toggleEmployeeCompany(employeeId,clientId,grant){
+  const emp=_teamAccessEmployees.find(e=>e.id===employeeId); if(!emp)return;
+  const set=new Set(emp.assigned_clients||[]);
+  if(grant)set.add(clientId); else set.delete(clientId);
+  emp.assigned_clients=[...set];
+  const body=document.getElementById('team-access-body');
+  if(body)body.innerHTML=teamAccessBodyHtml();
+  if(_sb){
+    try{
+      const {error}=await _sb.from('user_profiles').update({assigned_clients:emp.assigned_clients}).eq('id',employeeId);
+      if(error)throw error;
+      toast(grant?'Access granted':'Access removed','var(--green)');
+    }catch(e){ toast('Could not update access','var(--danger)'); }
+  }
 }
 function handlePicUpload(input,field){
   const file=input.files[0]; if(!file)return;
