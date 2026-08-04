@@ -425,6 +425,7 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="form-group"><label>Client / Company</label><input class="rb-input" id="nt-client" placeholder="Client name"/></div>
     <div class="form-group"><label>Owner</label><select class="rb-select" id="nt-owner"></select></div>
     <div class="form-group"><label>Priority</label><select class="rb-select" id="nt-priority"><option value="high">High</option><option value="med" selected>Medium</option><option value="low">Low</option></select></div>
+    <div class="form-group"><label>Due Date (optional)</label><input class="rb-input" type="date" id="nt-due"/></div>
     <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="addTicket()">Create Ticket</button>
   </div>
 </div>
@@ -559,7 +560,7 @@ async function loadRemoteData(){
   try{
     const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',currentUser.companyId).order('created_at',{ascending:false});
     if(tks&&tks.length){
-      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority}));
+      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null}));
     }
   }catch(e){}
   try{
@@ -693,11 +694,11 @@ function defaultState(){
       ]}
     ],
     tickets:[
-      {id:'SUP-1042',subject:'Refund not processed for order #4521',client:'BrandCo',owner:'Nomsa Dube',status:'active',priority:'high'},
+      {id:'SUP-1042',subject:'Refund not processed for order #4521',client:'BrandCo',owner:'Nomsa Dube',status:'active',priority:'high',dueAt:'2026-05-15T00:00:00.000Z'},
       {id:'SUP-1041',subject:'Update shipping address on account',client:'NovaMart',owner:'Liam Dlamini',status:'active',priority:'low'},
       {id:'SUP-1039',subject:'Integration not syncing with Shopify',client:'BrandCo',owner:'Zanele Mokoena',status:'active',priority:'med'},
-      {id:'SUP-1033',subject:'Duplicate billing charge',client:'NovaMart',owner:'Liam Dlamini',status:'done',priority:'high'},
-      {id:'SUP-1028',subject:'Password reset assistance',client:'BrandCo',owner:'ARIA',status:'done',priority:'low'},
+      {id:'SUP-1033',subject:'Duplicate billing charge',client:'NovaMart',owner:'Liam Dlamini',status:'done',priority:'high',csat:'good'},
+      {id:'SUP-1028',subject:'Password reset assistance',client:'BrandCo',owner:'ARIA',status:'done',priority:'low',csat:'good'},
       {id:'SUP-1015',subject:'Old onboarding question',client:'NovaMart',owner:'Nomsa Dube',status:'archived',priority:'low'}
     ],
     integrations:[
@@ -805,14 +806,28 @@ function initialsOf(name){return (name||'?').split(' ').map(w=>w[0]).join('').to
 function avatarHtml(name,color,size){size=size||30;return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*.32}px;background-color:${color||'var(--accent)'};color:#04121f">${initialsOf(name)}</div>`;}
 
 // ─── PULSE ───────────────────────────────────────────────
+function computeCsat(){
+  const rated=STATE.tickets.filter(t=>t.csat);
+  if(!rated.length)return null;
+  const good=rated.filter(t=>t.csat==='good').length;
+  return {pct:Math.round((good/rated.length)*100),n:rated.length};
+}
+function computeAiDeflection(){
+  const withMsgs=STATE.chats.filter(c=>c.messages&&c.messages.length);
+  if(!withMsgs.length)return null;
+  const deflected=withMsgs.filter(c=>!c.messages.some(m=>m.who==='agent')).length;
+  return {pct:Math.round((deflected/withMsgs.length)*100),n:withMsgs.length};
+}
 function renderPulse(){
   const fn=currentUser.name.split(' ')[0];
   const activeChats=STATE.chats.filter(c=>c.status==='active').length;
   const openTk=STATE.tickets.filter(t=>t.status==='active').length;
+  const csat=computeCsat();
+  const deflection=computeAiDeflection();
   return `
   <div class="grid-4" style="margin-bottom:1.25rem">
-    <div class="stat-card"><div class="stat-lbl">CSAT</div><div class="stat-val" style="color:var(--green)">94%</div></div>
-    <div class="stat-card"><div class="stat-lbl">AI Deflection</div><div class="stat-val" style="color:var(--accent)">52%</div></div>
+    <div class="stat-card"><div class="stat-lbl">CSAT</div>${csat?`<div class="stat-val" style="color:var(--green)">${csat.pct}%</div><div class="card-sub" style="margin:.2rem 0 0">From ${csat.n} rated ticket${csat.n===1?'':'s'}</div>`:`<div class="stat-val" style="font-size:1rem;color:var(--text-3)">No ratings yet</div>`}</div>
+    <div class="stat-card"><div class="stat-lbl">AI Deflection</div>${deflection?`<div class="stat-val" style="color:var(--accent)">${deflection.pct}%</div><div class="card-sub" style="margin:.2rem 0 0">Of ${deflection.n} conversation${deflection.n===1?'':'s'}</div>`:`<div class="stat-val" style="font-size:1rem;color:var(--text-3)">No data yet</div>`}</div>
     <div class="stat-card"><div class="stat-lbl">Active Chats</div><div class="stat-val">${activeChats}</div></div>
     <div class="stat-card"><div class="stat-lbl">Open Tickets</div><div class="stat-val">${openTk}</div></div>
   </div>
@@ -1333,6 +1348,8 @@ function ticketFilteredList(){
   if(!q)return STATE.tickets;
   return STATE.tickets.filter(t=>t.subject.toLowerCase().includes(q)||t.client.toLowerCase().includes(q)||t.owner.toLowerCase().includes(q)||t.id.toLowerCase().includes(q));
 }
+function isOverdue(t){ return t.status==='active'&&t.dueAt&&new Date(t.dueAt).getTime()<Date.now(); }
+function fmtDueDate(iso){ return iso?new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'}):''; }
 function kanbanHtml(){
   const all=ticketFilteredList();
   return TK_COLS.map(col=>{
@@ -1344,6 +1361,7 @@ function kanbanHtml(){
             <div class="tk-card" draggable="true" data-id="${t.id}">
               <div class="tk-card-top"><span class="tk-id" style="cursor:pointer;text-decoration:underline" onclick="openTicketDetail('${t.id}')">${t.id}</span><span class="badge badge-${t.priority==='high'?'high':t.priority==='med'?'med':'low'}">${t.priority}</span></div>
               <div class="tk-subject" style="cursor:pointer" onclick="openTicketDetail('${t.id}')">${t.subject}</div>
+              ${isOverdue(t)?`<div style="font-size:.68rem;color:var(--danger);font-weight:700;margin-bottom:.4rem">⚠ Overdue — due ${fmtDueDate(t.dueAt)}</div>`:t.dueAt&&t.status==='active'?`<div style="font-size:.68rem;color:var(--text-3);margin-bottom:.4rem">Due ${fmtDueDate(t.dueAt)}</div>`:''}
               <div class="tk-foot">
                 <div class="tk-owner">${avatarHtml(t.owner,'#1a2d47',20)} <span>${t.client}</span></div>
                 <select class="owner-select" onchange="reassignTicket('${t.id}',this.value)">
@@ -1380,11 +1398,12 @@ function persistNewTicket(t){
     owner_name:t.owner,
     status:t.status,
     priority:t.priority,
+    due_at:t.dueAt||null,
     created_by:currentUser.id
   }).select().single().then(({data,error})=>{ if(!error&&data)t.dbId=data.id; }).catch(()=>{});
 }
-function createTicket({subject,client,owner,priority,actor}){
-  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'—',owner,status:'active',priority};
+function createTicket({subject,client,owner,priority,actor,dueAt}){
+  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'—',owner,status:'active',priority,dueAt:dueAt||null};
   STATE.tickets.unshift(t);
   saveState();
   persistNewTicket(t);
@@ -1397,10 +1416,11 @@ function addTicket(){
   const client=document.getElementById('nt-client').value.trim()||'—';
   const owner=document.getElementById('nt-owner').value;
   const priority=document.getElementById('nt-priority').value;
+  const due=document.getElementById('nt-due').value;
   if(!subject){toast('Subject is required','var(--danger)');return;}
-  createTicket({subject,client,owner,priority});
+  createTicket({subject,client,owner,priority,dueAt:due?due+'T00:00:00.000Z':null});
   closeModal('modal-add-ticket');
-  document.getElementById('nt-subject').value='';document.getElementById('nt-client').value='';
+  document.getElementById('nt-subject').value='';document.getElementById('nt-client').value='';document.getElementById('nt-due').value='';
   renderSection();toast('Ticket created','var(--green)');
 }
 function reassignTicket(id,owner,actor){
@@ -1434,11 +1454,13 @@ async function openTicketDetail(id){
   body.innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
       <div class="form-group" style="margin-bottom:0"><label>Priority</label><select class="rb-select" id="td-priority" onchange="setTicketPriority('${t.id}',this.value)">${ticketPriorityOptions(t.priority)}</select></div>
-      <div class="form-group" style="margin-bottom:0"><label>Status</label><select class="rb-select" id="td-status" onchange="moveTicket('${t.id}',this.value)">
+      <div class="form-group" style="margin-bottom:0"><label>Status</label><select class="rb-select" id="td-status" onchange="tdStatusChange('${t.id}',this.value)">
         ${TK_COLS.map(c=>`<option value="${c}" ${c===t.status?'selected':''}>${TK_LABELS[c]}</option>`).join('')}
       </select></div>
     </div>
+    <div class="form-group"><label>Due Date</label><input class="rb-input" type="date" id="td-due" value="${t.dueAt?t.dueAt.slice(0,10):''}" onchange="setTicketDueDate('${t.id}',this.value)"/></div>
     <div class="form-group"><label>Subject</label><div style="font-size:.9rem;color:var(--text)">${t.subject}</div></div>
+    <div id="td-csat-wrap">${ticketCsatHtml(t)}</div>
     <div class="card-title" style="margin-top:1.25rem">Comments</div>
     <div id="td-comments" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;margin-bottom:.85rem"><div class="empty-state">Loading…</div></div>
     <div style="display:flex;gap:.5rem">
@@ -1447,6 +1469,33 @@ async function openTicketDetail(id){
     </div>`;
   openModal('modal-ticket-detail');
   await loadTicketComments(t);
+}
+function ticketCsatHtml(t){
+  if(t.status!=='done')return '';
+  const opts=[['good','👍','Good'],['neutral','😐','Neutral'],['bad','👎','Not satisfied']];
+  return `<div class="form-group"><label>Customer satisfaction</label><div style="display:flex;gap:.5rem">
+    ${opts.map(([v,emoji,lbl])=>`<button type="button" class="btn ${t.csat===v?'btn-acc':'btn-ghost'} btn-sm" onclick="setTicketCsat('${t.id}','${v}')">${emoji} ${lbl}</button>`).join('')}
+  </div></div>`;
+}
+function tdStatusChange(id,status){
+  moveTicket(id,status);
+  const t=STATE.tickets.find(x=>x.id===id);
+  const wrap=document.getElementById('td-csat-wrap');
+  if(t&&wrap)wrap.innerHTML=ticketCsatHtml(t);
+}
+function setTicketCsat(id,csat){
+  const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  t.csat=csat; saveState();
+  const wrap=document.getElementById('td-csat-wrap'); if(wrap)wrap.innerHTML=ticketCsatHtml(t);
+  if(currentSection==='pulse')renderSection();
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({csat}).eq('id',t.dbId); }catch(e){} }
+  toast('Rating saved','var(--accent)');
+}
+function setTicketDueDate(id,value){
+  const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
+  t.dueAt=value?value+'T00:00:00.000Z':null; saveState();
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({due_at:t.dueAt}).eq('id',t.dbId); }catch(e){} }
+  if(currentSection==='tickets')renderSection();
 }
 function commentHtml(c){
   return `<div style="background:var(--bg-3);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem"><div style="font-size:.72rem;font-weight:600;color:var(--text-3);margin-bottom:.2rem">${c.author} · ${c.time}</div><div style="font-size:.84rem">${c.text}</div></div>`;
