@@ -363,6 +363,9 @@ input:checked + .slider::before{transform:translateX(18px)}
 .legend-list{display:flex;flex-direction:column;gap:.65rem;flex:1;min-width:0}
 .legend-row{display:flex;align-items:center;gap:.6rem;font-size:.8rem;color:var(--text-2)}
 .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.chart-legend{display:flex;gap:1.25rem;margin-bottom:.75rem}
+.chart-legend-item{display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--text-2)}
+.chart-legend-item .legend-dot{width:8px;height:8px}
 .legend-row .legend-val{margin-left:auto;font-weight:700;font-family:var(--fd);color:var(--text)}
 .chart-tip{position:fixed;z-index:9999;background:var(--bg-4);border:1px solid var(--border-light);color:var(--text);font-size:.72rem;padding:.4rem .65rem;border-radius:8px;pointer-events:none;display:none;box-shadow:var(--shadow);white-space:nowrap}
 .chart-card-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.25rem}
@@ -720,6 +723,7 @@ async function switchViewingCompany(clientId){
   document.getElementById('sb-switcher').classList.remove('open');
   const co=_staffCompanies.find(c=>c.id===clientId);
   toast('Switching to '+(co?co.name:'company')+'…','var(--accent)');
+  closeAllModals();
   resetStateForCompanySwitch();
   await loadRemoteData();
   subscribeRealtime();
@@ -802,10 +806,11 @@ async function loadRemoteData(){
     const {data:lists}=await _sb.from('ticket_lists').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
     if(lists&&lists.length){
       STATE.ticketLists=lists.map(l=>({id:l.id,name:l.name,kind:l.kind,position:l.position}));
-    }else{
-      // First time this business's board has loaded — persist the 3 local
-      // defaults server-side (same ids the demo tickets already reference)
-      // so renames/adds from here on survive a reload.
+    }else if(activeClientId()===currentUser.companyId){
+      // First time this business's own board has loaded — persist the 3 local
+      // defaults server-side. Only for the account's own company: a staff member
+      // merely viewing another (empty) company via the switcher must never write
+      // data into it just by looking.
       const defaults=STATE.ticketLists;
       _sb.from('ticket_lists').insert(defaults.map(l=>({id:l.id,client_id:activeClientId(),name:l.name,kind:l.kind,position:l.position}))).then(()=>{}).catch(()=>{});
     }
@@ -1118,7 +1123,7 @@ function renderPulse(){
   <div class="card"><div class="card-title">Welcome back, ${fn}</div><p style="color:var(--text-3);font-size:.85rem;line-height:1.7">Here's a snapshot of how things are running today. Head to Chats or Tickets to jump into live work, or grab a full report below.</p></div>
   <div class="card">
     <div class="chart-card-hd">
-      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's chats, trending toward today's live total</div></div>
+      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's chats vs. tickets ARIA closed on its own</div></div>
       ${pulseChartActions('conversations')}
     </div>
     ${_pulseView.conversations==='table'?dataTableHtml('conversations'):renderConversationsChart()}
@@ -1164,6 +1169,12 @@ function getConversationsChartData(){
   const base=Math.max(STATE.chats.length,4);
   return shape.map((f,i)=>({label:days[i],v:Math.max(1,Math.round(f*base))}));
 }
+function getAriaClosedChartData(){
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
+  const shape=[.35,.48,.4,.6,.52,.75,1];
+  const base=STATE.tickets.filter(t=>listKind(t.status)==='done'&&t.owner==='ARIA').length;
+  return shape.map((f,i)=>({label:days[i],v:Math.round(f*base)}));
+}
 function getTicketStatusData(){
   return [
     {label:'Active',v:STATE.tickets.filter(t=>listKind(t.status)==='active').length,color:'var(--green)'},
@@ -1177,7 +1188,10 @@ function getChannelMixData(){
   return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([label,v])=>({label,v}));
 }
 const PULSE_CHART_TABLES={
-  conversations:{cols:['Day','Conversations'],rows:()=>getConversationsChartData().map(d=>[d.label,d.v])},
+  conversations:{cols:['Day','Conversations','Closed by ARIA'],rows:()=>{
+    const conv=getConversationsChartData(),aria=getAriaClosedChartData();
+    return conv.map((d,i)=>[d.label,d.v,aria[i].v]);
+  }},
   tickets:{cols:['Status','Tickets'],rows:()=>getTicketStatusData().map(d=>[d.label,d.v])},
   channels:{cols:['Channel','Conversations'],rows:()=>getChannelMixData().map(d=>[d.label,d.v])}
 };
@@ -1207,17 +1221,28 @@ function downloadChartCsv(key){
 
 function renderConversationsChart(){
   const data=getConversationsChartData();
+  const ariaData=getAriaClosedChartData();
   const w=760,h=180,pad={t:14,r:16,b:26,l:16};
   const innerW=w-pad.l-pad.r,innerH=h-pad.t-pad.b;
-  const max=Math.max(...data.map(d=>d.v),1);
+  const max=Math.max(...data.map(d=>d.v),...ariaData.map(d=>d.v),1);
   const stepX=innerW/(data.length-1);
-  const pts=data.map((d,i)=>[pad.l+i*stepX, pad.t+innerH-(d.v/max)*innerH]);
-  const line=pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const toPts=series=>series.map((d,i)=>[pad.l+i*stepX, pad.t+innerH-(d.v/max)*innerH]);
+  const toLine=pts=>pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const pts=toPts(data);
+  const line=toLine(pts);
   const area=line+` L${pts[pts.length-1][0].toFixed(1)},${(pad.t+innerH).toFixed(1)} L${pts[0][0].toFixed(1)},${(pad.t+innerH).toFixed(1)} Z`;
+  const ariaPts=toPts(ariaData);
+  const ariaLine=toLine(ariaPts);
   const grid=[0,.5,1].map(f=>{const y=(pad.t+innerH*f).toFixed(1);return `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;}).join('');
   const dots=pts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="var(--bg-2)" stroke="var(--accent)" stroke-width="2" style="cursor:pointer" onmouseenter="showChartTip(event,'${data[i].label}: ${data[i].v} conversations')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`).join('');
+  const ariaDots=ariaPts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--bg-2)" stroke="var(--accent-2)" stroke-width="2" style="cursor:pointer" onmouseenter="showChartTip(event,'${ariaData[i].label}: ${ariaData[i].v} closed by ARIA')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`).join('');
   const labels=data.map((d,i)=>`<text x="${pts[i][0].toFixed(1)}" y="${h-6}" font-size="10" fill="var(--text-3)" text-anchor="middle">${d.label}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="overflow:visible;display:block">
+  return `
+  <div class="chart-legend">
+    <span class="chart-legend-item"><span class="legend-dot" style="background:var(--accent)"></span>All Conversations</span>
+    <span class="chart-legend-item"><span class="legend-dot" style="background:var(--accent-2)"></span>Closed by ARIA</span>
+  </div>
+  <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="overflow:visible;display:block">
     <defs><linearGradient id="pulseAreaGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="var(--accent)" stop-opacity=".32"/>
       <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
@@ -1225,11 +1250,19 @@ function renderConversationsChart(){
     ${grid}
     <path d="${area}" fill="url(#pulseAreaGrad)"/>
     <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${ariaLine}" fill="none" stroke="var(--accent-2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>
     ${dots}
+    ${ariaDots}
     ${labels}
   </svg>`;
 }
 
+function donutValFontSize(n){
+  const digits=String(n).length;
+  if(digits>=6)return '.95rem';
+  if(digits>=5)return '1.1rem';
+  return '1.4rem';
+}
 function renderTicketDonut(){
   const segments=getTicketStatusData();
   const total=segments.reduce((a,s)=>a+s.v,0);
@@ -1248,7 +1281,7 @@ function renderTicketDonut(){
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg-3)" stroke-width="16"/>
         ${arcs}
       </svg>
-      <div class="donut-center"><div class="donut-center-val">${total}</div><div class="donut-center-lbl">Tickets</div></div>
+      <div class="donut-center"><div class="donut-center-val" style="font-size:${donutValFontSize(total)}">${total}</div><div class="donut-center-lbl">Tickets</div></div>
     </div>
     <div class="legend-list">
       ${segments.map(s=>`<div class="legend-row"><span class="legend-dot" style="background:${s.color}"></span>${s.label}<span class="legend-val">${s.v}</span></div>`).join('')}
@@ -1277,7 +1310,7 @@ function renderChannelMix(){
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg-3)" stroke-width="16"/>
         ${arcs}
       </svg>
-      <div class="donut-center"><div class="donut-center-val">${total}</div><div class="donut-center-lbl">Conversations</div></div>
+      <div class="donut-center"><div class="donut-center-val" style="font-size:${donutValFontSize(total)}">${total}</div><div class="donut-center-lbl">Conversations</div></div>
     </div>
     <div class="legend-list">
       ${rows.map(([ch,n])=>{
@@ -2995,6 +3028,7 @@ function removeKbDoc(id){ STATE.kbDocs=STATE.kbDocs.filter(d=>d.id!==id); saveSt
 // ─── MODALS / TOAST ──────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); }
 document.addEventListener('click',e=>{ if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open'); });
 function toast(msg,color){
   const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');
