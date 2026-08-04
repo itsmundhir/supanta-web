@@ -339,6 +339,12 @@ input:checked + .slider::before{transform:translateX(18px)}
 .chan-bar-fill{height:100%;border-radius:100px;transition:width .4s ease}
 .chan-bar-val{width:22px;text-align:right;font-size:.78rem;font-weight:700;font-family:var(--fd)}
 .chart-tip{position:fixed;z-index:9999;background:var(--bg-4);border:1px solid var(--border-light);color:var(--text);font-size:.72rem;padding:.4rem .65rem;border-radius:8px;pointer-events:none;display:none;box-shadow:var(--shadow);white-space:nowrap}
+.chart-card-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.25rem}
+.chart-card-actions{display:flex;gap:.5rem;flex-shrink:0}
+.data-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.data-table th{text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700;padding:.5rem .25rem;border-bottom:1px solid var(--border)}
+.data-table td{padding:.55rem .25rem;border-bottom:1px solid var(--border);color:var(--text-2)}
+.data-table tr:last-child td{border-bottom:none}
 @media(max-width:900px){.chart-card-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -803,18 +809,20 @@ function renderPulse(){
   </div>
   <div class="card"><div class="card-title">Welcome back, ${fn}</div><p style="color:var(--text-3);font-size:.85rem;line-height:1.7">Here's a snapshot of how things are running today. Head to Chats or Tickets to jump into live work, or grab a full report below.</p></div>
   <div class="card">
-    <div class="card-title">Conversation Volume</div>
-    <div class="card-sub">This week's chats, trending toward today's live total</div>
-    ${renderConversationsChart()}
+    <div class="chart-card-hd">
+      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's chats, trending toward today's live total</div></div>
+      ${pulseChartActions('conversations')}
+    </div>
+    ${_pulseView.conversations==='table'?dataTableHtml('conversations'):renderConversationsChart()}
   </div>
   <div class="chart-card-row">
     <div class="card">
-      <div class="card-title">Ticket Status Breakdown</div>
-      ${renderTicketDonut()}
+      <div class="chart-card-hd"><div class="card-title">Ticket Status Breakdown</div>${pulseChartActions('tickets')}</div>
+      ${_pulseView.tickets==='table'?dataTableHtml('tickets'):renderTicketDonut()}
     </div>
     <div class="card">
-      <div class="card-title">Conversations by Channel</div>
-      ${renderChannelMix()}
+      <div class="chart-card-hd"><div class="card-title">Conversations by Channel</div>${pulseChartActions('channels')}</div>
+      ${_pulseView.channels==='table'?dataTableHtml('channels'):renderChannelMix()}
     </div>
   </div>
   <div class="card">
@@ -841,11 +849,56 @@ function moveChartTip(evt){
 }
 function hideChartTip(){const tip=document.getElementById('chart-tip'); if(tip)tip.style.display='none';}
 
-function renderConversationsChart(){
+// ─── PULSE CHART DATA (shared by the SVG chart, the table view, and CSV export) ───
+function getConversationsChartData(){
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
   const shape=[.5,.64,.56,.78,.7,.9,1];
   const base=Math.max(STATE.chats.length,4);
-  const data=shape.map((f,i)=>({label:days[i],v:Math.max(1,Math.round(f*base))}));
+  return shape.map((f,i)=>({label:days[i],v:Math.max(1,Math.round(f*base))}));
+}
+function getTicketStatusData(){
+  return [
+    {label:'Active',v:STATE.tickets.filter(t=>t.status==='active').length,color:'var(--green)'},
+    {label:'Done',v:STATE.tickets.filter(t=>t.status==='done').length,color:'var(--accent)'},
+    {label:'Archived',v:STATE.tickets.filter(t=>t.status==='archived').length,color:'var(--text-3)'}
+  ];
+}
+function getChannelMixData(){
+  const counts={};
+  STATE.chats.forEach(c=>{counts[c.channel]=(counts[c.channel]||0)+1;});
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([label,v])=>({label,v}));
+}
+const PULSE_CHART_TABLES={
+  conversations:{cols:['Day','Conversations'],rows:()=>getConversationsChartData().map(d=>[d.label,d.v])},
+  tickets:{cols:['Status','Tickets'],rows:()=>getTicketStatusData().map(d=>[d.label,d.v])},
+  channels:{cols:['Channel','Conversations'],rows:()=>getChannelMixData().map(d=>[d.label,d.v])}
+};
+let _pulseView={conversations:'chart',tickets:'chart',channels:'chart'};
+function togglePulseView(key){ _pulseView[key]=_pulseView[key]==='chart'?'table':'chart'; renderSection(); }
+function pulseChartActions(key){
+  return `<div class="chart-card-actions">
+    <button class="btn btn-ghost btn-sm" onclick="togglePulseView('${key}')">${_pulseView[key]==='chart'?'View as table':'View as chart'}</button>
+    <button class="btn btn-ghost btn-sm" onclick="downloadChartCsv('${key}')">Download CSV</button>
+  </div>`;
+}
+function dataTableHtml(key){
+  const spec=PULSE_CHART_TABLES[key]; if(!spec)return '';
+  const rows=spec.rows();
+  if(!rows.length)return '<div class="empty-state">No data yet.</div>';
+  return `<table class="data-table"><thead><tr>${spec.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function downloadChartCsv(key){
+  const spec=PULSE_CHART_TABLES[key]; if(!spec)return;
+  const rows=spec.rows();
+  if(!rows.length){toast('Nothing to export yet','var(--danger)');return;}
+  const csv=[spec.cols.join(','),...rows.map(r=>r.map(v=>JSON.stringify(String(v))).join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=key+'.csv';a.click();
+  toast('Download started','var(--accent)');
+}
+
+function renderConversationsChart(){
+  const data=getConversationsChartData();
   const w=760,h=180,pad={t:14,r:16,b:26,l:16};
   const innerW=w-pad.l-pad.r,innerH=h-pad.t-pad.b;
   const max=Math.max(...data.map(d=>d.v),1);
@@ -870,11 +923,7 @@ function renderConversationsChart(){
 }
 
 function renderTicketDonut(){
-  const segments=[
-    {label:'Active',v:STATE.tickets.filter(t=>t.status==='active').length,color:'var(--green)'},
-    {label:'Done',v:STATE.tickets.filter(t=>t.status==='done').length,color:'var(--accent)'},
-    {label:'Archived',v:STATE.tickets.filter(t=>t.status==='archived').length,color:'var(--text-3)'}
-  ];
+  const segments=getTicketStatusData();
   const total=segments.reduce((a,s)=>a+s.v,0);
   const size=132,r=(size/2)-14,c=2*Math.PI*r,cx=size/2,cy=size/2;
   let offset=0;
@@ -901,9 +950,7 @@ function renderTicketDonut(){
 
 const CHART_CHANNEL_COLORS={whatsapp:'#25D366',email:'var(--accent)',instagram:'#E1306C',x:'var(--text-2)',facebook:'#1877F2',phone:'var(--warning)',shopify:'#95BF47'};
 function renderChannelMix(){
-  const counts={};
-  STATE.chats.forEach(c=>{counts[c.channel]=(counts[c.channel]||0)+1;});
-  const rows=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const rows=getChannelMixData().map(d=>[d.label,d.v]);
   if(!rows.length)return '<div class="empty-state">No conversations yet.</div>';
   const max=Math.max(...rows.map(r=>r[1]),1);
   return rows.map(([ch,n])=>{
