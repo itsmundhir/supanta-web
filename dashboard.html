@@ -872,6 +872,10 @@ async function loadRemoteData(){
     _emailConnection=ec||null;
   }catch(e){ _emailConnection=null; }
   try{
+    const {data:wc}=await _sb.from('client_whatsapp_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _whatsappConnection=wc||null;
+  }catch(e){ _whatsappConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -915,6 +919,7 @@ const LS_KEY='supanta_dash_state_v1';
 let STATE=null;
 let _viewingClientId=null, _staffCompanies=[], _staffNotifCounts={};
 let _emailConnection=null;
+let _whatsappConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -2466,7 +2471,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2493,6 +2498,21 @@ function emailIntegrationCardHtml(i){
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectEmail()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openEmailConnectModal()">Connect</button>`}
+  </div>`;
+}
+function whatsappIntegrationCardHtml(i){
+  const conn=_whatsappConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.display_phone_number||conn.phone_number_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectWhatsapp()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openWhatsappConnectModal()">Connect</button>`}
   </div>`;
 }
 function filterIntegrations(v){
@@ -2571,6 +2591,59 @@ async function disconnectEmail(){
   }
   _emailConnection=null;
   toast('Email disconnected','var(--accent)');
+  renderSection();
+}
+function openWhatsappConnectModal(){
+  document.getElementById('ci-title').textContent='Connect WhatsApp';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect a WhatsApp Business number so inbound messages become conversations here, with ARIA replying automatically. You'll need a Meta app with the WhatsApp product added — grab the Phone Number ID, a permanent access token, and the App Secret from your Meta App dashboard.</p>
+    <div class="form-group"><label>Phone Number ID</label><input class="rb-input" id="wa-phone-number-id" placeholder="e.g. 109876543210987"/></div>
+    <div class="form-group"><label>Access Token</label><input class="rb-input" type="password" id="wa-access-token"/></div>
+    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="wa-app-secret"/></div>
+    <button class="btn btn-acc" style="width:100%" id="wa-submit" onclick="submitWhatsappConnect()">Test &amp; Connect</button>
+    <div id="wa-connect-result" style="margin-top:1rem;display:none"></div>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitWhatsappConnect(){
+  const btn=document.getElementById('wa-submit');
+  const phone_number_id=document.getElementById('wa-phone-number-id').value.trim();
+  const access_token=document.getElementById('wa-access-token').value.trim();
+  const app_secret=document.getElementById('wa-app-secret').value.trim();
+  if(!phone_number_id||!access_token||!app_secret){
+    toast('Fill in the phone number ID, access token and app secret','var(--danger)');return;
+  }
+  btn.disabled=true;btn.textContent='Verifying with Meta…';
+  try{
+    const {data,error}=await _sb.functions.invoke('whatsapp-save-credentials',{body:{phone_number_id,access_token,app_secret}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('WhatsApp connected','var(--green)');
+    const resultEl=document.getElementById('wa-connect-result');
+    resultEl.style.display='block';
+    resultEl.innerHTML=`
+      <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step — configure this in your Meta App's WhatsApp &gt; Configuration:</div>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Callback URL</div>
+        <input class="rb-input" readonly value="${data.webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Verify Token</div>
+        <input class="rb-input" readonly value="${data.verify_token}" onclick="this.select()" style="font-size:.74rem"/>
+      </div>`;
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+  }catch(e){
+    toast(e.message||'Could not connect WhatsApp','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function disconnectWhatsapp(){
+  if(!confirm('Disconnect WhatsApp? Inbound messages will stop syncing until you reconnect.'))return;
+  if(_whatsappConnection&&_sb){
+    try{ await _sb.from('client_whatsapp_connections').update({status:'disconnected'}).eq('id',_whatsappConnection.id); }catch(e){}
+  }
+  _whatsappConnection=null;
+  toast('WhatsApp disconnected','var(--accent)');
   renderSection();
 }
 
