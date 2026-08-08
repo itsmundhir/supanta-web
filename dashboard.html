@@ -295,7 +295,8 @@ input:checked + .slider::before{transform:translateX(18px)}
 /* ARIA WIDGET */
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.2s ease-in-out infinite;display:inline-block}
-.aria-widget{position:fixed;bottom:1.75rem;right:1.75rem;z-index:400;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem)}
+.aria-widget{position:fixed;bottom:1.75rem;right:1.75rem;z-index:400;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem);transition:bottom .25s ease}
+.aria-widget.toast-active{bottom:6rem}
 .aria-chat-box{width:340px;max-height:calc(100vh - 7rem);background:var(--bg-2);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:none;flex-direction:column}
 .aria-chat-box.open{display:flex}
 .aria-chat-hdr{background:var(--bg-3);border-bottom:1px solid var(--border);padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
@@ -318,7 +319,7 @@ input:checked + .slider::before{transform:translateX(18px)}
 .aria-trigger-btn{background:var(--accent);color:#04121f;border:none;border-radius:100px;padding:.7rem 1.35rem;font-family:var(--fd);font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.55rem;box-shadow:0 8px 30px rgba(0,194,255,.35);transition:transform .2s,box-shadow .2s}
 .aria-trigger-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,194,255,.45)}
 .aria-trigger-pulse{width:8px;height:8px;border-radius:50%;background:rgba(4,18,31,.5);animation:pulse-dot 1.5s ease-in-out infinite}
-@media(max-width:900px){.aria-chat-box{width:calc(100vw - 3rem)}.aria-widget{right:1rem;bottom:1rem}}
+@media(max-width:900px){.aria-chat-box{width:calc(100vw - 3rem)}.aria-widget{right:1rem;bottom:1rem}.aria-widget.toast-active{bottom:5.5rem}}
 
 /* CONTEXT MENU */
 .ctx-menu{position:fixed;z-index:800;background:var(--bg-2);border:1px solid var(--border-light);border-radius:10px;box-shadow:var(--shadow);padding:.35rem;min-width:180px;display:none}
@@ -3198,11 +3199,18 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); }
 document.addEventListener('click',e=>{ if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open'); });
+// Toast and the ARIA widget both sit bottom-right, so a visible toast would
+// otherwise sit right on top of the Ask ARIA button — raise the widget out
+// of the way for as long as the toast is showing.
+function setToastActive(active){
+  const w=document.getElementById('aria-widget');
+  if(w)w.classList.toggle('toast-active',active);
+}
 function toast(msg,color){
   const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');
   ta.style.background=color||'var(--accent)'; tm.textContent=msg; tm.innerHTML=msg;
-  t.classList.add('show'); clearTimeout(window._toastTimer);
-  window._toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+  t.classList.add('show'); setToastActive(true); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); setToastActive(false); },3000);
 }
 // Same toast, but with a clickable Undo action and a longer window to use it —
 // for cheap, safely-reversible changes (a status flip), not destructive ones.
@@ -3211,9 +3219,9 @@ function toastUndo(msg,color,undoFn){
   ta.style.background=color||'var(--accent)';
   const undoId='toast-undo-'+Date.now();
   tm.innerHTML=`<span>${msg}</span> <button id="${undoId}" class="btn btn-ghost btn-sm" style="margin-left:.5rem;padding:.15rem .55rem">Undo</button>`;
-  t.classList.add('show'); clearTimeout(window._toastTimer);
-  window._toastTimer=setTimeout(()=>t.classList.remove('show'),6000);
-  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); clearTimeout(window._toastTimer); undoFn(); };
+  t.classList.add('show'); setToastActive(true); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); setToastActive(false); },6000);
+  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); setToastActive(false); clearTimeout(window._toastTimer); undoFn(); };
 }
 
 // ─── ARIA WIDGET (calls the client-assistant Supabase Edge Function) ─────
