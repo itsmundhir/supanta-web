@@ -963,7 +963,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='...';
       msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
       try{
-        const res=await fetch('https://api.supanta.com/chat',{
+        const res=await fetch('https://api.supanta.com/aria/query',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:ARIA_SUPANTA_CLIENT_ID,message:msg})
@@ -971,7 +971,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
         if(!res.ok)throw new Error('bad response');
         const data=await res.json();
         document.getElementById('aria-typing')?.remove();
-        msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${data.reply}</div>`;
+        msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${data.response}</div>`;
         msgs.scrollTop=msgs.scrollHeight;
         if(data.escalated && !_ariaLeadShownForSession){
           _ariaLeadShownForSession=true;
