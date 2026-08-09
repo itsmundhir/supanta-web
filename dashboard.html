@@ -923,6 +923,10 @@ async function loadRemoteData(){
     _whatsappConnection=wc||null;
   }catch(e){ _whatsappConnection=null; }
   try{
+    const {data:fc}=await _sb.from('client_facebook_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _facebookConnection=fc||null;
+  }catch(e){ _facebookConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -967,6 +971,7 @@ let STATE=null;
 let _viewingClientId=null, _staffCompanies=[], _staffNotifCounts={};
 let _emailConnection=null;
 let _whatsappConnection=null;
+let _facebookConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1035,7 +1040,7 @@ function defaultState(){
       {key:'email',name:'Email',desc:'Connect a support inbox to route email tickets automatically.',color:'#00c2ff',connected:true},
       {key:'instagram',name:'Instagram',desc:'Reply to DMs and comments from one place.',color:'#E1306C',connected:false},
       {key:'x',name:'X (Twitter)',desc:'Monitor mentions and DMs for support requests.',color:'#ffffff',connected:false},
-      {key:'facebook',name:'Facebook',desc:'Connect your Page inbox and comments.',color:'#1877F2',connected:false},
+      {key:'facebook',name:'Facebook',desc:'Route Messenger DMs from your Page into your shared inbox.',color:'#1877F2',connected:false},
       {key:'phone',name:'Phone',desc:'Voice call routing for inbound and outbound support calls.',color:'#f5a623',connected:false},
       {key:'shopify',name:'Shopify',desc:'Pull order, shipping and customer data directly into chats.',color:'#95BF47',connected:true},
       {key:'telegram',name:'Telegram',desc:'Route Telegram DMs into your shared inbox.',color:'#26A5E4',connected:false},
@@ -2546,7 +2551,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2588,6 +2593,21 @@ function whatsappIntegrationCardHtml(i){
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectWhatsapp()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openWhatsappConnectModal()">Connect</button>`}
+  </div>`;
+}
+function facebookIntegrationCardHtml(i){
+  const conn=_facebookConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.page_name||conn.page_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectFacebook()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openFacebookConnectModal()">Connect</button>`}
   </div>`;
 }
 function filterIntegrations(v){
@@ -2719,6 +2739,58 @@ async function disconnectWhatsapp(){
   }
   _whatsappConnection=null;
   toast('WhatsApp disconnected','var(--accent)');
+  renderSection();
+}
+function openFacebookConnectModal(){
+  document.getElementById('ci-title').textContent='Connect Facebook';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Facebook Page so Messenger DMs become conversations here, with ARIA replying automatically. This is DMs only — comments on posts aren't handled. You'll need a Meta app with the Messenger product added to your Page — grab a Page Access Token and the App Secret from your Meta App dashboard.</p>
+    <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="fb-access-token"/></div>
+    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="fb-app-secret"/></div>
+    <button class="btn btn-acc" style="width:100%" id="fb-submit" onclick="submitFacebookConnect()">Test &amp; Connect</button>
+    <div id="fb-connect-result" style="margin-top:1rem;display:none"></div>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitFacebookConnect(){
+  const btn=document.getElementById('fb-submit');
+  const page_access_token=document.getElementById('fb-access-token').value.trim();
+  const app_secret=document.getElementById('fb-app-secret').value.trim();
+  if(!page_access_token||!app_secret){
+    toast('Fill in the page access token and app secret','var(--danger)');return;
+  }
+  btn.disabled=true;btn.textContent='Verifying with Meta…';
+  try{
+    const {data,error}=await _sb.functions.invoke('facebook-save-credentials',{body:{page_access_token,app_secret}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('Facebook connected','var(--green)');
+    const resultEl=document.getElementById('fb-connect-result');
+    resultEl.style.display='block';
+    resultEl.innerHTML=`
+      <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step — configure this in your Meta App's Messenger &gt; Settings &gt; Webhooks:</div>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Callback URL</div>
+        <input class="rb-input" readonly value="${data.webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Verify Token</div>
+        <input class="rb-input" readonly value="${data.verify_token}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
+        <div style="font-size:.76rem;color:var(--text-3)">Subscribe the Page to the <strong>messages</strong> webhook field only — comments/feed events aren't handled.</div>
+      </div>`;
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+  }catch(e){
+    toast(e.message||'Could not connect Facebook','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function disconnectFacebook(){
+  if(!confirm('Disconnect Facebook? Inbound Messenger DMs will stop syncing until you reconnect.'))return;
+  if(_facebookConnection&&_sb){
+    try{ await _sb.from('client_facebook_connections').update({status:'disconnected'}).eq('id',_facebookConnection.id); }catch(e){}
+  }
+  _facebookConnection=null;
+  toast('Facebook disconnected','var(--accent)');
   renderSection();
 }
 
