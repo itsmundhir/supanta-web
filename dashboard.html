@@ -43,6 +43,8 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .spinner{width:34px;height:34px;border-radius:50%;border:3px solid var(--border-light);border-top-color:var(--accent);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #auth-gate-text{font-size:.82rem;color:var(--text-3)}
+#onboard-gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:9999;padding:1rem}
+#onboard-gate .card{max-width:420px;width:100%}
 
 #app{display:none;min-height:100vh}
 #app.ready{display:flex}
@@ -408,6 +410,18 @@ input:checked + .slider::before{transform:translateX(18px)}
 
 <div id="auth-gate"><div class="spinner"></div><div id="auth-gate-text">Checking your session…</div></div>
 
+<div id="onboard-gate">
+  <div class="card">
+    <div style="font-family:var(--fd,inherit);font-size:1.1rem;font-weight:700;margin-bottom:.3rem">Welcome to Supanta</div>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1.5rem">You're signed in — just tell us a bit about your business to finish setting up your account.</p>
+    <div class="form-group"><label>Company name</label><input class="rb-input" id="ob-company" placeholder="Your company"/></div>
+    <div class="form-group"><label>What are you looking for?</label><select class="rb-select" id="ob-service"><option value="" disabled selected>Select a service</option><option>Customer Support</option><option>Sales &amp; Lead Generation (SDR)</option><option>Back-Office Operations</option><option>Full Platform</option></select></div>
+    <div class="form-group"><label>Anything else we should know? (optional)</label><textarea class="rb-textarea" id="ob-notes" placeholder="Team size, ticket volume, channels..."></textarea></div>
+    <div id="ob-err" style="color:var(--danger,#ff5a5a);font-size:.78rem;margin-bottom:.75rem;display:none"></div>
+    <button class="btn btn-acc" id="ob-submit-btn" onclick="submitOnboarding()" style="width:100%;justify-content:center">Finish setup</button>
+  </div>
+</div>
+
 <div id="app">
   <aside class="sidebar" id="sidebar">
     <div class="sb-logo"><svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg)"/></svg> <span class="lbl">Supanta</span></div>
@@ -635,6 +649,15 @@ async function boot(){
   if(currentUser.companyId){
     try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
   }
+  // A brand-new self-serve signup (e.g. via "Continue with Google") gets an
+  // auth user + a default user_profiles row (via the on_auth_user_created
+  // trigger) but no business yet. Staff accounts are also companyId-less by
+  // design, so only gate on this for everyone else.
+  if(!currentUser.companyId && !currentUser.isStaff){
+    document.getElementById('auth-gate').style.display='none';
+    document.getElementById('onboard-gate').style.display='flex';
+    return;
+  }
   initTheme();
   loadState();
   if(currentUser.companyName && (!STATE.profile.companyName || STATE.profile.companyName==='Your Company'))STATE.profile.companyName=currentUser.companyName;
@@ -659,6 +682,28 @@ function handleEmailConnectRedirect(){
   params.delete('email_connect');params.delete('msg');
   const qs=params.toString();
   window.history.replaceState({},'',window.location.pathname+(qs?'?'+qs:''));
+}
+async function submitOnboarding(){
+  const company=document.getElementById('ob-company').value.trim();
+  const service=document.getElementById('ob-service').value;
+  const notes=document.getElementById('ob-notes').value.trim();
+  const err=document.getElementById('ob-err');
+  const btn=document.getElementById('ob-submit-btn');
+  err.style.display='none';
+  if(!company){err.textContent='Please enter your company name.';err.style.display='block';return;}
+  btn.textContent='Setting up...';btn.disabled=true;
+  try{
+    const {data:{session}}=await _sb.auth.getSession();
+    const {data,error}=await _sb.functions.invoke('complete-onboarding',{
+      body:{company_name:company,service,notes},
+      headers:{Authorization:`Bearer ${session.access_token}`}
+    });
+    if(error||data?.error)throw error||new Error(data.error);
+    window.location.reload();
+  }catch(e){
+    err.textContent=(e&&e.message)||'Could not finish setup — please try again.';err.style.display='block';
+    btn.textContent='Finish setup';btn.disabled=false;
+  }
 }
 function activeClientId(){ return _viewingClientId||currentUser.companyId; }
 async function loadStaffCompanies(){
