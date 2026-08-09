@@ -803,6 +803,8 @@ function subscribeRealtime(){
     _realtimeChannel=_sb.channel('client-'+cid)
       .on('postgres_changes',{event:'*',schema:'public',table:'tickets',filter},handleTicketRealtime)
       .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter},handleNotificationRealtime)
+      .on('postgres_changes',{event:'*',schema:'public',table:'messages',filter},handleMessageRealtime)
+      .on('postgres_changes',{event:'*',schema:'public',table:'conversations',filter},handleConversationRealtime)
       .subscribe();
   }catch(e){}
 }
@@ -846,6 +848,35 @@ function handleNotificationRealtime(payload){
   saveState();
   renderShell();
   if(currentSection==='notifications')renderSection();
+}
+// A teammate's reply, a new inbound customer message, or an ARIA auto-reply
+// all land here — re-fetch that one conversation's messages rather than
+// trying to patch the event in by hand (simplest way to stay consistent
+// with whatever else changed at the same time).
+function handleMessageRealtime(payload){
+  const r=payload.new||payload.old;
+  if(!r)return;
+  const c=STATE.chats.find(x=>x.dbId===r.conversation_id);
+  if(!c)return; // conversation not loaded locally yet — its own INSERT event (below) will pull it in
+  refreshChatMessages(c);
+}
+function handleConversationRealtime(payload){
+  if(payload.eventType==='DELETE'){
+    const before=STATE.chats.length;
+    STATE.chats=STATE.chats.filter(x=>x.dbId!==payload.old.id);
+    if(STATE.chats.length!==before&&currentSection==='chats')renderSection();
+    return;
+  }
+  const r=payload.new;
+  const existing=STATE.chats.find(x=>x.dbId===r.id);
+  if(existing){
+    existing.status=STATUS_DB_TO_UI[r.status]||existing.status;
+    existing.channel=CHANNEL_DB_TO_DISPLAY[r.channel]||existing.channel;
+    existing.customer=r.contact_name||r.contact_email||r.contact_phone||existing.customer;
+  }else{
+    STATE.chats.unshift(chatFromConversation(r,[]));
+  }
+  if(currentSection==='chats')renderSection();
 }
 // Tickets and Notifications are now backed by real Supabase tables (see
 // server-side migrations), scoped to this business via client_id/RLS — so
@@ -949,7 +980,62 @@ async function loadRemoteData(){
       STATE.activity=acts.map(r=>({id:++_activityId,dbId:r.id,actor:r.actor_name,action:r.action,target:r.target,time:new Date(r.created_at).toLocaleString()}));
     }
   }catch(e){}
+  // Conversations/messages are real Supabase tables (fed by the WhatsApp,
+  // Facebook and Email webhooks) — same "only replace demo data if real
+  // rows exist" precedent as tickets/notifications above.
+  try{
+    const {data:convs}=await _sb.from('conversations').select('*').eq('client_id',activeClientId()).order('last_message_at',{ascending:false,nullsFirst:false});
+    if(convs&&convs.length){
+      const {data:msgs}=await _sb.from('messages').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
+      const msgsByConv={};
+      (msgs||[]).forEach(m=>{ (msgsByConv[m.conversation_id]=msgsByConv[m.conversation_id]||[]).push(m); });
+      STATE.chats=convs.map(c=>chatFromConversation(c,msgsByConv[c.id]||[]));
+    }
+  }catch(e){}
   saveState();
+}
+// role/channel/status here are the schema's real vocabulary (see the
+// webhook edge functions) — this is the one place that translates it into
+// what the Chats UI already speaks (who/channel display name/tab bucket).
+const CHANNEL_DB_TO_DISPLAY={whatsapp:'WhatsApp',email:'Email',facebook:'Facebook',chat:'Live Chat',voice:'Phone'};
+const STATUS_DB_TO_UI={open:'active',escalated:'active',resolved:'done',abandoned:'archived'};
+const STATUS_UI_TO_DB={active:'open',done:'resolved',archived:'abandoned'};
+function chatFromConversation(c,allMsgs){
+  const transcript=allMsgs.filter(m=>m.role!=='aria_draft'&&m.role!=='system').map(m=>({
+    who:m.role==='user'?'customer':m.role==='assistant'?'aria':'agent',
+    text:m.content,
+    time:new Date(m.created_at).toTimeString().slice(0,5),
+    agentName:m.agent_name||null,
+    dbId:m.id
+  }));
+  const draft=[...allMsgs].reverse().find(m=>m.role==='aria_draft');
+  const ownerMember=c.escalated_to?STATE.team.find(t=>t.dbId===c.escalated_to):null;
+  return {
+    id:c.id,dbId:c.id,
+    customer:c.contact_name||c.contact_email||c.contact_phone||'Customer',
+    channel:CHANNEL_DB_TO_DISPLAY[c.channel]||c.channel,
+    status:STATUS_DB_TO_UI[c.status]||'active',
+    owner:ownerMember?ownerMember.name:(c.ai_handled?'ARIA':'Unassigned'),
+    last:transcript.length?transcript[transcript.length-1].text:(draft?'Draft ready — needs review':'No messages yet'),
+    messages:transcript,
+    ariaDraft:draft?draft.content:null
+  };
+}
+async function refreshChatMessages(c){
+  if(!c.dbId||!_sb)return;
+  try{
+    const {data:msgs}=await _sb.from('messages').select('*').eq('conversation_id',c.dbId).order('created_at',{ascending:true});
+    const updated=chatFromConversation({id:c.dbId,contact_name:c.customer,channel:Object.keys(CHANNEL_DB_TO_DISPLAY).find(k=>CHANNEL_DB_TO_DISPLAY[k]===c.channel)||c.channel,escalated_to:null,ai_handled:c.owner==='ARIA'},msgs||[]);
+    c.messages=updated.messages; c.ariaDraft=updated.ariaDraft; c.last=updated.last;
+    if(currentSection==='chats'){
+      if(_activeChatId===c.id){
+        const wrap=document.getElementById('chat-panel-wrap'); if(wrap)wrap.innerHTML=renderChatPanel(c);
+        const scroll=document.getElementById('chat-msgs-scroll'); if(scroll)scroll.scrollTop=scroll.scrollHeight;
+      }else{
+        const w=document.getElementById('chat-list-wrap'); if(w){w.innerHTML=chatListHtml();wireChatList();}
+      }
+    }
+  }catch(e){}
 }
 async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='index.html'; }
 
@@ -1596,6 +1682,7 @@ function messageHtml(m,c){
   </div>`;
 }
 function ariaSuggestions(c){
+  if(c.ariaDraft)return [c.ariaDraft];
   const last=[...c.messages].reverse().find(m=>m.who==='customer');
   const text=(last?last.text:'').toLowerCase();
   if(/refund|charge|billing|duplicate|invoice/.test(text))return [
@@ -1673,10 +1760,31 @@ function clearReplyImage(){
   document.getElementById('reply-img-input').value='';
   const wrap=document.getElementById('reply-img-preview-wrap'); if(wrap)wrap.innerHTML='';
 }
-function sendReply(chatId){
+const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send'};
+async function sendReply(chatId){
   const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
   const inp=document.getElementById('reply-input');
   const text=inp.value.trim();
+  // Real (dbId) conversations dispatch over the actual channel API — text
+  // only for now, image attachments aren't wired into any of the send
+  // functions yet. Legacy local-only demo chats keep the old behavior below.
+  if(c.dbId&&_sb){
+    if(!text)return;
+    const fn=CHAT_SEND_FN[c.channel];
+    if(!fn){ toast(`Sending isn't wired up for ${c.channel} yet`,'var(--danger)'); return; }
+    inp.value=''; inp.disabled=true;
+    try{
+      const {data,error}=await _sb.functions.invoke(fn,{body:{conversation_id:c.dbId,text}});
+      if(error||data?.error)throw new Error((data&&data.error)||error.message);
+      await refreshChatMessages(c);
+    }catch(e){
+      inp.value=text;
+      toast('Could not send — '+(e.message||e),'var(--danger)');
+    }finally{
+      inp.disabled=false;
+    }
+    return;
+  }
   if(!text && !_pendingReplyImage)return;
   const msg={who:'agent',text,time:nowTime(),agentName:currentUser.name};
   if(_pendingReplyImage)msg.image=_pendingReplyImage;
@@ -3697,6 +3805,9 @@ function setChatStatus(id,status,skipUndoToast){
   c.status=status; saveState();
   if(currentSection==='chats')renderSection();
   logActivity(`Marked chat ${status}`,`${c.customer} (${c.id})`);
+  if(c.dbId&&_sb){
+    _sb.from('conversations').update({status:STATUS_UI_TO_DB[status]||status}).eq('id',c.dbId).then(()=>{}).catch(()=>{});
+  }
   const msg=status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`;
   if(!skipUndoToast&&prevStatus!==status){
     toastUndo(msg,'var(--accent)',()=>setChatStatus(id,prevStatus,true));
