@@ -644,7 +644,8 @@ async function boot(){
     companyId:profile?.client_id||null,
     companyName:null,
     role:profile?.role||null,
-    isStaff:['admin','super_admin'].includes(profile?.role)
+    isStaff:['admin','super_admin'].includes(profile?.role),
+    isBusinessAdmin:profile?.role==='client_admin'
   };
   if(currentUser.companyId){
     try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
@@ -893,11 +894,11 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
-    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title,avatar_url').eq('client_id',activeClientId()).order('created_at',{ascending:true});
+    const {data:profiles}=await _sb.from('user_profiles').select('id,full_name,email,job_title,avatar_url,role').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(profiles&&profiles.length){
       const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
       const agents=STATE.team.filter(m=>m.type==='agent');
-      const humans=profiles.map((p,i)=>({id:++_teamId,dbId:p.id,name:p.full_name||p.email,email:p.email,role:p.job_title||'Team Member',type:'human',color:colors[i%colors.length],avatar:p.avatar_url||null}));
+      const humans=profiles.map((p,i)=>({id:++_teamId,dbId:p.id,name:p.full_name||p.email,email:p.email,role:p.job_title||'Team Member',dbRole:p.role,type:'human',color:colors[i%colors.length],avatar:p.avatar_url||null}));
       STATE.team=[...agents,...humans];
     }
   }catch(e){}
@@ -1420,13 +1421,15 @@ function teamListHtml(){
   const q=_teamSearch.trim().toLowerCase();
   const list=STATE.team.filter(m=>!q||m.name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q)||m.role.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No team members match your search.</div>';
+  const canManageRoles=currentUser.isBusinessAdmin||currentUser.isStaff;
   return list.map(m=>`
       <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
         ${avatarHtml(m.name,m.color,40)}
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:.88rem;display:flex;align-items:center;gap:.5rem">${m.name} ${m.type==='agent'?'<span class="badge badge-done">AI Agent</span>':m.dbId?'':'<span class="badge badge-med">Invite pending</span>'}</div>
+          <div style="font-weight:600;font-size:.88rem;display:flex;align-items:center;gap:.5rem">${m.name} ${m.type==='agent'?'<span class="badge badge-done">AI Agent</span>':m.dbId?'':'<span class="badge badge-med">Invite pending</span>'} ${m.dbRole==='client_admin'?'<span class="badge badge-med">Admin</span>':''}</div>
           <div style="font-size:.76rem;color:var(--text-3)">${m.role} · ${m.email}</div>
         </div>
+        ${canManageRoles&&m.dbId&&m.dbId!==currentUser.id&&(m.dbRole==='client'||m.dbRole==='client_admin')?`<button class="btn btn-ghost btn-sm" onclick="toggleTeamAdmin('${m.dbId}',${m.dbRole!=='client_admin'})">${m.dbRole==='client_admin'?'Remove admin':'Make admin'}</button>`:''}
         ${m.id!==1?`<button class="btn btn-ghost btn-sm" onclick="removeTeamMember(${m.id})">Remove</button>`:''}
       </div>`).join('');
 }
@@ -1465,6 +1468,17 @@ async function addTeamMember(){
     toast('Could not send invite — '+e.message,'var(--danger)');
   }
   if(btn){btn.disabled=false;btn.textContent='Add Member';}
+}
+async function toggleTeamAdmin(targetId,makeAdmin){
+  if(!_sb)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('set-team-role',{body:{target_id:targetId,make_admin:makeAdmin}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast(makeAdmin?'Teammate is now a business admin':'Admin access removed','var(--green)');
+    await loadRemoteData();renderSection();
+  }catch(e){
+    toast('Could not update role — '+e.message,'var(--danger)');
+  }
 }
 async function removeTeamMember(id){
   const m=STATE.team.find(x=>x.id===id);
