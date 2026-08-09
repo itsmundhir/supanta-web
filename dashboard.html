@@ -446,11 +446,11 @@ input:checked + .slider::before{transform:translateX(18px)}
     </div>
     <nav class="sb-nav">
       <div class="nav-sec-lbl lbl">Workspace</div>
-      <div class="nav-item" data-sec="pulse" onclick="showSection('pulse')"><span class="nav-ico">◔</span> <span class="lbl">Pulse</span></div>
+      <div class="nav-item" id="nav-pulse" data-sec="pulse" onclick="showSection('pulse')"><span class="nav-ico">◔</span> <span class="lbl">Pulse</span></div>
       <div class="nav-item" data-sec="teams" onclick="showSection('teams')"><span class="nav-ico">◎</span> <span class="lbl">Teams</span></div>
       <div class="nav-item" data-sec="chats" onclick="showSection('chats')"><span class="nav-ico">◈</span> <span class="lbl">Chats</span></div>
       <div class="nav-item" data-sec="tickets" onclick="showSection('tickets')"><span class="nav-ico">▤</span> <span class="lbl">Tickets</span></div>
-      <div class="nav-item" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
+      <div class="nav-item" id="nav-integrations" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
       <div class="sb-bottom">
         <div class="nav-sec-lbl lbl">General</div>
         <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico">🔔</span> <span class="lbl">Notifications</span> <span class="nav-badge lbl" id="notif-nav-badge" style="display:none"></span></div>
@@ -1119,7 +1119,12 @@ function renderShell(){
   document.getElementById('sb-user-title').textContent=STATE.profile.title||'Team Member';
   refreshNotifBadges();
   renderCompanySwitcher();
+  const canSeeReports=currentUser.isBusinessAdmin||currentUser.isStaff;
+  ['nav-pulse','nav-integrations'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.display=canSeeReports?'':'none'; });
 }
+// Statements, reports and integration setup are admin/owner territory —
+// regular agents only work Chats, Teams/Groups and Tickets.
+function canSeeReports(){ return currentUser.isBusinessAdmin||currentUser.isStaff; }
 function refreshNotifBadges(){
   const unread=STATE.notifications.filter(n=>!n.read).length;
   const navBadge=document.getElementById('notif-nav-badge');
@@ -1142,6 +1147,10 @@ const SECTION_META={
   settings:['Settings','Profile, workspace, display & billing']
 };
 function showSection(key){
+  if((key==='pulse'||key==='integrations')&&!canSeeReports()){
+    toast('Only business admins can access that','var(--danger)');
+    key='chats';
+  }
   if(window.innerWidth<=900)toggleSidebar(false);
   currentSection=key;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.sec===key));
@@ -2909,10 +2918,10 @@ function runGlobalSearch(v){
   const kb=(STATE.kbDocs||[]).filter(d=>d.name.toLowerCase().includes(q)).slice(0,5)
     .map(d=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoKb()"><div class="notif-dot" style="background:var(--accent-2)"></div><div><div>${d.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${d.size} · Added ${d.added}</div></div></div>`);
 
-  const iv=(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
+  const iv=!canSeeReports()?[]:(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
     .map(i=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoInvoices()"><div class="notif-dot" style="background:var(--green)"></div><div><div>${i.id} · ${i.amount}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">Due ${i.dueDate} · ${i.status}</div></div></div>`);
 
-  const ig=STATE.integrations.filter(i=>i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q)).slice(0,5)
+  const ig=!canSeeReports()?[]:STATE.integrations.filter(i=>i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q)).slice(0,5)
     .map(i=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoIntegration('${i.key}')"><div class="notif-dot" style="background:${i.color==='#ffffff'?'var(--text)':i.color}"></div><div><div>${i.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${i.comingSoon?'Coming soon':i.connected?'Connected':'Not connected'}</div></div></div>`);
 
   const html=gsGroup('Tickets',tk)+gsGroup('Chats',ch)+gsGroup('Team',tm)+gsGroup('Notifications',nt)+gsGroup('Knowledge Base',kb)+gsGroup('Invoices',iv)+gsGroup('Integrations',ig);
@@ -2946,13 +2955,16 @@ function gsGoTeam(){ closeGlobalSearch(); showSection('teams'); }
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
 function renderSettings(){
-  const tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
+  let tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
+  if(!canSeeReports())tabs=tabs.filter(([k])=>k!=='company'&&k!=='invoices');
   if(currentUser.role==='super_admin')tabs.push(['access','Team Access']);
+  if(!tabs.some(([k])=>k===_settingsTab))_settingsTab='profile';
   return `
   <div class="settings-nav">${tabs.map(([k,l])=>`<button class="tab-btn ${k===_settingsTab?'active':''}" onclick="setSettingsTab('${k}')">${l}</button>`).join('')}</div>
   <div id="settings-body">${renderSettingsTab(_settingsTab)}</div>`;
 }
 function setSettingsTab(t){
+  if((t==='company'||t==='invoices')&&!canSeeReports())t='profile';
   _settingsTab=t;renderSection();
   if(t==='access'&&currentUser.role==='super_admin'&&!_teamAccessLoaded){
     loadTeamAccessData().then(()=>{ if(_settingsTab==='access')renderSection(); });
