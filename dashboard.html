@@ -2915,7 +2915,7 @@ function runGlobalSearch(v){
   const nt=STATE.notifications.filter(n=>n.text.toLowerCase().includes(q)).slice(0,5)
     .map(n=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoNotifications()"><div class="notif-dot" style="background:var(--warning)"></div><div><div>${n.text}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${n.time}</div></div></div>`);
 
-  const kb=(STATE.kbDocs||[]).filter(d=>d.name.toLowerCase().includes(q)).slice(0,5)
+  const kb=!canSeeReports()?[]:(STATE.kbDocs||[]).filter(d=>d.name.toLowerCase().includes(q)).slice(0,5)
     .map(d=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoKb()"><div class="notif-dot" style="background:var(--accent-2)"></div><div><div>${d.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${d.size} · Added ${d.added}</div></div></div>`);
 
   const iv=!canSeeReports()?[]:(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
@@ -2956,7 +2956,7 @@ function gsGoTeam(){ closeGlobalSearch(); showSection('teams'); }
 let _settingsTab='profile';
 function renderSettings(){
   let tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
-  if(!canSeeReports())tabs=tabs.filter(([k])=>k!=='company'&&k!=='invoices');
+  if(!canSeeReports())tabs=tabs.filter(([k])=>k!=='company'&&k!=='invoices'&&k!=='kb');
   if(currentUser.role==='super_admin')tabs.push(['access','Team Access']);
   if(!tabs.some(([k])=>k===_settingsTab))_settingsTab='profile';
   return `
@@ -2964,7 +2964,7 @@ function renderSettings(){
   <div id="settings-body">${renderSettingsTab(_settingsTab)}</div>`;
 }
 function setSettingsTab(t){
-  if((t==='company'||t==='invoices')&&!canSeeReports())t='profile';
+  if((t==='company'||t==='invoices'||t==='kb')&&!canSeeReports())t='profile';
   _settingsTab=t;renderSection();
   if(t==='access'&&currentUser.role==='super_admin'&&!_teamAccessLoaded){
     loadTeamAccessData().then(()=>{ if(_settingsTab==='access')renderSection(); });
@@ -3373,6 +3373,7 @@ function tryAriaAction(text,file){
   const low=t.toLowerCase();
 
   if(file && /(knowledge base|\bkb\b)/.test(low) && /add|upload|save/.test(low)){
+    if(!canSeeReports())return "Only business admins can add documents to the knowledge base — ask an admin on your team to add this one.";
     addFileToKnowledgeBase(file);
     return `Done — I've added <strong>${file.name}</strong> to ${currentUser.companyName||'your'} knowledge base. I can reference it in future answers.`;
   }
