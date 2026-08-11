@@ -990,6 +990,10 @@ async function loadRemoteData(){
     _hubspotConnection=hsc||null;
   }catch(e){ _hubspotConnection=null; }
   try{
+    const {data:slc}=await _sb.from('client_slack_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _slackConnection=slc||null;
+  }catch(e){ _slackConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -1094,6 +1098,7 @@ let _instagramConnection=null;
 let _telegramConnection=null;
 let _livechatConnection=null;
 let _hubspotConnection=null;
+let _slackConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1171,7 +1176,7 @@ function defaultState(){
       // ^ intentionally not "coming soon" — see livechatIntegrationCardHtml
       {key:'tiktok',name:'TikTok',desc:'Reply to comments and DMs on your TikTok account.',color:'var(--text)',connected:false},
       {key:'googlebusiness',name:'Google Business Messages',desc:'Chat with customers directly from your Google Maps/Search listing.',color:'#4285F4',connected:false},
-      {key:'slack',name:'Slack',desc:'Route escalations and notify your team internally in Slack.',color:'#4A154B',connected:false},
+      {key:'slack',name:'Slack',desc:'Mirror your Supanta notifications into a Slack channel.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Book and join video calls with customers straight from a ticket.',color:'#2D8CFF',connected:false},
       {key:'googlecalendar',name:'Google Calendar',desc:'Schedule meetings from chats and sync them to your calendar.',color:'#4285F4',connected:false},
       {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false}
@@ -1295,6 +1300,7 @@ function renderSection(){
   if(currentSection==='chats')wireChatList();
   if(currentSection==='tickets')wireKanban();
   if(currentSection==='settings'&&_settingsTab==='security')refreshMfaStatus();
+  if(currentSection==='integrations'&&_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
 }
 function initialsOf(name){return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function avatarHtml(name,color,size){size=size||30;return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*.32}px;background-color:${color||'var(--accent)'};color:#04121f">${initialsOf(name)}</div>`;}
@@ -2706,7 +2712,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2886,10 +2892,86 @@ async function syncConversationToHubspot(conversationId){
     toast('Could not sync — '+(e.message||e),'var(--danger)');
   }
 }
+function slackIntegrationCardHtml(i){
+  const conn=_slackConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    ${isConnected?`
+      <div class="int-desc">Connected to <strong>${conn.team_name||'your workspace'}</strong>.${conn.channel_name?` Posting to <strong>#${conn.channel_name}</strong>.`:' Pick a channel to post to:'}</div>
+      <select class="rb-select" id="slack-channel-select" onchange="setSlackChannel(this)"><option value="">Loading channels…</option></select>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="sendSlackTestMessage()">Send test message</button>
+        <button class="btn btn-ghost btn-sm" onclick="disconnectSlack()">Disconnect</button>
+      </div>
+    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startSlackConnect()">Connect with Slack</button>`}
+  </div>`;
+}
+async function loadSlackChannelsIntoSelect(){
+  const sel=document.getElementById('slack-channel-select');
+  if(!sel||!_sb)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('slack-list-channels',{body:{}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const current=_slackConnection?.channel_id;
+    sel.innerHTML='<option value="">Select a channel…</option>'+(data.channels||[]).map(c=>`<option value="${c.id}" data-name="${c.name}" ${c.id===current?'selected':''}>#${c.name}</option>`).join('');
+  }catch(e){
+    sel.innerHTML='<option value="">Could not load channels</option>';
+  }
+}
+async function setSlackChannel(sel){
+  const opt=sel.selectedOptions[0];
+  if(!opt||!opt.value)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('slack-set-channel',{body:{channel_id:opt.value,channel_name:opt.dataset.name}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast(`Now posting to #${opt.dataset.name}`,'var(--green)');
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+    loadSlackChannelsIntoSelect();
+  }catch(e){
+    toast('Could not set channel — '+(e.message||e),'var(--danger)');
+  }
+}
+async function startSlackConnect(){
+  if(!_sb)return;
+  toast('Opening Slack…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('slack-oauth-start',{body:{}});
+    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    window.location.href=data.url;
+  }catch(e){
+    toast('Could not start Slack connect — '+(e.message||e),'var(--danger)');
+  }
+}
+async function sendSlackTestMessage(){
+  if(!_sb)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('slack-notify',{body:{text:'👋 This is a test notification from Supanta.'}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast('Test message sent to Slack','var(--green)');
+  }catch(e){
+    toast('Could not send — '+(e.message||e),'var(--danger)');
+  }
+}
+async function disconnectSlack(){
+  if(!confirm('Disconnect Slack? Notifications will stop posting until you reconnect.'))return;
+  if(_slackConnection&&_sb){
+    try{ await _sb.from('client_slack_connections').update({status:'disconnected'}).eq('id',_slackConnection.id); }catch(e){}
+  }
+  _slackConnection=null;
+  toast('Slack disconnected','var(--accent)');
+  renderSection();
+}
 function filterIntegrations(v){
   _intSearch=v;
   document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
   refocusSearch('int-search');
+  if(_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
 }
 function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
