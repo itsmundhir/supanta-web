@@ -190,7 +190,7 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .chat-msgs{flex:1;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;max-height:480px;overflow-y:auto}
 .cm{display:flex;align-items:flex-end;gap:.5rem}
 .cm.left{justify-content:flex-start}.cm.right{justify-content:flex-end}
-.cm-bubble{max-width:74%;border-radius:12px;padding:.65rem .9rem;border:1px solid var(--border);font-size:.84rem;line-height:1.55}
+.cm-bubble{max-width:74%;border-radius:12px;padding:.65rem .9rem;border:1px solid var(--border);font-size:.84rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
 .cm-customer{background:var(--bg-3)}
 .cm-agent{background:rgba(0,194,255,.09);border-color:rgba(0,194,255,.22)}
 .cm-aria{background:rgba(107,91,255,.1);border-color:rgba(107,91,255,.25)}
@@ -1633,9 +1633,9 @@ function chatListHtml(list){
         <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}" oncontextmenu="openChatCtxMenu(event,'${c.id}')">
           ${avatarHtml(c.customer,'#1a2d47',36)}
           <div class="chat-row-body">
-            <div class="chat-row-name">${c.customer}</div>
-            <div class="chat-row-channel"><span class="chan-pill">${INT_ICONS[c.channel.toLowerCase()]||''} ${c.channel}</span></div>
-            <div class="chat-row-msg">${c.last}</div>
+            <div class="chat-row-name">${escapeHtml(c.customer)}</div>
+            <div class="chat-row-channel"><span class="chan-pill">${INT_ICONS[c.channel.toLowerCase()]||''} ${escapeHtml(c.channel)}</span></div>
+            <div class="chat-row-msg">${escapeHtml(c.last)}</div>
           </div>
         </div>`).join('');
 }
@@ -1674,12 +1674,19 @@ function messageHtml(m,c){
   return `<div class="cm ${side}">
     ${side==='left'?sender.avatarHtml:''}
     <div class="cm-bubble ${cls}">
-      <div class="cm-meta">${sender.name} · ${m.time}</div>
-      ${m.text||''}
+      <div class="cm-meta">${escapeHtml(sender.name)} · ${escapeHtml(m.time)}</div>
+      ${escapeHtml(m.text||'')}
       ${m.image?`<img class="cm-img" src="${m.image}" alt="attachment"/>`:''}
     </div>
     ${side==='right'?sender.avatarHtml:''}
   </div>`;
+}
+// Customer messages and ARIA drafts are real inbound content now (see
+// handleMessageRealtime/loadRemoteData) — a customer can put HTML in a
+// message, so anywhere it's interpolated into a template string has to be
+// escaped, unlike the old hardcoded demo data this code was written against.
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function ariaSuggestions(c){
   if(c.ariaDraft)return [c.ariaDraft];
@@ -1721,7 +1728,7 @@ function renderChatPanel(c){
   return `
   <div class="chat-panel">
     <div class="chat-panel-hd">
-      <div><div style="font-weight:600;font-size:.9rem">${c.customer}</div><div style="font-size:.72rem;color:var(--text-3)">${c.channel} · Owner: ${c.owner} · ${c.id}</div></div>
+      <div><div style="font-weight:600;font-size:.9rem">${escapeHtml(c.customer)}</div><div style="font-size:.72rem;color:var(--text-3)">${escapeHtml(c.channel)} · Owner: ${escapeHtml(c.owner)} · ${escapeHtml(c.id)}</div></div>
       <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
     </div>
     <div class="chat-msgs" id="chat-msgs-scroll">
@@ -1729,7 +1736,7 @@ function renderChatPanel(c){
     </div>
     <div class="suggest-wrap">
       <div class="suggest-lbl">✨ ARIA suggests</div>
-      <div class="suggest-chips">${suggestions.map(s=>`<button class="suggest-chip" onclick="useSuggestion(this)">${s}</button>`).join('')}</div>
+      <div class="suggest-chips">${suggestions.map(s=>`<button class="suggest-chip" onclick="useSuggestion(this)">${escapeHtml(s)}</button>`).join('')}</div>
     </div>
     <div id="reply-img-preview-wrap"></div>
     <div class="reply-row">
@@ -3087,7 +3094,7 @@ function runGlobalSearch(v){
     .map(t=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTicket('${t.id}')"><div class="notif-dot" style="background:var(--accent)"></div><div><div>${t.subject}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${t.id} · ${t.client} · ${t.owner}</div></div></div>`);
 
   const ch=STATE.chats.filter(c=>c.customer.toLowerCase().includes(q)||c.last.toLowerCase().includes(q)||c.channel.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)).slice(0,5)
-    .map(c=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoChat('${c.id}')"><div class="notif-dot" style="background:var(--green)"></div><div><div>${c.customer} <span style="color:var(--text-3);font-weight:400">— ${c.channel}</span></div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${c.last}</div></div></div>`);
+    .map(c=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoChat('${c.id}')"><div class="notif-dot" style="background:var(--green)"></div><div><div>${escapeHtml(c.customer)} <span style="color:var(--text-3);font-weight:400">— ${escapeHtml(c.channel)}</span></div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${escapeHtml(c.last)}</div></div></div>`);
 
   const tm=STATE.team.filter(m=>m.name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q)||m.role.toLowerCase().includes(q)).slice(0,5)
     .map(m=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTeam()"><div class="notif-dot" style="background:#a99cff"></div><div><div>${m.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${m.role}</div></div></div>`);
