@@ -966,6 +966,10 @@ async function loadRemoteData(){
     _telegramConnection=tgc||null;
   }catch(e){ _telegramConnection=null; }
   try{
+    const {data:lcc}=await _sb.from('client_livechat_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _livechatConnection=lcc||null;
+  }catch(e){ _livechatConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -1068,6 +1072,7 @@ let _whatsappConnection=null;
 let _facebookConnection=null;
 let _instagramConnection=null;
 let _telegramConnection=null;
+let _livechatConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1142,6 +1147,7 @@ function defaultState(){
       {key:'telegram',name:'Telegram',desc:'Route Telegram bot DMs into your shared inbox.',color:'#26A5E4',connected:false},
       {key:'sms',name:'SMS',desc:'Text-message support for order updates, OTPs and quick replies.',color:'var(--accent)',connected:false},
       {key:'livechat',name:'Live Chat',desc:'An embeddable widget so visitors can chat with ARIA/agents on your own site.',color:'var(--accent-2)',connected:false},
+      // ^ intentionally not "coming soon" — see livechatIntegrationCardHtml
       {key:'tiktok',name:'TikTok',desc:'Reply to comments and DMs on your TikTok account.',color:'var(--text)',connected:false},
       {key:'googlebusiness',name:'Google Business Messages',desc:'Chat with customers directly from your Google Maps/Search listing.',color:'#4285F4',connected:false},
       {key:'slack',name:'Slack',desc:'Route escalations and notify your team internally in Slack.',color:'#4A154B',connected:false},
@@ -1777,7 +1783,7 @@ function clearReplyImage(){
   document.getElementById('reply-img-input').value='';
   const wrap=document.getElementById('reply-img-preview-wrap'); if(wrap)wrap.innerHTML='';
 }
-const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send',Instagram:'instagram-send',Telegram:'telegram-send'};
+const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send',Instagram:'instagram-send',Telegram:'telegram-send','Live Chat':'livechat-send'};
 async function sendReply(chatId){
   const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
   const inp=document.getElementById('reply-input');
@@ -2676,7 +2682,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2764,6 +2770,51 @@ function telegramIntegrationCardHtml(i){
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectTelegram()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTelegramConnectModal()">Connect</button>`}
   </div>`;
+}
+function livechatIntegrationCardHtml(i){
+  const conn=_livechatConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const snippet=isConnected?`<script src="${SUPABASE_URL}/functions/v1/livechat-widget?key=${conn.widget_key}" async><\/script>`:'';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':'badge-archived'}">${isConnected?'Enabled':'Not enabled'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?'Paste this snippet before the closing &lt;/body&gt; tag on your website:':i.desc}</div>
+    ${isConnected?`
+      <textarea class="rb-input" readonly onclick="this.select()" style="font-family:monospace;font-size:.72rem;min-height:52px;resize:vertical">${snippet}</textarea>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost btn-sm" onclick="copyLivechatSnippet()">Copy snippet</button>
+        <button class="btn btn-ghost btn-sm" onclick="disableLivechat()">Disable</button>
+      </div>
+    `:`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="enableLivechat()">Enable</button>`}
+  </div>`;
+}
+async function enableLivechat(){
+  if(!_sb)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('livechat-enable',{body:{}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    await loadRemoteData();
+    toast('Live Chat enabled','var(--green)');
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+  }catch(e){
+    toast('Could not enable Live Chat — '+(e.message||e),'var(--danger)');
+  }
+}
+async function disableLivechat(){
+  if(!confirm('Disable Live Chat? The widget will stop working on your site until re-enabled.'))return;
+  if(_livechatConnection&&_sb){
+    try{ await _sb.from('client_livechat_connections').update({status:'disconnected'}).eq('id',_livechatConnection.id); }catch(e){}
+  }
+  _livechatConnection=null;
+  toast('Live Chat disabled','var(--accent)');
+  renderSection();
+}
+function copyLivechatSnippet(){
+  if(!_livechatConnection)return;
+  const snippet=`<script src="${SUPABASE_URL}/functions/v1/livechat-widget?key=${_livechatConnection.widget_key}" async><\/script>`;
+  navigator.clipboard?.writeText(snippet).then(()=>toast('Snippet copied','var(--green)')).catch(()=>toast('Could not copy — select and copy manually','var(--danger)'));
 }
 function filterIntegrations(v){
   _intSearch=v;
