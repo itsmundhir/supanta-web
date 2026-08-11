@@ -673,6 +673,7 @@ async function boot(){
   renderSection();
   subscribeRealtime();
   handleEmailConnectRedirect();
+  handleIntegrationConnectRedirect();
 }
 function handleEmailConnectRedirect(){
   const params=new URLSearchParams(window.location.search);
@@ -681,6 +682,21 @@ function handleEmailConnectRedirect(){
   const msg=params.get('msg')||'';
   toast(result==='success'?('Email connected — '+msg):('Could not connect email — '+msg),result==='success'?'var(--green)':'var(--danger)');
   params.delete('email_connect');params.delete('msg');
+  const qs=params.toString();
+  window.history.replaceState({},'',window.location.pathname+(qs?'?'+qs:''));
+}
+// Generic version of the above for OAuth integrations added after Email
+// (e.g. HubSpot) — kept separate rather than widening email_connect's
+// contract, since that one's already live and its param names are fixed.
+function handleIntegrationConnectRedirect(){
+  const params=new URLSearchParams(window.location.search);
+  const key=params.get('int_connect');
+  if(!key)return;
+  const result=params.get('result');
+  const msg=params.get('msg')||'';
+  const label=key.charAt(0).toUpperCase()+key.slice(1);
+  toast(result==='success'?(`${label} connected — ${msg}`):(`Could not connect ${label} — ${msg}`),result==='success'?'var(--green)':'var(--danger)');
+  params.delete('int_connect');params.delete('result');params.delete('msg');
   const qs=params.toString();
   window.history.replaceState({},'',window.location.pathname+(qs?'?'+qs:''));
 }
@@ -970,6 +986,10 @@ async function loadRemoteData(){
     _livechatConnection=lcc||null;
   }catch(e){ _livechatConnection=null; }
   try{
+    const {data:hsc}=await _sb.from('client_hubspot_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _hubspotConnection=hsc||null;
+  }catch(e){ _hubspotConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -1073,6 +1093,7 @@ let _facebookConnection=null;
 let _instagramConnection=null;
 let _telegramConnection=null;
 let _livechatConnection=null;
+let _hubspotConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1153,7 +1174,7 @@ function defaultState(){
       {key:'slack',name:'Slack',desc:'Route escalations and notify your team internally in Slack.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Book and join video calls with customers straight from a ticket.',color:'#2D8CFF',connected:false},
       {key:'googlecalendar',name:'Google Calendar',desc:'Schedule meetings from chats and sync them to your calendar.',color:'#4285F4',connected:false},
-      {key:'hubspot',name:'HubSpot',desc:'Sync contacts and conversations with your HubSpot CRM.',color:'#FF7A59',connected:false}
+      {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false}
     ],
     notifications:[
       {id:1,text:'ARIA escalated a billing dispute from Sarah Lee to Liam Dlamini.',time:'10 min ago',read:false},
@@ -1745,7 +1766,10 @@ function renderChatPanel(c){
   <div class="chat-panel">
     <div class="chat-panel-hd">
       <div><div style="font-weight:600;font-size:.9rem">${escapeHtml(c.customer)}</div><div style="font-size:.72rem;color:var(--text-3)">${escapeHtml(c.channel)} · Owner: ${escapeHtml(c.owner)} · ${escapeHtml(c.id)}</div></div>
-      <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
+      <div style="display:flex;gap:.5rem">
+        ${c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
+      </div>
     </div>
     <div class="chat-msgs" id="chat-msgs-scroll">
       ${c.messages.map(m=>messageHtml(m,c)).join('')}
@@ -2682,7 +2706,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2815,6 +2839,52 @@ function copyLivechatSnippet(){
   if(!_livechatConnection)return;
   const snippet=`<script src="${SUPABASE_URL}/functions/v1/livechat-widget?key=${_livechatConnection.widget_key}" async><\/script>`;
   navigator.clipboard?.writeText(snippet).then(()=>toast('Snippet copied','var(--green)')).catch(()=>toast('Could not copy — select and copy manually','var(--danger)'));
+}
+function hubspotIntegrationCardHtml(i){
+  const conn=_hubspotConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected to portal <strong>${conn.portal_id||'—'}</strong>. Sync a conversation to HubSpot from its chat panel.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectHubspot()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startHubspotConnect()">Connect with HubSpot</button>`}
+  </div>`;
+}
+async function startHubspotConnect(){
+  if(!_sb)return;
+  toast('Opening HubSpot…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('hubspot-oauth-start',{body:{}});
+    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    window.location.href=data.url;
+  }catch(e){
+    toast('Could not start HubSpot connect — '+(e.message||e),'var(--danger)');
+  }
+}
+async function disconnectHubspot(){
+  if(!confirm('Disconnect HubSpot? Conversations will stop syncing until you reconnect.'))return;
+  if(_hubspotConnection&&_sb){
+    try{ await _sb.from('client_hubspot_connections').update({status:'disconnected'}).eq('id',_hubspotConnection.id); }catch(e){}
+  }
+  _hubspotConnection=null;
+  toast('HubSpot disconnected','var(--accent)');
+  renderSection();
+}
+async function syncConversationToHubspot(conversationId){
+  if(!_sb)return;
+  toast('Syncing to HubSpot…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('hubspot-sync-conversation',{body:{conversation_id:conversationId}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast('Synced to HubSpot','var(--green)');
+  }catch(e){
+    toast('Could not sync — '+(e.message||e),'var(--danger)');
+  }
 }
 function filterIntegrations(v){
   _intSearch=v;
