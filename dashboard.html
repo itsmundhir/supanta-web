@@ -958,6 +958,10 @@ async function loadRemoteData(){
     _facebookConnection=fc||null;
   }catch(e){ _facebookConnection=null; }
   try{
+    const {data:igc}=await _sb.from('client_instagram_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _instagramConnection=igc||null;
+  }catch(e){ _instagramConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -997,7 +1001,7 @@ async function loadRemoteData(){
 // role/channel/status here are the schema's real vocabulary (see the
 // webhook edge functions) — this is the one place that translates it into
 // what the Chats UI already speaks (who/channel display name/tab bucket).
-const CHANNEL_DB_TO_DISPLAY={whatsapp:'WhatsApp',email:'Email',facebook:'Facebook',chat:'Live Chat',voice:'Phone'};
+const CHANNEL_DB_TO_DISPLAY={whatsapp:'WhatsApp',email:'Email',facebook:'Facebook',instagram:'Instagram',chat:'Live Chat',voice:'Phone'};
 const STATUS_DB_TO_UI={open:'active',escalated:'active',resolved:'done',abandoned:'archived'};
 const STATUS_UI_TO_DB={active:'open',done:'resolved',archived:'abandoned'};
 function chatFromConversation(c,allMsgs){
@@ -1058,6 +1062,7 @@ let _viewingClientId=null, _staffCompanies=[], _staffNotifCounts={};
 let _emailConnection=null;
 let _whatsappConnection=null;
 let _facebookConnection=null;
+let _instagramConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1124,7 +1129,7 @@ function defaultState(){
     integrations:[
       {key:'whatsapp',name:'WhatsApp',desc:'Route WhatsApp conversations into your shared inbox.',color:'#25D366',connected:true},
       {key:'email',name:'Email',desc:'Connect a support inbox to route email tickets automatically.',color:'#00c2ff',connected:true},
-      {key:'instagram',name:'Instagram',desc:'Reply to DMs and comments from one place.',color:'#E1306C',connected:false},
+      {key:'instagram',name:'Instagram',desc:'Route Instagram DMs from your linked account into your shared inbox.',color:'#E1306C',connected:false},
       {key:'x',name:'X (Twitter)',desc:'Monitor mentions and DMs for support requests.',color:'#ffffff',connected:false},
       {key:'facebook',name:'Facebook',desc:'Route Messenger DMs from your Page into your shared inbox.',color:'#1877F2',connected:false},
       {key:'phone',name:'Phone',desc:'Voice call routing for inbound and outbound support calls.',color:'#f5a623',connected:false},
@@ -1767,7 +1772,7 @@ function clearReplyImage(){
   document.getElementById('reply-img-input').value='';
   const wrap=document.getElementById('reply-img-preview-wrap'); if(wrap)wrap.innerHTML='';
 }
-const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send'};
+const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send',Instagram:'instagram-send'};
 async function sendReply(chatId){
   const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
   const inp=document.getElementById('reply-input');
@@ -2666,7 +2671,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2723,6 +2728,21 @@ function facebookIntegrationCardHtml(i){
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectFacebook()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openFacebookConnectModal()">Connect</button>`}
+  </div>`;
+}
+function instagramIntegrationCardHtml(i){
+  const conn=_instagramConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected as <strong>@${conn.ig_username||conn.ig_account_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectInstagram()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openInstagramConnectModal()">Connect</button>`}
   </div>`;
 }
 function filterIntegrations(v){
@@ -2906,6 +2926,58 @@ async function disconnectFacebook(){
   }
   _facebookConnection=null;
   toast('Facebook disconnected','var(--accent)');
+  renderSection();
+}
+function openInstagramConnectModal(){
+  document.getElementById('ci-title').textContent='Connect Instagram';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Instagram professional account so DMs become conversations here, with ARIA replying automatically. Instagram DMs go through the Facebook Page your Instagram account is linked to — use the same Page Access Token as your Facebook connection (with the instagram_manage_messages permission added) and the same App Secret.</p>
+    <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="ig-access-token"/></div>
+    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="ig-app-secret"/></div>
+    <button class="btn btn-acc" style="width:100%" id="ig-submit" onclick="submitInstagramConnect()">Test &amp; Connect</button>
+    <div id="ig-connect-result" style="margin-top:1rem;display:none"></div>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitInstagramConnect(){
+  const btn=document.getElementById('ig-submit');
+  const page_access_token=document.getElementById('ig-access-token').value.trim();
+  const app_secret=document.getElementById('ig-app-secret').value.trim();
+  if(!page_access_token||!app_secret){
+    toast('Fill in the page access token and app secret','var(--danger)');return;
+  }
+  btn.disabled=true;btn.textContent='Verifying with Meta…';
+  try{
+    const {data,error}=await _sb.functions.invoke('instagram-save-credentials',{body:{page_access_token,app_secret}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('Instagram connected','var(--green)');
+    const resultEl=document.getElementById('ig-connect-result');
+    resultEl.style.display='block';
+    resultEl.innerHTML=`
+      <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step — configure this in your Meta App's Instagram &gt; Webhooks (or Messenger &gt; Webhooks, subscribed to the Instagram object):</div>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Callback URL</div>
+        <input class="rb-input" readonly value="${data.webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Verify Token</div>
+        <input class="rb-input" readonly value="${data.verify_token}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
+        <div style="font-size:.76rem;color:var(--text-3)">Subscribe to the <strong>messages</strong> field only — comments aren't handled.</div>
+      </div>`;
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+  }catch(e){
+    toast(e.message||'Could not connect Instagram','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function disconnectInstagram(){
+  if(!confirm('Disconnect Instagram? Inbound DMs will stop syncing until you reconnect.'))return;
+  if(_instagramConnection&&_sb){
+    try{ await _sb.from('client_instagram_connections').update({status:'disconnected'}).eq('id',_instagramConnection.id); }catch(e){}
+  }
+  _instagramConnection=null;
+  toast('Instagram disconnected','var(--accent)');
   renderSection();
 }
 
