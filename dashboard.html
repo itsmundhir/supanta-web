@@ -998,6 +998,10 @@ async function loadRemoteData(){
     _zoomConnection=zc||null;
   }catch(e){ _zoomConnection=null; }
   try{
+    const {data:gcc}=await _sb.from('client_googlecalendar_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _googleCalendarConnection=gcc||null;
+  }catch(e){ _googleCalendarConnection=null; }
+  try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
       const mapped=[];
@@ -1104,6 +1108,7 @@ let _livechatConnection=null;
 let _hubspotConnection=null;
 let _slackConnection=null;
 let _zoomConnection=null;
+let _googleCalendarConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1183,7 +1188,7 @@ function defaultState(){
       {key:'googlebusiness',name:'Google Business Messages',desc:'Chat with customers directly from your Google Maps/Search listing.',color:'#4285F4',connected:false},
       {key:'slack',name:'Slack',desc:'Mirror your Supanta notifications into a Slack channel.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Start an instant video call with a customer straight from a chat.',color:'#2D8CFF',connected:false},
-      {key:'googlecalendar',name:'Google Calendar',desc:'Schedule meetings from chats and sync them to your calendar.',color:'#4285F4',connected:false},
+      {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false},
       {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false}
     ],
     notifications:[
@@ -1778,6 +1783,7 @@ function renderChatPanel(c){
     <div class="chat-panel-hd">
       <div><div style="font-weight:600;font-size:.9rem">${escapeHtml(c.customer)}</div><div style="font-size:.72rem;color:var(--text-3)">${escapeHtml(c.channel)} · Owner: ${escapeHtml(c.owner)} · ${escapeHtml(c.id)}</div></div>
       <div style="display:flex;gap:.5rem">
+        ${c.dbId&&_googleCalendarConnection&&_googleCalendarConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="openScheduleMeetingModal('${c.dbId}')">Schedule meeting</button>`:''}
         ${c.dbId&&_zoomConnection&&_zoomConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="startZoomCall('${c.dbId}')">Start Zoom call</button>`:''}
         ${c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</button>`:''}
         <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
@@ -2718,7 +2724,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):i.key==='googlecalendar'?googleCalendarIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -3042,6 +3048,71 @@ async function startZoomCall(conversationId){
     if(c)await refreshChatMessages(c);
   }catch(e){
     toast('Could not start call — '+(e.message||e),'var(--danger)');
+  }
+}
+function googleCalendarIntegrationCardHtml(i){
+  const conn=_googleCalendarConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.google_email||'your Google account'}</strong>. Schedule a meeting from a chat's panel.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectGoogleCalendar()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startGoogleCalendarConnect()">Connect with Google</button>`}
+  </div>`;
+}
+async function startGoogleCalendarConnect(){
+  if(!_sb)return;
+  toast('Opening Google…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('googlecalendar-oauth-start',{body:{}});
+    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    window.location.href=data.url;
+  }catch(e){
+    toast('Could not start Google connect — '+(e.message||e),'var(--danger)');
+  }
+}
+async function disconnectGoogleCalendar(){
+  if(!confirm('Disconnect Google Calendar?'))return;
+  if(_googleCalendarConnection&&_sb){
+    try{ await _sb.from('client_googlecalendar_connections').update({status:'disconnected'}).eq('id',_googleCalendarConnection.id); }catch(e){}
+  }
+  _googleCalendarConnection=null;
+  toast('Google Calendar disconnected','var(--accent)');
+  renderSection();
+}
+function openScheduleMeetingModal(conversationId){
+  document.getElementById('ci-title').textContent='Schedule a Meeting';
+  document.getElementById('ci-body').innerHTML=`
+    <div class="form-group"><label>Title</label><input class="rb-input" id="gc-title" placeholder="Call with customer"/></div>
+    <div class="form-group"><label>Date &amp; Time</label><input class="rb-input" type="datetime-local" id="gc-start"/></div>
+    <div class="form-group"><label>Duration (minutes)</label><input class="rb-input" type="number" id="gc-duration" value="30"/></div>
+    <button class="btn btn-acc" style="width:100%" id="gc-submit" onclick="submitScheduleMeeting('${conversationId}')">Schedule</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitScheduleMeeting(conversationId){
+  const btn=document.getElementById('gc-submit');
+  const title=document.getElementById('gc-title').value.trim();
+  const start=document.getElementById('gc-start').value;
+  const duration=document.getElementById('gc-duration').value;
+  if(!start){toast('Pick a date and time','var(--danger)');return;}
+  btn.disabled=true;btn.textContent='Scheduling…';
+  try{
+    const {data,error}=await _sb.functions.invoke('googlecalendar-create-event',{body:{conversation_id:conversationId,start_time:new Date(start).toISOString(),duration_minutes:Number(duration)||30,title:title||undefined}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast('Meeting scheduled','var(--green)');
+    closeModal('modal-connect-int');
+    const c=STATE.chats.find(x=>x.dbId===conversationId);
+    if(c)await refreshChatMessages(c);
+  }catch(e){
+    toast('Could not schedule — '+(e.message||e),'var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Schedule';
   }
 }
 function filterIntegrations(v){
