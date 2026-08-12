@@ -158,12 +158,15 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .rb-table tr:last-child td{border-bottom:none}
 .rb-table tr:hover td{background:var(--bg-3)}
 
-/* KANBAN */
-.kanban{display:flex;gap:1.1rem;align-items:flex-start;overflow-x:auto;padding-bottom:.5rem}
+/* KANBAN — bounded to the viewport so the horizontal (column) scrollbar
+   stays reachable near the top of the screen instead of sinking below
+   however tall the longest column's card list happens to be; each column
+   scrolls its own cards internally instead. */
+.kanban{display:flex;gap:1.1rem;align-items:stretch;overflow-x:auto;padding-bottom:.5rem;max-height:calc(100vh - 230px)}
 .kanban>.kanban-col{flex:0 0 300px;width:300px}
-.kanban-col{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;min-height:140px}
-.kanban-col-hd{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);font-family:var(--fd);font-size:.82rem;font-weight:700;display:flex;justify-content:space-between;align-items:center}
-.kanban-body{padding:.75rem;display:flex;flex-direction:column;gap:.65rem;min-height:80px}
+.kanban-col{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;min-height:140px;display:flex;flex-direction:column;overflow:hidden}
+.kanban-col-hd{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);font-family:var(--fd);font-size:.82rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.kanban-body{padding:.75rem;display:flex;flex-direction:column;gap:.65rem;min-height:80px;overflow-y:auto;flex:1}
 .kanban-body.dragover{background:rgba(0,194,255,.06);outline:2px dashed var(--accent);outline-offset:-4px;border-radius:8px}
 .tk-card{background:var(--bg-3);border:1px solid var(--border-light);border-radius:10px;padding:.85rem;cursor:grab}
 .tk-card:active{cursor:grabbing}
@@ -453,7 +456,7 @@ input:checked + .slider::before{transform:translateX(18px)}
       <div class="nav-item" id="nav-integrations" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
       <div class="sb-bottom">
         <div class="nav-sec-lbl lbl">General</div>
-        <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico">🔔</span> <span class="lbl">Notifications</span> <span class="nav-badge lbl" id="notif-nav-badge" style="display:none"></span></div>
+        <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> <span class="lbl">Notifications</span> <span class="nav-badge lbl" id="notif-nav-badge" style="display:none"></span></div>
         <div class="nav-item" data-sec="settings" onclick="showSection('settings')"><span class="nav-ico">⚙</span> <span class="lbl">Settings</span></div>
       </div>
     </nav>
@@ -472,7 +475,8 @@ input:checked + .slider::before{transform:translateX(18px)}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
         <button class="icon-btn" onclick="toggleNotifPanel()" aria-label="Notifications">
-          🔔<span class="dot-badge" id="topbar-notif-dot" style="display:none"></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="dot-badge" id="topbar-notif-dot" style="display:none"></span>
         </button>
         <div class="avatar" id="topbar-avatar" style="cursor:pointer" onclick="showSection('settings')"></div>
       </div>
@@ -596,11 +600,11 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
     <div class="aria-chat-input-row">
       <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
-      <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input')" id="aria-emoji-btn" title="Emoji">😊</button>
+      <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
       <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
       <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
-      <div class="emoji-pop" id="emoji-pop-aria-input" style="left:auto;right:.85rem"></div>
+      <div class="emoji-pop" id="emoji-pop-aria-input"></div>
     </div>
   </div>
   <button class="aria-trigger-btn" onclick="toggleAriaChat()">
@@ -623,7 +627,7 @@ function authFail(){ document.getElementById('auth-gate-text').textContent='Cann
 
 async function boot(){
   const {data:{session}}=await _sb.auth.getSession();
-  if(!session){ window.location.href='index.html'; return; }
+  if(!session){ window.location.href='home.html'; return; }
   // A signed-in session that hasn't completed its 2FA (AAL2) challenge yet
   // must not reach the dashboard — bounce back to the login page's code step.
   // Wrapped defensively: if this check itself fails for any reason, fail
@@ -631,7 +635,7 @@ async function boot(){
   try{
     const {data:aal}=await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
     if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
-      window.location.href='index.html#login'; return;
+      window.location.href='home.html#login'; return;
     }
   }catch(e){}
   sbUser=session.user;
@@ -645,7 +649,8 @@ async function boot(){
     companyName:null,
     role:profile?.role||null,
     isStaff:['admin','super_admin'].includes(profile?.role),
-    isBusinessAdmin:profile?.role==='client_admin'
+    isBusinessAdmin:profile?.role==='client_admin',
+    links:profile?.links||{}
   };
   if(currentUser.companyId){
     try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
@@ -659,7 +664,7 @@ async function boot(){
     document.getElementById('onboard-gate').style.display='flex';
     return;
   }
-  initTheme();
+  initTheme(profile?.links?.theme);
   loadState();
   if(currentUser.companyName && (!STATE.profile.companyName || STATE.profile.companyName==='Your Company'))STATE.profile.companyName=currentUser.companyName;
   if(currentUser.isStaff)await loadStaffCompanies();
@@ -1081,17 +1086,26 @@ async function refreshChatMessages(c){
     }
   }catch(e){}
 }
-async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='index.html'; }
+async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='home.html'; }
 
 // ─── THEME ───────────────────────────────────────────────
-function initTheme(){
-  const saved=localStorage.getItem('supanta_theme');
-  if(saved){ document.documentElement.setAttribute('data-theme',saved); }
+// The server-stored value (user_profiles.links.theme) is the source of
+// truth — it follows the account across browsers/devices/domains, unlike
+// localStorage which only survives within one browser on one origin (e.g.
+// it wouldn't carry over from a Netlify preview URL to supanta.com).
+// localStorage is kept only as an instant-apply cache for the next load.
+function initTheme(serverTheme){
+  const saved=serverTheme||localStorage.getItem('supanta_theme');
+  if(saved){ document.documentElement.setAttribute('data-theme',saved); localStorage.setItem('supanta_theme',saved); }
 }
 function setTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   localStorage.setItem('supanta_theme',t);
   if(currentSection==='settings')renderSection();
+  if(_sb&&currentUser){
+    currentUser.links={...(currentUser.links||{}),theme:t};
+    _sb.from('user_profiles').update({links:currentUser.links}).eq('id',currentUser.id).then(()=>{}).catch(()=>{});
+  }
 }
 
 // ─── STATE (localStorage-backed mock data — no backend for these entities yet) ───
@@ -1133,45 +1147,8 @@ function defaultState(){
         {from:'ARIA',text:'Escalated CHT-102 (Sarah Lee) — possible duplicate billing charge.',time:'11:03'}
       ]}
     ],
-    chats:[
-      {id:'CHT-101',customer:'Alex Johnson',channel:'WhatsApp',status:'active',last:'Can you check my order status?',owner:'Nomsa Dube',messages:[
-        {who:'customer',text:'Hi, can you check my order status?',time:'09:12'},
-        {who:'aria',text:'Hi Alex! Let me pull that up — one moment.',time:'09:12'},
-        {who:'aria',text:'Your order #4521 shipped yesterday and is on its way. ETA is Thursday.',time:'09:13'},
-        {who:'agent',text:'Following up here — anything else you need on that order, Alex?',time:'09:20'}
-      ]},
-      {id:'CHT-102',customer:'Sarah Lee',channel:'Email',status:'active',last:'I was charged twice this month',owner:'Liam Dlamini',messages:[
-        {who:'customer',text:'I think I was charged twice this month for my subscription.',time:'11:02'},
-        {who:'customer',text:'Here\'s a screenshot of my statement:',time:'11:02',image:MOCK_RECEIPT_IMG},
-        {who:'aria',text:'I\'m sorry about that — I can see the screenshot, and it shows two identical $49.00 charges posted on the same day. I\'m flagging this as a duplicate billing charge for a specialist to correct.',time:'11:03'},
-        {who:'agent',text:'Hi Sarah, I can see the duplicate charge — refunding it now, should reflect in 3-5 business days.',time:'11:20'}
-      ]},
-      {id:'CHT-098',customer:'Marcus Webb',channel:'Instagram',status:'done',last:'Perfect, thank you!',owner:'Zanele Mokoena',messages:[
-        {who:'customer',text:'Do you ship internationally?',time:'Yesterday'},
-        {who:'aria',text:'Yes! We ship to over 40 countries — shipping cost is calculated at checkout.',time:'Yesterday'},
-        {who:'customer',text:'Perfect, thank you!',time:'Yesterday'}
-      ]},
-      {id:'CHT-091',customer:'Priya Patel',channel:'X',status:'archived',last:'Resolved via email instead',owner:'Nomsa Dube',messages:[
-        {who:'customer',text:'Anyone there? Been waiting on a reply for my ticket.',time:'Mon'},
-        {who:'agent',text:'Hi Priya, apologies for the delay — I\'ve moved this to email so we can share account details securely.',time:'Mon'}
-      ]},
-      {id:'CHT-107',customer:'Thandeka Nkosi',channel:'Facebook',status:'active',last:'Is the blue one back in stock?',owner:'Zanele Mokoena',messages:[
-        {who:'customer',text:'Is the blue one back in stock?',time:'14:02'},
-        {who:'aria',text:'Yes — the blue variant was restocked this morning. Want me to send you the link?',time:'14:03'}
-      ]},
-      {id:'CHT-105',customer:'David Kim',channel:'Phone',status:'done',last:'Call completed — 4m 12s',owner:'Liam Dlamini',messages:[
-        {who:'customer',text:'(Call transcript) Hi, I need help cancelling my subscription.',time:'13:10'},
-        {who:'agent',text:'(Call transcript) No problem, I\'ve processed the cancellation — you\'ll get a confirmation email shortly.',time:'13:14'}
-      ]}
-    ],
-    tickets:[
-      {id:'SUP-1042',subject:'Refund not processed for order #4521',client:'BrandCo',owner:'Nomsa Dube',status:'active',priority:'high',dueAt:'2026-05-15T00:00:00.000Z'},
-      {id:'SUP-1041',subject:'Update shipping address on account',client:'NovaMart',owner:'Liam Dlamini',status:'active',priority:'low'},
-      {id:'SUP-1039',subject:'Integration not syncing with Shopify',client:'BrandCo',owner:'Zanele Mokoena',status:'active',priority:'med'},
-      {id:'SUP-1033',subject:'Duplicate billing charge',client:'NovaMart',owner:'Liam Dlamini',status:'done',priority:'high',csat:'good'},
-      {id:'SUP-1028',subject:'Password reset assistance',client:'BrandCo',owner:'ARIA',status:'done',priority:'low',csat:'good'},
-      {id:'SUP-1015',subject:'Old onboarding question',client:'NovaMart',owner:'Nomsa Dube',status:'archived',priority:'low'}
-    ],
+    chats:[],
+    tickets:[],
     integrations:[
       {key:'whatsapp',name:'WhatsApp',desc:'Route WhatsApp conversations into your shared inbox.',color:'#25D366',connected:true},
       {key:'email',name:'Email',desc:'Connect a support inbox to route email tickets automatically.',color:'#00c2ff',connected:true},
@@ -1179,34 +1156,22 @@ function defaultState(){
       {key:'x',name:'X (Twitter)',desc:'Monitor mentions and DMs for support requests.',color:'#ffffff',connected:false},
       {key:'facebook',name:'Facebook',desc:'Route Messenger DMs from your Page into your shared inbox.',color:'#1877F2',connected:false},
       {key:'phone',name:'Phone',desc:'Voice call routing for inbound and outbound support calls.',color:'#f5a623',connected:false},
-      {key:'shopify',name:'Shopify',desc:'Pull order, shipping and customer data directly into chats.',color:'#95BF47',connected:true},
       {key:'telegram',name:'Telegram',desc:'Route Telegram bot DMs into your shared inbox.',color:'#26A5E4',connected:false},
       {key:'sms',name:'SMS',desc:'Text-message support for order updates, OTPs and quick replies.',color:'var(--accent)',connected:false},
       {key:'livechat',name:'Live Chat',desc:'An embeddable widget so visitors can chat with ARIA/agents on your own site.',color:'var(--accent-2)',connected:false},
       // ^ intentionally not "coming soon" — see livechatIntegrationCardHtml
       {key:'tiktok',name:'TikTok',desc:'Reply to comments and DMs on your TikTok account.',color:'var(--text)',connected:false},
-      {key:'googlebusiness',name:'Google Business Messages',desc:'Chat with customers directly from your Google Maps/Search listing.',color:'#4285F4',connected:false},
       {key:'slack',name:'Slack',desc:'Mirror your Supanta notifications into a Slack channel.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Start an instant video call with a customer straight from a chat.',color:'#2D8CFF',connected:false},
       {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false},
       {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false}
     ],
-    notifications:[
-      {id:1,text:'ARIA escalated a billing dispute from Sarah Lee to Liam Dlamini.',time:'10 min ago',read:false},
-      {id:2,text:'New ticket SUP-1042 opened for BrandCo — high priority.',time:'1 hr ago',read:false},
-      {id:3,text:'Your April Pulse report is ready to download.',time:'Yesterday',read:false},
-      {id:4,text:'Zanele Mokoena joined the team.',time:'2 days ago',read:true}
-    ],
+    notifications:[],
     kbDocs:[
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
       {id:2,name:'Product FAQ — Spring Catalog.docx',size:'88 KB',added:'2026-05-11'}
     ],
-    activity:[
-      {id:1,actor:'Zanele Mokoena',action:'Reassigned ticket',target:'SUP-1039 → Zanele Mokoena',time:'2 hr ago'},
-      {id:2,actor:'ARIA',action:'Created ticket',target:'SUP-1042',time:'5 hr ago'},
-      {id:3,actor:'Nomsa Dube',action:'Marked chat done',target:'Marcus Webb (CHT-098)',time:'Yesterday'},
-      {id:4,actor:'demo',action:'Added team member',target:'Zanele Mokoena',time:'2 days ago'}
-    ],
+    activity:[],
     wisePayee:{name:'Supanta (Pty) Ltd',email:'payments@supanta.com',reference:'Use your invoice number as the payment reference'},
     invoices:[
       {id:'INV-0512',date:'2026-05-01',dueDate:'2026-05-15',amount:'$2,500.00',status:'Paid'},
@@ -1220,19 +1185,7 @@ function defaultState(){
     ],
     ticketLabels:[],
     ticketCustomFields:[],
-    ticketChecklists:{
-      'SUP-1042':[
-        {id:1,title:'Steps for Order Processing',items:[
-          {id:1,text:'Confirm refund amount with customer',link:null,done:true},
-          {id:2,text:'Process refund via payment provider',link:null,done:false},
-          {id:3,text:'Update order status',link:null,done:false}
-        ]},
-        {id:2,title:'Links',items:[
-          {id:4,text:'Order details',link:'https://example.com/orders/4521',done:false},
-          {id:5,text:'Refund policy',link:'https://example.com/refund-policy',done:false}
-        ]}
-      ]
-    }
+    ticketChecklists:{}
   };
 }
 function loadState(){
@@ -1387,8 +1340,8 @@ function hideChartTip(){const tip=document.getElementById('chart-tip'); if(tip)t
 function getConversationsChartData(){
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
   const shape=[.5,.64,.56,.78,.7,.9,1];
-  const base=Math.max(STATE.chats.length,4);
-  return shape.map((f,i)=>({label:days[i],v:Math.max(1,Math.round(f*base))}));
+  const base=STATE.chats.length;
+  return shape.map((f,i)=>({label:days[i],v:Math.round(f*base)}));
 }
 function getAriaClosedChartData(){
   const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
@@ -1516,7 +1469,7 @@ function renderTicketDonut(){
   </div>`;
 }
 
-const CHART_CHANNEL_COLORS={whatsapp:'#25D366',email:'var(--accent)',instagram:'#E1306C',x:'var(--text-2)',facebook:'#1877F2',phone:'var(--warning)',shopify:'#95BF47',telegram:'#26A5E4',sms:'var(--accent)',livechat:'var(--accent-2)',tiktok:'var(--text)',googlebusiness:'#4285F4'};
+const CHART_CHANNEL_COLORS={whatsapp:'#25D366',email:'var(--accent)',instagram:'#E1306C',x:'var(--text-2)',facebook:'#1877F2',phone:'var(--warning)',telegram:'#26A5E4',sms:'var(--accent)',livechat:'var(--accent-2)',tiktok:'var(--text)'};
 function renderChannelMix(){
   const rows=getChannelMixData().map(d=>[d.label,d.v]);
   if(!rows.length)return '<div class="empty-state">No conversations yet.</div>';
@@ -1608,7 +1561,7 @@ async function addTeamMember(){
   const btn=document.querySelector('#modal-add-member .btn-acc');
   if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
   try{
-    const redirectTo=window.location.origin+window.location.pathname.replace(/dashboard\.html$/,'index.html');
+    const redirectTo=window.location.origin+window.location.pathname.replace(/app\.html$/,'home.html');
     const {data,error}=await _sb.functions.invoke('invite-team-member',{body:{email,full_name:name,job_title:role,redirect_to:redirectTo}});
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     closeModal('modal-add-member');
@@ -1653,7 +1606,7 @@ async function removeTeamMember(id){
 
 // ─── CHATS ───────────────────────────────────────────────
 let _chatTab='active', _activeChatId=null, _chatSearch='', _chatChannel='all';
-const CHAT_CHANNELS=['WhatsApp','Email','Instagram','X','Facebook','Phone','Telegram','SMS','Live Chat','TikTok','Google Business Messages'];
+const CHAT_CHANNELS=['WhatsApp','Email','Instagram','X','Facebook','Phone','Telegram','SMS','Live Chat','TikTok'];
 function chatFilteredList(){
   const q=_chatSearch.trim().toLowerCase();
   return STATE.chats.filter(c=>c.status===_chatTab
@@ -1800,7 +1753,7 @@ function renderChatPanel(c){
     <div class="reply-row">
       <button class="reply-icon-btn" onclick="toggleSavedPop()" title="Saved responses">📋</button>
       <button class="reply-icon-btn" onclick="document.getElementById('reply-img-input').click()" title="Attach image">🖼️</button>
-      <button class="reply-icon-btn emoji-trigger" onclick="toggleEmojiPop('reply-input')" title="Emoji">😊</button>
+      <button class="reply-icon-btn emoji-trigger" onclick="toggleEmojiPop('reply-input',this)" title="Emoji">😊</button>
       <input type="file" id="reply-img-input" accept="image/*" style="display:none" onchange="handleReplyImage(this)"/>
       <textarea class="reply-textarea" id="reply-input" rows="1" placeholder="Type a reply…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply('${c.id}')}"></textarea>
       <button class="aria-send-btn" style="height:38px" onclick="sendReply('${c.id}')">Send</button>
@@ -1899,12 +1852,20 @@ const EMOJI_LIST=['😀','😂','🙂','😊','😍','😉','👍','👏','🙏'
 function emojiButtonsHtml(targetInputId){
   return EMOJI_LIST.map(e=>`<button class="emoji-btn" onclick="insertEmoji('${targetInputId}','${e}')">${e}</button>`).join('');
 }
-function toggleEmojiPop(targetInputId){
+function toggleEmojiPop(targetInputId,btnEl){
   const p=document.getElementById('emoji-pop-'+targetInputId);
   if(!p)return;
   const open=!p.classList.contains('open');
   document.querySelectorAll('.emoji-pop.open, .saved-pop.open').forEach(x=>x.classList.remove('open'));
   if(!p.innerHTML.trim())p.innerHTML=emojiButtonsHtml(targetInputId);
+  // Align under whichever button actually triggered it, rather than a fixed
+  // left offset — the emoji button isn't always the row's first icon, so a
+  // static position opened the picker under the wrong button.
+  if(btnEl&&p.parentElement===btnEl.parentElement){
+    const maxLeft=p.parentElement.clientWidth-216-8;
+    p.style.left=Math.max(4,Math.min(btnEl.offsetLeft,maxLeft))+'px';
+    p.style.right='auto';
+  }
   p.classList.toggle('open',open);
 }
 function insertEmoji(targetInputId,emoji){
@@ -2068,7 +2029,7 @@ function kanbanHtml(){
                 <span class="badge badge-${t.priority==='high'?'high':t.priority==='med'?'med':'low'}">${t.priority}</span>
               </div>
               <div class="tk-subject" style="cursor:pointer" onclick="openTicketDetail('${t.id}')">${t.subject}</div>
-              ${isOverdue(t)?`<div style="font-size:.68rem;color:var(--danger);font-weight:700;margin-bottom:.4rem">⚠ Overdue — due ${fmtDueDate(t.dueAt,true)}</div>`:t.dueAt&&listKind(t.status)==='active'?`<div style="font-size:.68rem;color:var(--text-3);margin-bottom:.4rem">Due ${fmtDueDate(t.dueAt,true)}</div>`:''}
+              ${isOverdue(t)?`<div style="font-size:.68rem;color:var(--danger);font-weight:700;margin-bottom:.4rem">Overdue — due ${fmtDueDate(t.dueAt,true)}</div>`:t.dueAt&&listKind(t.status)==='active'?`<div style="font-size:.68rem;color:var(--text-3);margin-bottom:.4rem">Due ${fmtDueDate(t.dueAt,true)}</div>`:''}
               <div class="tk-foot">
                 <div class="tk-owner">${avatarHtml(t.owner,'#1a2d47',20)} <span>${t.client}</span></div>
                 <select class="owner-select" onchange="reassignTicket('${t.id}',this.value)">
@@ -2295,9 +2256,9 @@ function openTicketSettings(){
 }
 function ticketCsatHtml(t){
   if(listKind(t.status)!=='done')return '';
-  const opts=[['good','👍','Good'],['neutral','😐','Neutral'],['bad','👎','Not satisfied']];
+  const opts=[['good','Good'],['neutral','Neutral'],['bad','Not satisfied']];
   return `<div class="form-group"><label>Customer satisfaction</label><div style="display:flex;gap:.5rem">
-    ${opts.map(([v,emoji,lbl])=>`<button type="button" class="btn ${t.csat===v?'btn-acc':'btn-ghost'} btn-sm" onclick="setTicketCsat('${t.id}','${v}')">${emoji} ${lbl}</button>`).join('')}
+    ${opts.map(([v,lbl])=>`<button type="button" class="btn ${t.csat===v?'btn-acc':'btn-ghost'} btn-sm" onclick="setTicketCsat('${t.id}','${v}')">${lbl}</button>`).join('')}
   </div></div>`;
 }
 function tdStatusChange(id,status){
@@ -2351,7 +2312,7 @@ function checklistsHtml(ticketId){
       ${cl.items.map(i=>`
         <div class="cl-item">
           <input type="checkbox" ${i.done?'checked':''} onchange="toggleChecklistItem('${ticketId}',${cl.id},${i.id},this.checked)"/>
-          <div class="cl-item-text ${i.done?'done':''}">${i.text}${i.link?`<a class="cl-link-chip" href="${i.link}" target="_blank" rel="noopener">🔗 Link</a>`:''}</div>
+          <div class="cl-item-text ${i.done?'done':''}">${i.text}${i.link?`<a class="cl-link-chip" href="${i.link}" target="_blank" rel="noopener">Link</a>`:''}</div>
           <span class="saved-del" onclick="deleteChecklistItem('${ticketId}',${cl.id},${i.id})">✕</span>
         </div>`).join('')}
       <div class="cl-add-row">
@@ -2667,7 +2628,6 @@ const CHANNEL_ICON_PATHS={
   instagram:'<path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/>',
   x:'<path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/>',
   facebook:'<path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/>',
-  shopify:'<path d="M15.337 23.979l7.216-1.561s-2.604-17.613-2.625-17.73c-.018-.116-.114-.192-.211-.192s-1.929-.136-1.929-.136-1.275-1.274-1.439-1.411c-.045-.037-.075-.057-.121-.074l-.914 21.104h.023zM11.71 11.305s-.81-.424-1.774-.424c-1.447 0-1.504.906-1.504 1.141 0 1.232 3.24 1.715 3.24 4.629 0 2.295-1.44 3.76-3.406 3.76-2.354 0-3.54-1.465-3.54-1.465l.646-2.086s1.245 1.066 2.28 1.066c.675 0 .975-.545.975-.932 0-1.619-2.654-1.694-2.654-4.359-.034-2.237 1.571-4.416 4.827-4.416 1.257 0 1.875.361 1.875.361l-.945 2.715-.02.01zM11.17.83c.136 0 .271.038.405.135-.984.465-2.064 1.639-2.508 3.992-.656.213-1.293.405-1.889.578C7.697 3.75 8.951.84 11.17.84V.83zm1.235 2.949v.135c-.754.232-1.583.484-2.394.736.466-1.777 1.333-2.645 2.085-2.971.193.501.309 1.176.309 2.1zm.539-2.234c.694.074 1.141.867 1.429 1.755-.349.114-.735.231-1.158.366v-.252c0-.752-.096-1.371-.271-1.871v.002zm2.992 1.289c-.02 0-.06.021-.078.021s-.289.075-.714.21c-.423-1.233-1.176-2.37-2.508-2.37h-.115C12.135.209 11.669 0 11.265 0 8.159 0 6.675 3.877 6.21 5.846c-1.194.365-2.063.636-2.16.674-.675.213-.694.232-.772.87-.075.462-1.83 14.063-1.83 14.063L15.009 24l.927-21.166z"/>',
   email:'<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><polyline points="22,6 12,13 2,6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   phone:'<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
   // Official brand marks (Simple Icons, MIT licensed) — verified byte-for-byte via direct fetch.
@@ -2689,7 +2649,7 @@ const CHANNEL_ICON_PATHS={
 const CHANNEL_LETTER_FALLBACK={slack:{letter:'S',color:'#4A154B'}};
 // A few channel names don't map 1:1 to an icon-path key (multi-word labels, or
 // products that share a parent brand's mark) — normalize through this first.
-const CHANNEL_KEY_ALIASES={googlebusinessmessages:'google',googlebusiness:'google',xtwitter:'x'};
+const CHANNEL_KEY_ALIASES={xtwitter:'x'};
 function normalizeChannelKey(key){
   const k=String(key||'').toLowerCase().replace(/[^a-z0-9]/g,'');
   return CHANNEL_KEY_ALIASES[k]||k;
@@ -2713,9 +2673,6 @@ const INT_ICONS=new Proxy({},{get:(_,key)=>channelIconSvg(key,20)});
 let _intSearch='';
 function renderIntegrations(){
   return `
-  <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:10px;padding:.9rem 1.1rem;font-size:.8rem;color:var(--warning);margin-bottom:1.25rem">
-    Reminder: Phone / voice call routing still needs to be integrated. Also remember to set up official accounts on every social platform below before going live.
-  </div>
   <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="int-search" placeholder="Search integrations by name…" value="${_intSearch}" oninput="filterIntegrations(this.value)"/></div>
   <div id="int-grid-wrap">${intGridHtml()}</div>`;
 }
@@ -2963,7 +2920,7 @@ async function startSlackConnect(){
 async function sendSlackTestMessage(){
   if(!_sb)return;
   try{
-    const {data,error}=await _sb.functions.invoke('slack-notify',{body:{text:'👋 This is a test notification from Supanta.'}});
+    const {data,error}=await _sb.functions.invoke('slack-notify',{body:{text:'This is a test notification from Supanta.'}});
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     toast('Test message sent to Slack','var(--green)');
   }catch(e){
@@ -3669,7 +3626,7 @@ function renderSettingsTab(t){
     <div class="card">
       <div class="card-title">Company Display Picture</div>
       <div class="pic-upload">
-        <div class="pic-preview sq" id="company-pic-preview" style="${STATE.profile.companyAvatar?`background-image:url(${STATE.profile.companyAvatar})`:''}">${STATE.profile.companyAvatar?'':'🏢'}</div>
+        <div class="pic-preview sq" id="company-pic-preview" style="${STATE.profile.companyAvatar?`background-image:url(${STATE.profile.companyAvatar})`:''}">${STATE.profile.companyAvatar?'':initialsOf(STATE.profile.companyName)}</div>
         <div><input type="file" accept="image/*" id="company-pic-input" onchange="handlePicUpload(this,'companyAvatar')"/><div style="font-size:.72rem;color:var(--text-3);margin-top:.4rem">Shown across your workspace.</div></div>
       </div>
     </div>
@@ -4142,7 +4099,7 @@ function tryAriaAction(text,file){
   m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
   if(m){
     const wantConnect=m[1]==='connect'||m[1]==='enable'||m[1]==='turn on';
-    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',shopify:'shopify',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',googlebusinessmessages:'googlebusiness',googlebusiness:'googlebusiness',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot'};
+    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot'};
     const key=aliasMap[m[2].trim().replace(/\s+/g,'')];
     const i=key&&STATE.integrations.find(x=>x.key===key);
     if(i){
