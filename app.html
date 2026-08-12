@@ -627,7 +627,7 @@ function authFail(){ document.getElementById('auth-gate-text').textContent='Cann
 
 async function boot(){
   const {data:{session}}=await _sb.auth.getSession();
-  if(!session){ window.location.href='home.html'; return; }
+  if(!session){ window.location.href='/home'; return; }
   // A signed-in session that hasn't completed its 2FA (AAL2) challenge yet
   // must not reach the dashboard — bounce back to the login page's code step.
   // Wrapped defensively: if this check itself fails for any reason, fail
@@ -635,7 +635,7 @@ async function boot(){
   try{
     const {data:aal}=await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
     if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
-      window.location.href='home.html#login'; return;
+      window.location.href='/home#login'; return;
     }
   }catch(e){}
   sbUser=session.user;
@@ -1086,7 +1086,7 @@ async function refreshChatMessages(c){
     }
   }catch(e){}
 }
-async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='home.html'; }
+async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='/home'; }
 
 // ─── THEME ───────────────────────────────────────────────
 // The server-stored value (user_profiles.links.theme) is the source of
@@ -1561,7 +1561,7 @@ async function addTeamMember(){
   const btn=document.querySelector('#modal-add-member .btn-acc');
   if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
   try{
-    const redirectTo=window.location.origin+window.location.pathname.replace(/app\.html$/,'home.html');
+    const redirectTo=window.location.origin+'/home';
     const {data,error}=await _sb.functions.invoke('invite-team-member',{body:{email,full_name:name,job_title:role,redirect_to:redirectTo}});
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     closeModal('modal-add-member');

@@ -1124,7 +1124,7 @@ async function signInWithGoogle(){
   }
   await window._sb.auth.signInWithOAuth({
     provider:'google',
-    options:{redirectTo:window.location.origin+window.location.pathname.replace(/home\.html$/,'')+'app.html'}
+    options:{redirectTo:window.location.origin+'/app'}
   });
 }
 let _mfaFactorId=null;
@@ -1158,7 +1158,7 @@ async function doLogin(){
         return;
       }
     }
-    window.location.href='app.html';
+    window.location.href='/app';
   } catch(e){
     err.textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.';err.style.display='block';
     btn.textContent='Sign In';btn.disabled=false;
@@ -1176,7 +1176,7 @@ async function verifyLogin2fa(){
     if(chErr)throw chErr;
     const {error:vErr}=await window._sb.auth.mfa.verify({factorId:_mfaFactorId,challengeId:challenge.id,code});
     if(vErr){err.textContent='Incorrect code — try again.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;return;}
-    window.location.href='app.html';
+    window.location.href='/app';
   }catch(e){
     err.textContent='Could not verify code right now.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;
   }
@@ -1281,13 +1281,13 @@ async function initApp(){
     try{
       const {data:aal}=await window._sb.auth.mfa.getAuthenticatorAssuranceLevel();
       if(!aal || aal.nextLevel!=='aal2' || aal.nextLevel===aal.currentLevel){
-        window.location.href='app.html'; return;
+        window.location.href='/app'; return;
       }
       // Session exists but this account has 2FA enrolled and the current
       // session hasn't completed the AAL2 challenge yet — fall through to
       // the normal login page instead of granting dashboard access.
     }catch(e){
-      window.location.href='app.html'; return;
+      window.location.href='/app'; return;
     }
   }
   applyFaqToPage();
