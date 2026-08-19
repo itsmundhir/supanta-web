@@ -109,6 +109,7 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .icon-btn{width:38px;height:38px;border-radius:9px;background:var(--bg-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;transition:all .2s;position:relative}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .dot-badge{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--bg-2)}
+.aria-avail-badge{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid var(--bg-2);animation:pulse-dot 1.2s ease-in-out infinite}
 .content{padding:2rem 2rem 7rem}
 .content.content-tight{padding-bottom:0}
 
@@ -487,8 +488,9 @@ input:checked + .slider::before{transform:translateX(18px)}
         <button class="icon-btn" onclick="toggleGlobalSearch()" aria-label="Search everything">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
-        <button class="icon-btn" onclick="toggleAriaChat()" aria-label="Ask ARIA" id="aria-toggle-btn">
+        <button class="icon-btn" onclick="toggleAriaChat()" aria-label="Ask ARIA — online" id="aria-toggle-btn" title="ARIA is available">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <span class="aria-avail-badge" id="aria-avail-badge" style="display:none"></span>
         </button>
         <button class="icon-btn" onclick="toggleNotifPanel()" aria-label="Notifications">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -3998,6 +4000,8 @@ function initAriaScope(){
   const inp=document.getElementById('aria-input');
   const btn=document.getElementById('aria-send-btn');
   const attachBtn=document.getElementById('aria-attach-btn');
+  const availBadge=document.getElementById('aria-avail-badge');
+  if(availBadge)availBadge.style.display=activeClientId()?'block':'none';
   if(activeClientId()){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>${co}`;
