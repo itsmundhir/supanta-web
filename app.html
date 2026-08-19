@@ -109,6 +109,7 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .dot-badge{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--bg-2)}
 .content{padding:2rem 2rem 7rem}
+.content.content-tight{padding-bottom:0}
 
 /* CARDS / GENERIC */
 .card{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.25rem}
@@ -178,8 +179,8 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .owner-select{background:var(--bg-4);border:1px solid var(--border);border-radius:6px;color:var(--text-2);font-size:.68rem;padding:2px 4px;font-family:var(--fb)}
 
 /* CHATS */
-.chat-layout{display:grid;grid-template-columns:340px 1fr;gap:1.1rem;align-items:start}
-.chat-list{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.chat-layout{display:grid;grid-template-columns:340px 1fr;gap:1.1rem;align-items:stretch;min-height:360px}
+.chat-list{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow-y:auto}
 .chat-row{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
 .chat-row:last-child{border-bottom:none}
 .chat-row:hover,.chat-row.active{background:var(--bg-3)}
@@ -188,9 +189,22 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .chat-row-channel{margin:3px 0}
 .chat-row-msg{font-size:.75rem;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
 .chan-pill{display:inline-flex;align-items:center;gap:4px;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:100px;background:var(--bg-4);color:var(--text-3);text-transform:uppercase;letter-spacing:.03em;pointer-events:none}
-.chat-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:460px}
-.chat-panel-hd{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.chat-msgs{flex:1;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;max-height:480px;overflow-y:auto}
+.chat-avatar-wrap{position:relative;flex-shrink:0;line-height:0}
+.chat-channel-badge{position:absolute;bottom:-3px;right:-3px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-2);color:#fff}
+.chat-row:hover .chat-channel-badge,.chat-row.active .chat-channel-badge{border-color:var(--bg-3)}
+#chat-panel-wrap{display:flex;flex-direction:column;min-height:0}
+.chat-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:0;flex:1}
+.chat-panel-hd{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.chat-panel-hd-name{font-size:.9rem;font-weight:700;color:var(--text)}
+.chat-assign-trigger{font-size:.72rem;color:var(--text-3);cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin-top:2px;transition:color .15s}
+.chat-assign-trigger:hover{color:var(--accent)}
+.chat-panel-hd-actions{display:flex;gap:.5rem;align-items:center;flex-shrink:0}
+.chat-overflow-btn{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--border-light);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:1.1rem;line-height:1}
+.chat-overflow-btn:hover{border-color:var(--border);background:var(--bg-3);color:var(--text)}
+.assign-menu-item{display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border-radius:6px;cursor:pointer;font-size:.8rem;color:var(--text-2)}
+.assign-menu-item:hover{background:var(--bg-3);color:var(--text)}
+.assign-menu-item.active{color:var(--accent)}
+.chat-msgs{flex:1;min-height:0;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;overflow-y:auto}
 .cm{display:flex;align-items:flex-end;gap:.5rem}
 .cm.left{justify-content:flex-start}.cm.right{justify-content:flex-end}
 .cm-bubble{max-width:74%;border-radius:12px;padding:.65rem .9rem;border:1px solid var(--border);font-size:.84rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
@@ -202,14 +216,14 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .cm-analyzing{font-size:.7rem;color:var(--text-3);font-style:italic;margin-top:.35rem;display:flex;align-items:center;gap:5px}
 
 /* ARIA SUGGESTIONS */
-.suggest-wrap{padding:.75rem 1.1rem;border-top:1px solid var(--border);background:var(--bg-3)}
+.suggest-wrap{padding:.75rem 1.1rem;border-top:1px solid var(--border);background:var(--bg-3);flex-shrink:0}
 .suggest-lbl{font-size:.68rem;font-weight:700;color:#a99cff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:5px}
 .suggest-chips{display:flex;flex-wrap:wrap;gap:.5rem}
 .suggest-chip{background:rgba(107,91,255,.1);border:1px solid rgba(107,91,255,.28);color:var(--text);border-radius:9px;padding:.5rem .8rem;font-size:.78rem;text-align:left;cursor:pointer;transition:all .15s;max-width:100%}
 .suggest-chip:hover{background:rgba(107,91,255,.2);border-color:rgba(107,91,255,.5)}
 
 /* REPLY BOX */
-.reply-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative;align-items:flex-end}
+.reply-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative;align-items:flex-end;flex-shrink:0}
 .reply-icon-btn{width:38px;height:38px;border-radius:8px;background:var(--bg-4);border:1px solid var(--border-light);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s}
 .reply-icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .reply-textarea{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.6rem .75rem;color:var(--text);font-size:.84rem;font-family:var(--fb);outline:none;resize:none;min-height:38px;max-height:100px;transition:border-color .2s}
@@ -571,6 +585,13 @@ input:checked + .slider::before{transform:translateX(18px)}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-contact-info">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-hdr"><div class="modal-title">Contact</div><button class="modal-close" onclick="closeModal('modal-contact-info')">✕</button></div>
+    <div id="contact-info-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><div class="toast-accent" id="toast-accent"></div><div id="toast-msg"></div></div>
 
 <!-- CONTEXT MENU (chat rows) -->
@@ -580,6 +601,11 @@ input:checked + .slider::before{transform:translateX(18px)}
   <div class="ctx-item" id="ctx-archive"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archive</div>
   <div class="ctx-item" id="ctx-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Mark as Done</div>
 </div>
+
+<!-- ASSIGN CONVERSATION MENU (chat panel header) -->
+<div class="ctx-menu" id="chat-assign-menu"></div>
+<!-- CHAT PANEL OVERFLOW MENU (chat panel header ⋯) -->
+<div class="ctx-menu" id="chat-overflow-menu"></div>
 
 <!-- ARIA WIDGET -->
 <div class="aria-widget" id="aria-widget">
@@ -1258,6 +1284,7 @@ function showSection(key){
 }
 function renderSection(){
   const m=document.getElementById('main-content');
+  m.classList.toggle('content-tight',currentSection==='chats');
   const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,integrations:renderIntegrations,notifications:renderNotifications,settings:renderSettings};
   m.innerHTML=(fns[currentSection]||(()=>''))();
   if(currentSection==='chats')wireChatList();
@@ -1626,7 +1653,7 @@ function renderChats(){
     ${CHAT_CHANNELS.map(ch=>`<button class="tab-btn ${_chatChannel===ch?'active':''}" onclick="setChatChannel('${ch}')">${INT_ICONS[ch.toLowerCase()]||''} ${ch}</button>`).join('')}
   </div>
   <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
-  <div class="chat-layout">
+  <div class="chat-layout" id="chat-layout-wrap">
     <div class="chat-list" id="chat-list-wrap">${chatListHtml(list)}</div>
     <div id="chat-panel-wrap">${renderChatPanel(list.find(c=>c.id===_activeChatId))}</div>
   </div>`;
@@ -1637,10 +1664,12 @@ function chatListHtml(list){
   if(!list.length)return '<div class="empty-state">No chats match.</div>';
   return list.map(c=>`
         <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}" oncontextmenu="openChatCtxMenu(event,'${c.id}')">
-          ${avatarHtml(c.customer,'#1a2d47',36)}
+          <div class="chat-avatar-wrap">
+            ${avatarHtml(c.customer,'#1a2d47',36)}
+            <div class="chat-channel-badge" style="background:${channelBrandColor(c.channel)}" title="${escapeHtml(c.channel)}">${channelIconSvg(c.channel,9)}</div>
+          </div>
           <div class="chat-row-body">
             <div class="chat-row-name">${escapeHtml(c.customer)}</div>
-            <div class="chat-row-channel"><span class="chan-pill">${INT_ICONS[c.channel.toLowerCase()]||''} ${escapeHtml(c.channel)}</span></div>
             <div class="chat-row-msg">${escapeHtml(c.last)}</div>
           </div>
         </div>`).join('');
@@ -1659,7 +1688,18 @@ function wireChatList(){
   document.querySelectorAll('.chat-row').forEach(row=>{
     row.addEventListener('click',()=>{ _activeChatId=row.dataset.id; renderSection(); });
   });
+  fitChatLayout();
 }
+// Sizes the list+thread grid to exactly fill the remaining viewport below it,
+// so the page itself never scrolls — only the conversation list and the
+// message thread scroll internally, each within their own fixed-height box.
+function fitChatLayout(){
+  const wrap=document.getElementById('chat-layout-wrap');
+  if(!wrap)return;
+  const top=wrap.getBoundingClientRect().top;
+  wrap.style.height=Math.max(360,window.innerHeight-top-24)+'px';
+}
+window.addEventListener('resize',()=>{ if(currentSection==='chats')fitChatLayout(); });
 // The agent who actually handled it (not a generic "Agent" label) — same
 // path for a live chat reply and a call transcript line, since a call is
 // just a chat on the Phone channel under the hood.
@@ -1734,12 +1774,13 @@ function renderChatPanel(c){
   return `
   <div class="chat-panel">
     <div class="chat-panel-hd">
-      <div><div style="font-weight:600;font-size:.9rem">${escapeHtml(c.customer)}</div><div style="font-size:.72rem;color:var(--text-3)">${escapeHtml(c.channel)} · Owner: ${escapeHtml(c.owner)} · ${escapeHtml(c.id)}</div></div>
-      <div style="display:flex;gap:.5rem">
-        ${c.dbId&&_googleCalendarConnection&&_googleCalendarConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="openScheduleMeetingModal('${c.dbId}')">Schedule meeting</button>`:''}
-        ${c.dbId&&_zoomConnection&&_zoomConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="startZoomCall('${c.dbId}')">Start Zoom call</button>`:''}
-        ${c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</button>`:''}
-        <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
+      <div>
+        <div class="chat-panel-hd-name">${escapeHtml(c.customer)}</div>
+        <div class="chat-assign-trigger" onclick="openAssignMenu(event,'${c.id}')">${c.owner==='Unassigned'?'Assign this conversation':'Assigned to '+escapeHtml(c.owner)} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+      </div>
+      <div class="chat-panel-hd-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openContactInfo('${c.id}')">See contact</button>
+        <button class="chat-overflow-btn" onclick="openChatOverflowMenu(event,'${c.id}')" title="More">⋯</button>
       </div>
     </div>
     <div class="chat-msgs" id="chat-msgs-scroll">
@@ -4241,8 +4282,83 @@ function closeChatCtxMenu(){ document.getElementById('chat-ctx-menu').classList.
 document.getElementById('ctx-download').addEventListener('click',()=>{ if(_ctxChatId)downloadChat(_ctxChatId); closeChatCtxMenu(); });
 document.getElementById('ctx-archive').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'archived'); closeChatCtxMenu(); });
 document.getElementById('ctx-done').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'done'); closeChatCtxMenu(); });
-document.addEventListener('click',e=>{ if(!e.target.closest('.ctx-menu'))closeChatCtxMenu(); });
-document.addEventListener('scroll',closeChatCtxMenu,true);
+document.addEventListener('click',e=>{ if(!e.target.closest('.ctx-menu')){closeChatCtxMenu();closeAllCtxMenus();} });
+document.addEventListener('scroll',closeAllCtxMenus,true);
+
+// ─── ASSIGN CONVERSATION (chat panel header) ─────────────
+function positionCtxMenu(menu,e){
+  const x=Math.min(e.clientX,window.innerWidth-220), y=Math.min(e.clientY,window.innerHeight-260);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+function openAssignMenu(e,chatId){
+  e.stopPropagation();
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  const menu=document.getElementById('chat-assign-menu');
+  const humans=STATE.team.filter(t=>t.type!=='agent');
+  const rows=[
+    `<div class="assign-menu-item ${c.owner==='ARIA'?'active':''}" onclick="assignConversation('${chatId}',null,'ARIA')">${avatarHtml('ARIA','#6b5bff',20)} ARIA</div>`,
+    ...humans.map(m=>`<div class="assign-menu-item ${c.owner===m.name?'active':''}" onclick="assignConversation('${chatId}','${m.dbId||''}','${escapeHtml(m.name).replace(/'/g,"\\'")}')">${avatarHtml(m.name,m.color,20)} ${escapeHtml(m.name)}</div>`),
+    `<div class="ctx-sep"></div>`,
+    `<div class="assign-menu-item ${c.owner==='Unassigned'?'active':''}" onclick="assignConversation('${chatId}',null,'Unassigned')">Unassign</div>`
+  ];
+  menu.innerHTML=rows.join('');
+  positionCtxMenu(menu,e);
+  document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
+  menu.classList.add('open');
+}
+async function assignConversation(chatId,teamDbId,displayName){
+  const c=STATE.chats.find(x=>x.id===chatId);
+  document.getElementById('chat-assign-menu').classList.remove('open');
+  if(!c)return;
+  c.owner=displayName;
+  if(c.dbId&&_sb){
+    try{ await _sb.from('conversations').update({escalated_to:teamDbId,ai_handled:displayName==='ARIA'}).eq('id',c.dbId); }
+    catch(e){}
+  }
+  saveState(); renderSection();
+  toast(displayName==='Unassigned'?'Conversation unassigned':'Assigned to '+displayName,'var(--accent)');
+}
+
+// ─── CHAT PANEL OVERFLOW MENU ────────────────────────────
+function openChatOverflowMenu(e,chatId){
+  e.stopPropagation();
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  const menu=document.getElementById('chat-overflow-menu');
+  const items=[];
+  if(c.dbId&&_googleCalendarConnection&&_googleCalendarConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();openScheduleMeetingModal('${c.dbId}')">Schedule meeting</div>`);
+  if(c.dbId&&_zoomConnection&&_zoomConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();startZoomCall('${c.dbId}')">Start Zoom call</div>`);
+  if(c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</div>`);
+  if(items.length)items.push('<div class="ctx-sep"></div>');
+  items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();downloadChat('${chatId}')">Download Transcript</div>`);
+  items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();setChatStatus('${chatId}','archived')">Archive</div>`);
+  items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();setChatStatus('${chatId}','done')">Mark as Done</div>`);
+  menu.innerHTML=items.join('');
+  positionCtxMenu(menu,e);
+  document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
+  menu.classList.add('open');
+}
+function closeAllCtxMenus(){ document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open')); }
+
+// ─── CONTACT INFO (chat panel header) ────────────────────
+function openContactInfo(chatId){
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  document.getElementById('contact-info-body').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:1.25rem">
+      ${avatarHtml(c.customer,'#1a2d47',56)}
+      <div style="font-weight:700;font-size:1rem;margin-top:.7rem">${escapeHtml(c.customer)}</div>
+      <div style="font-size:.78rem;color:var(--text-3);margin-top:2px">${channelIconSvg(c.channel,13)} ${escapeHtml(c.channel)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.7rem;font-size:.82rem">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-3)">Conversation</span><span>${escapeHtml(c.id)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-3)">Status</span><span style="text-transform:capitalize">${escapeHtml(c.status)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-3)">Assigned to</span><span>${escapeHtml(c.owner)}</span></div>
+    </div>`;
+  openModal('modal-contact-info');
+}
+
 function setChatStatus(id,status,skipUndoToast){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
   const prevStatus=c.status;
