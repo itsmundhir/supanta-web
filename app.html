@@ -1561,7 +1561,7 @@ async function addTeamMember(){
   const btn=document.querySelector('#modal-add-member .btn-acc');
   if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
   try{
-    const redirectTo=window.location.origin+'/home';
+    const redirectTo=window.location.origin+'/home.html';
     const {data,error}=await _sb.functions.invoke('invite-team-member',{body:{email,full_name:name,job_title:role,redirect_to:redirectTo}});
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     closeModal('modal-add-member');
