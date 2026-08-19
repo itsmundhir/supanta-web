@@ -695,6 +695,7 @@ async function boot(){
   if(currentUser.isStaff)await loadStaffCompanies();
   renderShell();
   initAriaScope();
+  if(window.innerWidth>900)toggleAriaChat();
   showSection('pulse');
   document.getElementById('auth-gate').style.display='none';
   document.getElementById('app').classList.add('ready');
