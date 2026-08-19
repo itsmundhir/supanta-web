@@ -99,7 +99,8 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .sidebar-backdrop.open{display:block}
 
 /* MAIN */
-.main{flex:1;min-width:0;margin-left:76px;min-height:100vh;background:var(--bg);transition:margin-left .22s ease}
+.main{flex:1;min-width:0;margin-left:76px;min-height:100vh;background:var(--bg);transition:margin-left .22s ease,margin-right .25s ease}
+.main.aria-open{margin-right:380px}
 .sidebar:hover ~ .main,.sidebar:focus-within ~ .main{margin-left:250px}
 .topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 2rem;border-bottom:1px solid var(--border);background:var(--bg);z-index:40}
 .page-title{font-family:var(--fd);font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
@@ -311,34 +312,30 @@ input:checked + .slider::before{transform:translateX(18px)}
 .toast.show{display:flex}
 .toast-accent{width:4px;align-self:stretch;border-radius:4px;flex-shrink:0}
 
-/* ARIA WIDGET */
+/* ARIA PANEL (docked right-hand side, not a floating widget) */
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.2s ease-in-out infinite;display:inline-block}
-.aria-widget{position:fixed;bottom:1.75rem;right:1.75rem;z-index:400;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem);transition:bottom .25s ease}
-.aria-widget.toast-active{bottom:6rem}
-.aria-chat-box{width:340px;max-height:calc(100vh - 7rem);background:var(--bg-2);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:none;flex-direction:column}
-.aria-chat-box.open{display:flex}
-.aria-chat-hdr{background:var(--bg-3);border-bottom:1px solid var(--border);padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
+.aria-widget{position:fixed;top:0;right:0;bottom:0;width:380px;z-index:400;display:flex;flex-direction:column;background:var(--bg-2);border-left:1px solid var(--border-light);box-shadow:-8px 0 28px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .25s ease}
+.aria-widget.open{transform:translateX(0)}
+.aria-chat-hdr{flex-shrink:0;background:var(--bg-3);border-bottom:1px solid var(--border);padding:.9rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
 .aria-chat-hdr-left{display:flex;align-items:center;gap:.65rem}
 .aria-chat-av{width:30px;height:30px;border-radius:50%;background:rgba(0,194,255,.12);border:1px solid rgba(0,194,255,.3);display:flex;align-items:center;justify-content:center}
 .aria-chat-name{font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--text)}
 .aria-chat-status{font-size:.65rem;color:var(--green);display:flex;align-items:center;gap:4px}
 .aria-chat-close{background:none;border:none;color:var(--text-3);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .2s;line-height:1}
 .aria-chat-close:hover{color:var(--text)}
-.aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;flex:1;min-height:120px;max-height:340px;overflow-y:auto}
+.aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;flex:1;min-height:0;overflow-y:auto}
 .aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55}
 .aria-msg-bot{background:var(--bg-3);color:var(--text-2);align-self:flex-start;border-bottom-left-radius:3px}
 .aria-msg-user{background:rgba(0,194,255,.12);color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid rgba(0,194,255,.2)}
-.aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative}
+.aria-chat-input-row{flex-shrink:0;display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative}
 .aria-chat-input{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
 .aria-chat-input:focus{border-color:var(--accent)}
 .aria-chat-input::placeholder{color:var(--text-3)}
 .aria-send-btn{background:var(--accent);color:#04121f;border:none;border-radius:8px;padding:.5rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:var(--fd);transition:opacity .2s}
 .aria-send-btn:hover{opacity:.85}
-.aria-trigger-btn{background:var(--accent);color:#04121f;border:none;border-radius:100px;padding:.7rem 1.35rem;font-family:var(--fd);font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.55rem;box-shadow:0 8px 30px rgba(0,194,255,.35);transition:transform .2s,box-shadow .2s}
-.aria-trigger-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,194,255,.45)}
-.aria-trigger-pulse{width:8px;height:8px;border-radius:50%;background:rgba(4,18,31,.5);animation:pulse-dot 1.5s ease-in-out infinite}
-@media(max-width:900px){.aria-chat-box{width:calc(100vw - 3rem)}.aria-widget{right:1rem;bottom:1rem}.aria-widget.toast-active{bottom:5.5rem}}
+.toast.shift-for-aria{right:calc(380px + 1.75rem)}
+@media(max-width:900px){.aria-widget{width:100%}.main.aria-open{margin-right:0}.toast.shift-for-aria{right:1.75rem}}
 
 /* CONTEXT MENU */
 .ctx-menu{position:fixed;z-index:800;background:var(--bg-2);border:1px solid var(--border-light);border-radius:10px;box-shadow:var(--shadow);padding:.35rem;min-width:180px;display:none}
@@ -488,6 +485,9 @@ input:checked + .slider::before{transform:translateX(18px)}
         <button class="icon-btn" onclick="toggleGlobalSearch()" aria-label="Search everything">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
+        <button class="icon-btn" onclick="toggleAriaChat()" aria-label="Ask ARIA" id="aria-toggle-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </button>
         <button class="icon-btn" onclick="toggleNotifPanel()" aria-label="Notifications">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span class="dot-badge" id="topbar-notif-dot" style="display:none"></span>
@@ -607,35 +607,30 @@ input:checked + .slider::before{transform:translateX(18px)}
 <!-- CHAT PANEL OVERFLOW MENU (chat panel header ⋯) -->
 <div class="ctx-menu" id="chat-overflow-menu"></div>
 
-<!-- ARIA WIDGET -->
+<!-- ARIA PANEL (docked right-hand side) -->
 <div class="aria-widget" id="aria-widget">
-  <div class="aria-chat-box" id="aria-chat-box">
-    <div class="aria-chat-hdr">
-      <div class="aria-chat-hdr-left">
-        <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
-        <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status" id="aria-scope-status"><span class="live-dot"></span>Online</div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:2px">
-        <button class="aria-chat-close" onclick="clearAriaConversation()" title="Clear conversation">🗑</button>
-        <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
-      </div>
+  <div class="aria-chat-hdr">
+    <div class="aria-chat-hdr-left">
+      <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+      <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status" id="aria-scope-status"><span class="live-dot"></span>Online</div></div>
     </div>
-    <div class="aria-chat-msgs" id="aria-msgs">
-      <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
-    </div>
-    <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
-    <div class="aria-chat-input-row">
-      <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
-      <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
-      <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
-      <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
-      <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
-      <div class="emoji-pop" id="emoji-pop-aria-input"></div>
+    <div style="display:flex;align-items:center;gap:2px">
+      <button class="aria-chat-close" onclick="clearAriaConversation()" title="Clear conversation">🗑</button>
+      <button class="aria-chat-close" onclick="toggleAriaChat()" title="Close panel">✕</button>
     </div>
   </div>
-  <button class="aria-trigger-btn" onclick="toggleAriaChat()">
-    <span class="aria-trigger-pulse"></span> Ask ARIA
-  </button>
+  <div class="aria-chat-msgs" id="aria-msgs">
+    <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
+  </div>
+  <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
+  <div class="aria-chat-input-row">
+    <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
+    <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
+    <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
+    <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+    <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
+    <div class="emoji-pop" id="emoji-pop-aria-input"></div>
+  </div>
 </div>
 
 <script>
@@ -3941,18 +3936,19 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); }
 document.addEventListener('click',e=>{ if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open'); });
-// Toast and the ARIA widget both sit bottom-right, so a visible toast would
-// otherwise sit right on top of the Ask ARIA button — raise the widget out
-// of the way for as long as the toast is showing.
-function setToastActive(active){
+// The ARIA panel docks along the right edge, so a bottom-right toast would
+// otherwise sit underneath it while the panel is open — shift the toast
+// left by the panel's width for as long as it's open.
+function ariaPanelOpen(){
   const w=document.getElementById('aria-widget');
-  if(w)w.classList.toggle('toast-active',active);
+  return !!(w&&w.classList.contains('open'));
 }
 function toast(msg,color){
   const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');
   ta.style.background=color||'var(--accent)'; tm.textContent=msg; tm.innerHTML=msg;
-  t.classList.add('show'); setToastActive(true); clearTimeout(window._toastTimer);
-  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); setToastActive(false); },3000);
+  t.classList.toggle('shift-for-aria',ariaPanelOpen());
+  t.classList.add('show'); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); },3000);
 }
 // Same toast, but with a clickable Undo action and a longer window to use it —
 // for cheap, safely-reversible changes (a status flip), not destructive ones.
@@ -3961,9 +3957,10 @@ function toastUndo(msg,color,undoFn){
   ta.style.background=color||'var(--accent)';
   const undoId='toast-undo-'+Date.now();
   tm.innerHTML=`<span>${msg}</span> <button id="${undoId}" class="btn btn-ghost btn-sm" style="margin-left:.5rem;padding:.15rem .55rem">Undo</button>`;
-  t.classList.add('show'); setToastActive(true); clearTimeout(window._toastTimer);
-  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); setToastActive(false); },6000);
-  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); setToastActive(false); clearTimeout(window._toastTimer); undoFn(); };
+  t.classList.toggle('shift-for-aria',ariaPanelOpen());
+  t.classList.add('show'); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); },6000);
+  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); clearTimeout(window._toastTimer); undoFn(); };
 }
 
 // ─── ARIA WIDGET (calls the client-assistant Supabase Edge Function) ─────
@@ -4004,8 +4001,9 @@ async function maybeSuggestMfa(){
   }catch(e){}
 }
 function toggleAriaChat(){
-  const b=document.getElementById('aria-chat-box');
+  const b=document.getElementById('aria-widget');
   b.classList.toggle('open');
+  document.querySelector('.main').classList.toggle('aria-open',b.classList.contains('open'));
   if(b.classList.contains('open')&&!document.getElementById('aria-input').disabled)document.getElementById('aria-input').focus();
 }
 let _ariaPendingFile=null;
