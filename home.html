@@ -1060,7 +1060,7 @@ async function doForgotPassword(){
   if(!window._sb){err.textContent='Connection unavailable. Open the site over http(s), not as a local file.';err.style.display='block';return;}
   const btn=document.getElementById('login-submit-btn');btn.textContent='Sending...';btn.disabled=true;
   try{
-    const {error}=await window._sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/home.html#reset-password'});
+    const {error}=await window._sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/home#reset-password'});
     if(error){err.textContent='Could not send reset link. Check the email address and try again.';err.style.display='block';}
     else{ok.textContent='If an account exists for that email, a reset link is on its way.';ok.style.display='block';}
   }catch(e){err.textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.';err.style.display='block';}
@@ -1124,7 +1124,7 @@ async function signInWithGoogle(){
   }
   await window._sb.auth.signInWithOAuth({
     provider:'google',
-    options:{redirectTo:window.location.origin+'/app.html'}
+    options:{redirectTo:window.location.origin+'/app'}
   });
 }
 let _mfaFactorId=null;
