@@ -1093,7 +1093,11 @@ function chatFromConversation(c,allMsgs){
     owner:ownerMember?ownerMember.name:(c.ai_handled?'ARIA':'Unassigned'),
     last:transcript.length?transcript[transcript.length-1].text:(draft?'Draft ready — needs review':'No messages yet'),
     messages:transcript,
-    ariaDraft:draft?draft.content:null
+    ariaDraft:draft?draft.content:null,
+    createdAt:c.created_at||null,
+    resolvedAt:c.resolved_at||null,
+    aiHandled:!!c.ai_handled,
+    escalatedTo:c.escalated_to||null
   };
 }
 async function refreshChatMessages(c){
@@ -1325,7 +1329,7 @@ function renderPulse(){
   <div class="card"><div class="card-title">Welcome back, ${fn}</div><p style="color:var(--text-3);font-size:.85rem;line-height:1.7">Here's a snapshot of how things are running today. Head to Chats or Tickets to jump into live work, or grab a full report below.</p></div>
   <div class="card">
     <div class="chart-card-hd">
-      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's chats vs. tickets ARIA closed on its own</div></div>
+      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's conversations vs. those ARIA resolved without escalating to a human</div></div>
       ${pulseChartActions('conversations')}
     </div>
     ${_pulseView.conversations==='table'?dataTableHtml('conversations'):renderConversationsChart()}
@@ -1365,17 +1369,42 @@ function moveChartTip(evt){
 function hideChartTip(){const tip=document.getElementById('chart-tip'); if(tip)tip.style.display='none';}
 
 // ─── PULSE CHART DATA (shared by the SVG chart, the table view, and CSV export) ───
+// Real trailing-7-day buckets from each conversation's actual timestamps —
+// not a fabricated shape scaled off today's totals.
+function last7DayBuckets(){
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    days.push(d);
+  }
+  return days;
+}
+function dayBucketLabel(d,isToday){
+  return isToday?'Today':d.toLocaleDateString(undefined,{weekday:'short'});
+}
 function getConversationsChartData(){
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
-  const shape=[.5,.64,.56,.78,.7,.9,1];
-  const base=STATE.chats.length;
-  return shape.map((f,i)=>({label:days[i],v:Math.round(f*base)}));
+  const days=last7DayBuckets();
+  return days.map((d,i)=>{
+    const next=new Date(d); next.setDate(d.getDate()+1);
+    const v=STATE.chats.filter(c=>{
+      if(!c.createdAt)return false;
+      const t=new Date(c.createdAt).getTime();
+      return t>=d.getTime()&&t<next.getTime();
+    }).length;
+    return {label:dayBucketLabel(d,i===days.length-1),v};
+  });
 }
 function getAriaClosedChartData(){
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
-  const shape=[.35,.48,.4,.6,.52,.75,1];
-  const base=STATE.tickets.filter(t=>listKind(t.status)==='done'&&t.owner==='ARIA').length;
-  return shape.map((f,i)=>({label:days[i],v:Math.round(f*base)}));
+  const days=last7DayBuckets();
+  return days.map((d,i)=>{
+    const next=new Date(d); next.setDate(d.getDate()+1);
+    const v=STATE.chats.filter(c=>{
+      if(!c.aiHandled||c.escalatedTo||!c.resolvedAt)return false;
+      const t=new Date(c.resolvedAt).getTime();
+      return t>=d.getTime()&&t<next.getTime();
+    }).length;
+    return {label:dayBucketLabel(d,i===days.length-1),v};
+  });
 }
 function getTicketStatusData(){
   return [
@@ -1427,34 +1456,30 @@ function renderConversationsChart(){
   const w=760,h=180,pad={t:14,r:16,b:26,l:16};
   const innerW=w-pad.l-pad.r,innerH=h-pad.t-pad.b;
   const max=Math.max(...data.map(d=>d.v),...ariaData.map(d=>d.v),1);
-  const stepX=innerW/(data.length-1);
-  const toPts=series=>series.map((d,i)=>[pad.l+i*stepX, pad.t+innerH-(d.v/max)*innerH]);
-  const toLine=pts=>pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const pts=toPts(data);
-  const line=toLine(pts);
-  const area=line+` L${pts[pts.length-1][0].toFixed(1)},${(pad.t+innerH).toFixed(1)} L${pts[0][0].toFixed(1)},${(pad.t+innerH).toFixed(1)} Z`;
-  const ariaPts=toPts(ariaData);
-  const ariaLine=toLine(ariaPts);
-  const grid=[0,.5,1].map(f=>{const y=(pad.t+innerH*f).toFixed(1);return `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;}).join('');
-  const dots=pts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="var(--bg-2)" stroke="var(--accent)" stroke-width="2" style="cursor:pointer" onmouseenter="showChartTip(event,'${data[i].label}: ${data[i].v} conversations')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`).join('');
-  const ariaDots=ariaPts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--bg-2)" stroke="var(--accent-2)" stroke-width="2" style="cursor:pointer" onmouseenter="showChartTip(event,'${ariaData[i].label}: ${ariaData[i].v} closed by ARIA')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`).join('');
-  const labels=data.map((d,i)=>`<text x="${pts[i][0].toFixed(1)}" y="${h-6}" font-size="10" fill="var(--text-3)" text-anchor="middle">${d.label}</text>`).join('');
+  const n=data.length;
+  const slotW=innerW/n;
+  const barW=Math.min(22,slotW*.32);
+  const gap=4;
+  const grid=[pad.t,pad.t+innerH/2,pad.t+innerH].map(y=>`<line x1="${pad.l}" y1="${y.toFixed(1)}" x2="${w-pad.r}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`).join('');
+  let bars='',labels='';
+  for(let i=0;i<n;i++){
+    const slotCx=pad.l+slotW*i+slotW/2;
+    const x1=slotCx-gap/2-barW, x2=slotCx+gap/2;
+    const v1=data[i].v, v2=ariaData[i].v;
+    const h1=Math.max((v1/max)*innerH,v1>0?2:0), h2=Math.max((v2/max)*innerH,v2>0?2:0);
+    const y1=pad.t+innerH-h1, y2=pad.t+innerH-h2;
+    bars+=`<rect x="${x1.toFixed(1)}" y="${y1.toFixed(1)}" width="${barW.toFixed(1)}" height="${h1.toFixed(1)}" rx="3" fill="var(--accent)" style="cursor:pointer" onmouseenter="showChartTip(event,'${data[i].label}: ${v1} conversation${v1===1?'':'s'}')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`;
+    bars+=`<rect x="${x2.toFixed(1)}" y="${y2.toFixed(1)}" width="${barW.toFixed(1)}" height="${h2.toFixed(1)}" rx="3" fill="var(--accent-2)" style="cursor:pointer" onmouseenter="showChartTip(event,'${ariaData[i].label}: ${v2} closed by ARIA')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`;
+    labels+=`<text x="${slotCx.toFixed(1)}" y="${h-6}" font-size="10" fill="var(--text-3)" text-anchor="middle">${data[i].label}</text>`;
+  }
   return `
   <div class="chart-legend">
     <span class="chart-legend-item"><span class="legend-dot" style="background:var(--accent)"></span>All Conversations</span>
     <span class="chart-legend-item"><span class="legend-dot" style="background:var(--accent-2)"></span>Closed by ARIA</span>
   </div>
   <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="overflow:visible;display:block">
-    <defs><linearGradient id="pulseAreaGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="var(--accent)" stop-opacity=".32"/>
-      <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-    </linearGradient></defs>
     ${grid}
-    <path d="${area}" fill="url(#pulseAreaGrad)"/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${ariaLine}" fill="none" stroke="var(--accent-2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>
-    ${dots}
-    ${ariaDots}
+    ${bars}
     ${labels}
   </svg>`;
 }
