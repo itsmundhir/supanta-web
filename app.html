@@ -4433,7 +4433,8 @@ async function sendAriaMsg(){
     }
   }catch(e){
     document.getElementById('aria-typing')?.remove();
-    ariaAppend('bot',"Sorry, I'm having trouble connecting right now — try again shortly.");
+    const detail=(e&&e.message)?String(e.message):'';
+    ariaAppend('bot',`Sorry, something went wrong on my end${detail?' — '+escapeHtml(detail):''}. Try again in a moment.`);
   }
 }
 function fileToBase64(file){
