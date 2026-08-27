@@ -1029,6 +1029,10 @@ async function loadRemoteData(){
     _zoomConnection=zc||null;
   }catch(e){ _zoomConnection=null; }
   try{
+    const {data:trc}=await _sb.from('client_trello_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _trelloConnection=trc||null;
+  }catch(e){ _trelloConnection=null; }
+  try{
     const {data:gcc}=await _sb.from('client_googlecalendar_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
     _googleCalendarConnection=gcc||null;
   }catch(e){ _googleCalendarConnection=null; }
@@ -1153,6 +1157,7 @@ let _livechatConnection=null;
 let _hubspotConnection=null;
 let _slackConnection=null;
 let _zoomConnection=null;
+let _trelloConnection=null;
 let _googleCalendarConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
@@ -1195,7 +1200,8 @@ function defaultState(){
       {key:'slack',name:'Slack',desc:'Mirror your Supanta notifications into a Slack channel.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Start an instant video call with a customer straight from a chat.',color:'#2D8CFF',connected:false},
       {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false},
-      {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false}
+      {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false},
+      {key:'trello',name:'Trello',desc:'Send a conversation to a Trello board so your team can track it as a card.',color:'#0079BF',connected:false}
     ],
     notifications:[],
     kbDocs:[
@@ -1296,6 +1302,7 @@ function renderSection(){
   if(currentSection==='tickets')wireKanban();
   if(currentSection==='settings'&&_settingsTab==='security')refreshMfaStatus();
   if(currentSection==='integrations'&&_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
+  if(currentSection==='integrations'&&_trelloConnection&&_trelloConnection.status==='connected')loadTrelloBoardsIntoSelect();
 }
 function initialsOf(name){return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function avatarHtml(name,color,size){size=size||30;return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*.32}px;background-color:${color||'var(--accent)'};color:#04121f">${initialsOf(name)}</div>`;}
@@ -2728,6 +2735,7 @@ const CHANNEL_ICON_PATHS={
   zoom:'<path d="M5.033 14.649H.743a.74.74 0 0 1-.686-.458.74.74 0 0 1 .16-.808L3.19 10.41H1.06A1.06 1.06 0 0 1 0 9.35h3.957c.301 0 .57.18.686.458a.74.74 0 0 1-.161.808L1.51 13.59h2.464c.585 0 1.06.475 1.06 1.06zM24 11.338c0-1.14-.927-2.066-2.066-2.066-.61 0-1.158.265-1.537.686a2.061 2.061 0 0 0-1.536-.686c-1.14 0-2.066.926-2.066 2.066v3.311a1.06 1.06 0 0 0 1.06-1.06v-2.251a1.004 1.004 0 0 1 2.013 0v2.251c0 .586.474 1.06 1.06 1.06v-3.311a1.004 1.004 0 0 1 2.012 0v2.251c0 .586.475 1.06 1.06 1.06zM16.265 12a2.728 2.728 0 1 1-5.457 0 2.728 2.728 0 0 1 5.457 0zm-1.06 0a1.669 1.669 0 1 0-3.338 0 1.669 1.669 0 0 0 3.338 0zm-4.82 0a2.728 2.728 0 1 1-5.458 0 2.728 2.728 0 0 1 5.457 0zm-1.06 0a1.669 1.669 0 1 0-3.338 0 1.669 1.669 0 0 0 3.338 0z"/>',
   googlecalendar:'<path d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"/>',
   hubspot:'<path d="M18.164 7.93V5.084a2.198 2.198 0 001.267-1.978v-.067A2.2 2.2 0 0017.238.845h-.067a2.2 2.2 0 00-2.193 2.193v.067a2.196 2.196 0 001.252 1.973l.013.006v2.852a6.22 6.22 0 00-2.969 1.31l.012-.01-7.828-6.095A2.497 2.497 0 104.3 4.656l-.012.006 7.697 5.991a6.176 6.176 0 00-1.038 3.446c0 1.343.425 2.588 1.147 3.607l-.013-.02-2.342 2.343a1.968 1.968 0 00-.58-.095h-.002a2.033 2.033 0 102.033 2.033 1.978 1.978 0 00-.1-.595l.005.014 2.317-2.317a6.247 6.247 0 104.782-11.134l-.036-.005zm-.964 9.378a3.206 3.206 0 113.215-3.207v.002a3.206 3.206 0 01-3.207 3.207z"/>',
+  trello:'<path d="M21.147 0H2.853A2.86 2.86 0 000 2.853v18.294A2.86 2.86 0 002.853 24h18.294A2.86 2.86 0 0024 21.147V2.853A2.86 2.86 0 0021.147 0zM10.34 17.287a.953.953 0 01-.953.953h-4a.954.954 0 01-.954-.953V5.38a.953.953 0 01.954-.953h4a.954.954 0 01.953.953zm9.233-5.467a.944.944 0 01-.953.947h-4a.947.947 0 01-.953-.947V5.38a.953.953 0 01.953-.953h4a.954.954 0 01.953.953z"/>',
   google:'<path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>',
   // Generic (non-brand) glyphs — used where the integration is a category/protocol
   // rather than a single company's mark (SMS, a live-chat widget), or where the
@@ -2773,7 +2781,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):i.key==='googlecalendar'?googleCalendarIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):i.key==='googlecalendar'?googleCalendarIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -3164,11 +3172,124 @@ async function submitScheduleMeeting(conversationId){
     btn.disabled=false;btn.textContent='Schedule';
   }
 }
+function trelloIntegrationCardHtml(i){
+  const conn=_trelloConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    ${isConnected?`
+      <div class="int-desc">${conn.list_name?`Sending cards to <strong>${escapeHtml(conn.board_name||'')} / ${escapeHtml(conn.list_name)}</strong>.`:'Pick a board, then a list, to send cards to:'}</div>
+      <select class="rb-select" id="trello-board-select" onchange="onTrelloBoardChange(this)"><option value="">Loading boards…</option></select>
+      <select class="rb-select" id="trello-list-select" onchange="setTrelloList(this)" style="display:none"><option value="">Select a list…</option></select>
+      <button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectTrello()">Disconnect</button>
+    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTrelloConnectModal()">Connect</button>`}
+  </div>`;
+}
+function openTrelloConnectModal(){
+  document.getElementById('ci-title').textContent='Connect Trello';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Get your API key from <a href="https://trello.com/power-ups/admin" target="_blank" rel="noopener" style="color:var(--accent)">trello.com/power-ups/admin</a> (create a Power-Up if you don't have one), then click "Token" on that same page to generate and copy a token. Paste both below.</p>
+    <div class="form-group"><label>API Key</label><input class="rb-input" id="trello-api-key"/></div>
+    <div class="form-group"><label>Token</label><input class="rb-input" type="password" id="trello-token"/></div>
+    <button class="btn btn-acc" style="width:100%" id="trello-submit" onclick="submitTrelloConnect()">Test &amp; Connect</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitTrelloConnect(){
+  const btn=document.getElementById('trello-submit');
+  const api_key=document.getElementById('trello-api-key').value.trim();
+  const token=document.getElementById('trello-token').value.trim();
+  if(!api_key||!token){toast('Fill in the API key and token','var(--danger)');return;}
+  btn.disabled=true;btn.textContent='Verifying with Trello…';
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-save-credentials',{body:{api_key,token}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('Trello connected','var(--green)');
+    closeModal('modal-connect-int');
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+    loadTrelloBoardsIntoSelect();
+  }catch(e){
+    toast(e.message||'Could not connect Trello','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function loadTrelloBoardsIntoSelect(){
+  const sel=document.getElementById('trello-board-select');
+  if(!sel||!_sb)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-list-boards',{body:{}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const current=_trelloConnection?.board_id;
+    sel.innerHTML='<option value="">Select a board…</option>'+(data.boards||[]).map(b=>`<option value="${b.id}" data-name="${escapeHtml(b.name)}" ${b.id===current?'selected':''}>${escapeHtml(b.name)}</option>`).join('');
+    if(current)onTrelloBoardChange(sel,true);
+  }catch(e){
+    sel.innerHTML='<option value="">Could not load boards</option>';
+  }
+}
+async function onTrelloBoardChange(sel,skipClear){
+  const opt=sel.selectedOptions[0];
+  const listSel=document.getElementById('trello-list-select');
+  if(!opt||!opt.value){ listSel.style.display='none'; return; }
+  listSel.style.display='block';
+  listSel.innerHTML='<option value="">Loading lists…</option>';
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-list-lists',{body:{board_id:opt.value}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const current=skipClear?_trelloConnection?.list_id:null;
+    listSel.dataset.boardId=opt.value;
+    listSel.dataset.boardName=opt.dataset.name;
+    listSel.innerHTML='<option value="">Select a list…</option>'+(data.lists||[]).map(l=>`<option value="${l.id}" data-name="${escapeHtml(l.name)}" ${l.id===current?'selected':''}>${escapeHtml(l.name)}</option>`).join('');
+  }catch(e){
+    listSel.innerHTML='<option value="">Could not load lists</option>';
+  }
+}
+async function setTrelloList(sel){
+  const opt=sel.selectedOptions[0];
+  if(!opt||!opt.value)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-set-list',{body:{board_id:sel.dataset.boardId,board_name:sel.dataset.boardName,list_id:opt.value,list_name:opt.dataset.name}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast(`Now sending cards to ${sel.dataset.boardName} / ${opt.dataset.name}`,'var(--green)');
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+    loadTrelloBoardsIntoSelect();
+  }catch(e){
+    toast('Could not set list — '+(e.message||e),'var(--danger)');
+  }
+}
+async function disconnectTrello(){
+  if(!confirm('Disconnect Trello?'))return;
+  if(_trelloConnection&&_sb){
+    try{ await _sb.from('client_trello_connections').update({status:'disconnected'}).eq('id',_trelloConnection.id); }catch(e){}
+  }
+  _trelloConnection=null;
+  toast('Trello disconnected','var(--accent)');
+  renderSection();
+}
+async function sendConversationToTrello(conversationId){
+  if(!_sb)return;
+  toast('Sending to Trello…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-create-card',{body:{conversation_id:conversationId}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast(data.updated?'Trello card updated':'Trello card created','var(--green)');
+  }catch(e){
+    toast('Could not send to Trello — '+(e.message||e),'var(--danger)');
+  }
+}
 function filterIntegrations(v){
   _intSearch=v;
   document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
   refocusSearch('int-search');
   if(_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
+  if(_trelloConnection&&_trelloConnection.status==='connected')loadTrelloBoardsIntoSelect();
 }
 function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
@@ -4196,7 +4317,7 @@ function tryAriaAction(text,file){
   m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
   if(m){
     const wantConnect=m[1]==='connect'||m[1]==='enable'||m[1]==='turn on';
-    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot'};
+    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot',trello:'trello'};
     const key=aliasMap[m[2].trim().replace(/\s+/g,'')];
     const i=key&&STATE.integrations.find(x=>x.key===key);
     if(i){
@@ -4387,6 +4508,8 @@ function openChatOverflowMenu(e,chatId){
     items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();startZoomCall('${c.dbId}')">Start Zoom call</div>`);
   if(c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected')
     items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</div>`);
+  if(c.dbId&&_trelloConnection&&_trelloConnection.status==='connected'&&_trelloConnection.list_id)
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();sendConversationToTrello('${c.dbId}')">Send to Trello</div>`);
   if(items.length)items.push('<div class="ctx-sep"></div>');
   items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();downloadChat('${chatId}')">Download Transcript</div>`);
   items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();setChatStatus('${chatId}','archived')">Archive</div>`);
