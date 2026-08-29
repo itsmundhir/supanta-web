@@ -4374,6 +4374,18 @@ function ariaPlainHistory(){
     content:m.html.replace(/<[^>]+>/g,'').trim()
   })).filter(m=>m.content);
 }
+// supabase-js gives a generic "Edge Function returned a non-2xx status code"
+// for any failed function call — the real {error:"..."} body the function
+// actually sent back is only reachable via error.context, the raw Response.
+async function realFunctionError(error){
+  try{
+    if(error&&error.context&&typeof error.context.json==='function'){
+      const body=await error.context.clone().json();
+      if(body&&body.error)return new Error(body.error);
+    }
+  }catch(_e){}
+  return error instanceof Error?error:new Error((error&&error.message)||String(error));
+}
 async function sendAriaMsg(){
   if(!activeClientId()||!_sb)return;
   const inp=document.getElementById('aria-input');
@@ -4422,7 +4434,7 @@ async function sendAriaMsg(){
 
   try{
     const {data,error}=await _sb.functions.invoke('client-assistant',{body});
-    if(error)throw error;
+    if(error)throw await realFunctionError(error);
     if(data&&data.error)throw new Error(data.error);
     document.getElementById('aria-typing')?.remove();
     ariaAppend('bot',data.reply||"Sorry, I couldn't come up with a response just now.");
