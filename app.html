@@ -598,6 +598,16 @@ input:checked + .slider::before{transform:translateX(18px)}
   </div>
 </div>
 
+<!-- Read-only preview for a chat reached from a notification/activity entry —
+     opens this single conversation in isolation instead of dropping the
+     viewer into the full Active/Archived/Done list. -->
+<div class="modal-overlay" id="modal-chat-preview">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-hdr"><div class="modal-title" id="chat-preview-title">Conversation</div><button class="modal-close" onclick="closeModal('modal-chat-preview')">✕</button></div>
+    <div id="chat-preview-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><div class="toast-accent" id="toast-accent"></div><div id="toast-msg"></div></div>
 
 <!-- CONTEXT MENU (chat rows) -->
@@ -3639,7 +3649,10 @@ function goToActivity(id){
     return;
   }
   if(nav.section==='chats'){
-    if(nav.chatId)gsGoChat(nav.chatId); else showSection('chats');
+    if(nav.chatId){
+      const c=STATE.chats.find(x=>x.id===nav.chatId);
+      if(c&&c.status!=='active')openChatPreview(c.id); else gsGoChat(nav.chatId);
+    }else showSection('chats');
     return;
   }
   if(nav.section==='teams'){
@@ -3792,6 +3805,33 @@ function gsGoChat(id){
   showSection('chats');
 }
 function gsGoTeam(){ closeGlobalSearch(); showSection('teams'); }
+
+// ─── CHAT PREVIEW (from a notification/activity entry) ───────────
+// A "closed" chat (archived/done) reached from a click here is shown in
+// isolation with a Reopen action, instead of dropping the viewer into the
+// full Active/Archived/Done list where it's just one row among many.
+function openChatPreview(chatId){
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  document.getElementById('chat-preview-title').textContent=c.customer;
+  const statusLabel=c.status[0].toUpperCase()+c.status.slice(1);
+  document.getElementById('chat-preview-body').innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div style="font-size:.78rem;color:var(--text-3)">${channelIconSvg(c.channel,13)} ${escapeHtml(c.channel)} · ${escapeHtml(c.id)}</div>
+      <span class="badge ${c.status==='done'?'badge-active':'badge-archived'}">${statusLabel}</span>
+    </div>
+    <div class="chat-msgs" style="max-height:340px;border:1px solid var(--border);border-radius:10px;margin-bottom:1rem">
+      ${c.messages.map(m=>messageHtml(m,c)).join('')||'<div class="empty-state">No messages.</div>'}
+    </div>
+    <div style="display:flex;gap:.5rem">
+      ${c.status!=='active'?`<button class="btn btn-acc btn-sm" onclick="reopenChatFromPreview('${c.id}')">Reopen</button>`:''}
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modal-chat-preview');gsGoChat('${c.id}')">Open in Chats</button>
+    </div>`;
+  openModal('modal-chat-preview');
+}
+function reopenChatFromPreview(chatId){
+  closeModal('modal-chat-preview');
+  setChatStatus(chatId,'active');
+}
 
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
@@ -4564,7 +4604,7 @@ function setChatStatus(id,status,skipUndoToast){
   if(c.dbId&&_sb){
     _sb.from('conversations').update({status:STATUS_UI_TO_DB[status]||status}).eq('id',c.dbId).then(()=>{}).catch(()=>{});
   }
-  const msg=status==='archived'?`Conversation with ${c.customer} archived`:`Conversation with ${c.customer} marked done`;
+  const msg=status==='archived'?`Conversation with ${c.customer} archived`:status==='active'?`Conversation with ${c.customer} reopened`:`Conversation with ${c.customer} marked done`;
   if(!skipUndoToast&&prevStatus!==status){
     toastUndo(msg,'var(--accent)',()=>setChatStatus(id,prevStatus,true));
   }else{
