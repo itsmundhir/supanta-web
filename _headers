@@ -1,0 +1,14 @@
+/home.html
+  Cache-Control: no-cache
+
+/app.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
+
+/home
+  Cache-Control: no-cache
+
+/app
+  Cache-Control: no-cache
