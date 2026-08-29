@@ -647,7 +647,27 @@ let _sb=null, sbUser=null;
 
 const _sbScript=document.createElement('script');
 _sbScript.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-_sbScript.onload=()=>{ try{ _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); boot(); }catch(e){ authFail(); } };
+// supabase-js only ever puts a generic "Edge Function returned a non-2xx
+// status code" on error.message for a failed function call — the real
+// {error:"..."} body the function actually sent back only lives on
+// error.context, the raw Response. Wrapping invoke() once here means every
+// call site's existing `error.message` / `data.error` handling just works,
+// instead of needing this unwrap repeated at each of the ~30 call sites.
+function wrapFunctionsInvoke(sb){
+  const rawInvoke=sb.functions.invoke.bind(sb.functions);
+  sb.functions.invoke=async(name,opts)=>{
+    const res=await rawInvoke(name,opts);
+    if(res.error&&res.error.context&&typeof res.error.context.json==='function'){
+      try{
+        const body=await res.error.context.clone().json();
+        if(body&&body.error)res.error=new Error(body.error);
+      }catch(_e){}
+    }
+    return res;
+  };
+  return sb;
+}
+_sbScript.onload=()=>{ try{ _sb=wrapFunctionsInvoke(window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)); boot(); }catch(e){ authFail(); } };
 _sbScript.onerror=()=>authFail();
 document.head.appendChild(_sbScript);
 function authFail(){ document.getElementById('auth-gate-text').textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.'; }
