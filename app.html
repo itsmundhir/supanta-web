@@ -183,6 +183,8 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 /* CHATS */
 .chat-layout{display:grid;grid-template-columns:340px 1fr;gap:1.1rem;align-items:stretch;min-height:360px}
 .chat-list{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow-y:auto}
+.chat-list-tabs{position:sticky;top:0;z-index:5;display:flex;gap:.35rem;padding:.65rem .65rem .55rem;background:var(--bg-2);border-bottom:1px solid var(--border);border-radius:12px 12px 0 0}
+.chat-list-tabs .tab-btn{padding:.32rem .7rem;font-size:.72rem;flex:1;text-align:center}
 .chat-row{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
 .chat-row:last-child{border-bottom:none}
 .chat-row:hover,.chat-row.active{background:var(--bg-3)}
@@ -1116,7 +1118,7 @@ async function refreshChatMessages(c){
         const scroll=document.getElementById('chat-msgs-scroll'); if(scroll)scroll.scrollTop=scroll.scrollHeight;
         loadAriaSuggestions(c);
       }else{
-        const w=document.getElementById('chat-list-wrap'); if(w){w.innerHTML=chatListHtml();wireChatList();}
+        const w=document.getElementById('chat-list-rows'); if(w){w.innerHTML=chatListHtml();wireChatList();}
       }
     }
   }catch(e){}
@@ -1677,9 +1679,6 @@ function renderChats(){
   const list=chatFilteredList();
   if(!_activeChatId||!list.find(c=>c.id===_activeChatId))_activeChatId=list[0]?list[0].id:null;
   return `
-  <div class="tabs">
-    ${['active','archived','done'].map(t=>`<button class="tab-btn ${t===_chatTab?'active':''}" onclick="setChatTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
-  </div>
   <div style="font-size:.7rem;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-bottom:.5rem">All channels, one inbox</div>
   <div class="tabs" style="margin-bottom:1rem;padding-bottom:0;border-bottom:none">
     <button class="tab-btn ${_chatChannel==='all'?'active':''}" onclick="setChatChannel('all')">All</button>
@@ -1687,7 +1686,12 @@ function renderChats(){
   </div>
   <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
   <div class="chat-layout" id="chat-layout-wrap">
-    <div class="chat-list" id="chat-list-wrap">${chatListHtml(list)}</div>
+    <div class="chat-list" id="chat-list-wrap">
+      <div class="chat-list-tabs">
+        ${['active','archived','done'].map(t=>`<button class="tab-btn ${t===_chatTab?'active':''}" onclick="setChatTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
+      </div>
+      <div id="chat-list-rows">${chatListHtml(list)}</div>
+    </div>
     <div id="chat-panel-wrap">${renderChatPanel(list.find(c=>c.id===_activeChatId))}</div>
   </div>`;
 }
@@ -1712,7 +1716,7 @@ function filterChats(v){
   _chatSearch=v;
   const list=chatFilteredList();
   if(!_activeChatId||!list.find(c=>c.id===_activeChatId))_activeChatId=list[0]?list[0].id:null;
-  document.getElementById('chat-list-wrap').innerHTML=chatListHtml(list);
+  document.getElementById('chat-list-rows').innerHTML=chatListHtml(list);
   document.getElementById('chat-panel-wrap').innerHTML=renderChatPanel(list.find(c=>c.id===_activeChatId));
   wireChatList();
   refocusSearch('chat-search');
