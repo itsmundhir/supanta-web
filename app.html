@@ -3118,8 +3118,47 @@ function appointmentRowHtml(a){
     </div>
     ${a.meetLink&&a.status==='scheduled'?`<a class="btn btn-ghost btn-sm" href="${a.meetLink}" target="_blank" rel="noopener">Join</a>`:''}
     ${a.conversationId?`<button class="btn btn-ghost btn-sm" onclick="gsGoChat('${STATE.chats.find(c=>c.dbId===a.conversationId)?.id||''}')">Open Chat</button>`:''}
+    ${a.status==='scheduled'?`<button class="btn btn-ghost btn-sm" onclick="openRescheduleModal('${a.id}')">Reschedule</button>`:''}
     ${a.status==='scheduled'?`<button class="btn btn-ghost btn-sm" onclick="cancelAppointment('${a.id}')">Cancel</button>`:''}
   </div>`;
+}
+function toDatetimeLocalValue(iso){
+  const d=new Date(iso);
+  const pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function openRescheduleModal(id){
+  const a=STATE.appointments.find(x=>x.id===id); if(!a)return;
+  const durationMin=Math.round((new Date(a.endTime)-new Date(a.startTime))/60000)||30;
+  document.getElementById('ci-title').textContent='Reschedule Appointment';
+  document.getElementById('ci-body').innerHTML=`
+    <div class="form-group"><label>${escapeHtml(a.title)}</label></div>
+    <div class="form-group"><label>New Date &amp; Time</label><input class="rb-input" type="datetime-local" id="rs-start" value="${toDatetimeLocalValue(a.startTime)}"/></div>
+    <div class="form-group"><label>Duration (minutes)</label><input class="rb-input" type="number" id="rs-duration" value="${durationMin}"/></div>
+    <button class="btn btn-acc" style="width:100%" id="rs-submit" onclick="submitReschedule('${id}')">Save New Time</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitReschedule(id){
+  const btn=document.getElementById('rs-submit');
+  const start=document.getElementById('rs-start').value;
+  const duration=document.getElementById('rs-duration').value;
+  if(!start){toast('Pick a date and time','var(--danger)');return;}
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
+    const {data,error}=await _sb.functions.invoke('googlecalendar-reschedule-event',{body:{appointment_id:id,start_time:new Date(start).toISOString(),duration_minutes:Number(duration)||undefined}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const a=STATE.appointments.find(x=>x.id===id);
+    if(a&&data.appointment){ a.startTime=data.appointment.start_time; a.endTime=data.appointment.end_time; }
+    closeModal('modal-connect-int');
+    renderSection();
+    toast('Appointment rescheduled','var(--green)');
+    logActivity('Rescheduled appointment',a?a.title:id);
+  }catch(e){
+    toast('Could not reschedule — '+(e.message||e),'var(--danger)');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Save New Time';}
+  }
 }
 function openNewAppointmentModal(){
   document.getElementById('ci-title').textContent='New Appointment';
