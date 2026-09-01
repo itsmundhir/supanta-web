@@ -2797,16 +2797,11 @@ function channelBrandColor(key){
   return 'var(--accent)';
 }
 const INT_ICONS=new Proxy({},{get:(_,key)=>channelIconSvg(key,20)});
-let _intSearch='';
 function renderIntegrations(){
-  return `
-  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="int-search" type="search" autocomplete="off" name="int-search-q" placeholder="Search integrations by name…" value="${_intSearch}" oninput="filterIntegrations(this.value)"/></div>
-  <div id="int-grid-wrap">${intGridHtml()}</div>`;
+  return `<div id="int-grid-wrap">${intGridHtml()}</div>`;
 }
 function intGridHtml(){
-  const q=_intSearch.trim().toLowerCase();
-  const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
-  if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
+  const list=STATE.integrations;
   return `<div class="grid-3">
     ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):i.key==='googlecalendar'?googleCalendarIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):`
       <div class="int-card">
@@ -3440,13 +3435,6 @@ async function sendConversationToTrello(conversationId){
     toast('Could not send to Trello — '+(e.message||e),'var(--danger)');
   }
 }
-function filterIntegrations(v){
-  _intSearch=v;
-  document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
-  refocusSearch('int-search');
-  if(_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
-  if(_trelloConnection&&_trelloConnection.status==='connected')loadTrelloBoardsIntoSelect();
-}
 function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
   i.connected=checked;saveState();
@@ -3926,9 +3914,7 @@ function gsGoInvoices(){ closeGlobalSearch(); showSection('settings'); _settings
 function gsGoIntegration(key){
   closeGlobalSearch();
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
-  _intSearch='';showSection('integrations');
-  document.getElementById('int-search').value=i.name;
-  filterIntegrations(i.name);
+  showSection('integrations');
 }
 function gsGoTicket(id){
   closeGlobalSearch();
