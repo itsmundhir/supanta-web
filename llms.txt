@@ -1,0 +1,16 @@
+# Supanta
+
+> Supanta is an AI-powered contact centre company. We combine an AI support agent (ARIA) with human agents on one platform, so businesses can run customer support, sales/lead generation, and back-office operations without switching tools or vendors.
+
+Supanta is not a chatbot vendor and not a traditional BPO — we build the AI platform and run the contact centre ourselves, under one roof, accountable for one outcome. We integrate with existing CRMs and helpdesks (HubSpot, Zendesk, and others) rather than requiring customers to replace their stack. Most clients are live within 48–72 hours of a discovery call. Supanta is POPIA-compliant and operates in line with UK GDPR requirements, serving businesses globally.
+
+## Pages
+
+- [Home](https://supanta.com/): Overview of Supanta's AI-powered contact centre platform and what it does.
+- [About](https://supanta.com/about): Why Supanta exists and how it differs from chatbot vendors and traditional BPOs.
+- [Services](https://supanta.com/services): The three service lines — customer support, sales & lead generation, and back-office operations — all on one AI platform.
+- [Contact](https://supanta.com/contact): How to get in touch and request a scoped plan/quote.
+
+## Notes
+
+- The client dashboard (https://supanta.com/app) is a private, authenticated application and is not part of the public site — it is excluded from indexing.
