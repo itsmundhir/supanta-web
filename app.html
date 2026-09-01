@@ -99,7 +99,8 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .sidebar-backdrop.open{display:block}
 
 /* MAIN */
-.main{flex:1;min-width:0;margin-left:76px;min-height:100vh;background:var(--bg);transition:margin-left .22s ease}
+.main{flex:1;min-width:0;margin-left:76px;min-height:100vh;background:var(--bg);transition:margin-left .22s ease,margin-right .25s ease}
+.main.aria-open{margin-right:380px}
 .sidebar:hover ~ .main,.sidebar:focus-within ~ .main{margin-left:250px}
 .topbar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 2rem;border-bottom:1px solid var(--border);background:var(--bg);z-index:40}
 .page-title{font-family:var(--fd);font-size:1.3rem;font-weight:700;letter-spacing:-.02em}
@@ -108,7 +109,9 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .icon-btn{width:38px;height:38px;border-radius:9px;background:var(--bg-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);cursor:pointer;transition:all .2s;position:relative}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .dot-badge{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--bg-2)}
+.aria-avail-badge{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid var(--bg-2);animation:pulse-dot 1.2s ease-in-out infinite}
 .content{padding:2rem 2rem 7rem}
+.content.content-tight{padding-bottom:0}
 
 /* CARDS / GENERIC */
 .card{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.25rem}
@@ -178,8 +181,10 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .owner-select{background:var(--bg-4);border:1px solid var(--border);border-radius:6px;color:var(--text-2);font-size:.68rem;padding:2px 4px;font-family:var(--fb)}
 
 /* CHATS */
-.chat-layout{display:grid;grid-template-columns:340px 1fr;gap:1.1rem;align-items:start}
-.chat-list{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.chat-layout{display:grid;grid-template-columns:340px 1fr;gap:1.1rem;align-items:stretch;min-height:360px}
+.chat-list{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;overflow-y:auto}
+.chat-list-tabs{position:sticky;top:0;z-index:5;display:flex;gap:.35rem;padding:.65rem .65rem .55rem;background:var(--bg-2);border-bottom:1px solid var(--border);border-radius:12px 12px 0 0}
+.chat-list-tabs .tab-btn{padding:.32rem .7rem;font-size:.72rem;flex:1;text-align:center}
 .chat-row{display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
 .chat-row:last-child{border-bottom:none}
 .chat-row:hover,.chat-row.active{background:var(--bg-3)}
@@ -188,9 +193,22 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .chat-row-channel{margin:3px 0}
 .chat-row-msg{font-size:.75rem;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
 .chan-pill{display:inline-flex;align-items:center;gap:4px;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:100px;background:var(--bg-4);color:var(--text-3);text-transform:uppercase;letter-spacing:.03em;pointer-events:none}
-.chat-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:460px}
-.chat-panel-hd{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
-.chat-msgs{flex:1;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;max-height:480px;overflow-y:auto}
+.chat-avatar-wrap{position:relative;flex-shrink:0;line-height:0}
+.chat-channel-badge{position:absolute;bottom:-3px;right:-3px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-2);color:#fff}
+.chat-row:hover .chat-channel-badge,.chat-row.active .chat-channel-badge{border-color:var(--bg-3)}
+#chat-panel-wrap{display:flex;flex-direction:column;min-height:0}
+.chat-panel{background:var(--bg-2);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;min-height:0;flex:1}
+.chat-panel-hd{padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.chat-panel-hd-name{font-size:.9rem;font-weight:700;color:var(--text)}
+.chat-assign-trigger{font-size:.72rem;color:var(--text-3);cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin-top:2px;transition:color .15s}
+.chat-assign-trigger:hover{color:var(--accent)}
+.chat-panel-hd-actions{display:flex;gap:.5rem;align-items:center;flex-shrink:0}
+.chat-overflow-btn{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--border-light);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:1.1rem;line-height:1}
+.chat-overflow-btn:hover{border-color:var(--border);background:var(--bg-3);color:var(--text)}
+.assign-menu-item{display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border-radius:6px;cursor:pointer;font-size:.8rem;color:var(--text-2)}
+.assign-menu-item:hover{background:var(--bg-3);color:var(--text)}
+.assign-menu-item.active{color:var(--accent)}
+.chat-msgs{flex:1;min-height:0;padding:1.25rem;display:flex;flex-direction:column;gap:.7rem;overflow-y:auto}
 .cm{display:flex;align-items:flex-end;gap:.5rem}
 .cm.left{justify-content:flex-start}.cm.right{justify-content:flex-end}
 .cm-bubble{max-width:74%;border-radius:12px;padding:.65rem .9rem;border:1px solid var(--border);font-size:.84rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
@@ -202,14 +220,16 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .cm-analyzing{font-size:.7rem;color:var(--text-3);font-style:italic;margin-top:.35rem;display:flex;align-items:center;gap:5px}
 
 /* ARIA SUGGESTIONS */
-.suggest-wrap{padding:.75rem 1.1rem;border-top:1px solid var(--border);background:var(--bg-3)}
-.suggest-lbl{font-size:.68rem;font-weight:700;color:#a99cff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;gap:5px}
+.suggest-wrap{padding:.75rem 1.1rem;border-top:1px solid var(--border);background:var(--bg-3);flex-shrink:0}
+.suggest-lbl{font-size:.68rem;font-weight:700;color:#a99cff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:5px}
+.suggest-close{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:.72rem;padding:2px 4px;border-radius:4px;line-height:1;letter-spacing:0;text-transform:none;font-weight:400;transition:color .15s}
+.suggest-close:hover{color:var(--text)}
 .suggest-chips{display:flex;flex-wrap:wrap;gap:.5rem}
 .suggest-chip{background:rgba(107,91,255,.1);border:1px solid rgba(107,91,255,.28);color:var(--text);border-radius:9px;padding:.5rem .8rem;font-size:.78rem;text-align:left;cursor:pointer;transition:all .15s;max-width:100%}
 .suggest-chip:hover{background:rgba(107,91,255,.2);border-color:rgba(107,91,255,.5)}
 
 /* REPLY BOX */
-.reply-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative;align-items:flex-end}
+.reply-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative;align-items:flex-end;flex-shrink:0}
 .reply-icon-btn{width:38px;height:38px;border-radius:8px;background:var(--bg-4);border:1px solid var(--border-light);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s}
 .reply-icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .reply-textarea{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.6rem .75rem;color:var(--text);font-size:.84rem;font-family:var(--fb);outline:none;resize:none;min-height:38px;max-height:100px;transition:border-color .2s}
@@ -297,34 +317,30 @@ input:checked + .slider::before{transform:translateX(18px)}
 .toast.show{display:flex}
 .toast-accent{width:4px;align-self:stretch;border-radius:4px;flex-shrink:0}
 
-/* ARIA WIDGET */
+/* ARIA PANEL (docked right-hand side, not a floating widget) */
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.2s ease-in-out infinite;display:inline-block}
-.aria-widget{position:fixed;bottom:1.75rem;right:1.75rem;z-index:400;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem);transition:bottom .25s ease}
-.aria-widget.toast-active{bottom:6rem}
-.aria-chat-box{width:340px;max-height:calc(100vh - 7rem);background:var(--bg-2);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:none;flex-direction:column}
-.aria-chat-box.open{display:flex}
-.aria-chat-hdr{background:var(--bg-3);border-bottom:1px solid var(--border);padding:.85rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
+.aria-widget{position:fixed;top:0;right:0;bottom:0;width:380px;z-index:400;display:flex;flex-direction:column;background:var(--bg-2);border-left:1px solid var(--border-light);box-shadow:-8px 0 28px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .25s ease}
+.aria-widget.open{transform:translateX(0)}
+.aria-chat-hdr{flex-shrink:0;background:var(--bg-3);border-bottom:1px solid var(--border);padding:.9rem 1.1rem;display:flex;align-items:center;justify-content:space-between}
 .aria-chat-hdr-left{display:flex;align-items:center;gap:.65rem}
 .aria-chat-av{width:30px;height:30px;border-radius:50%;background:rgba(0,194,255,.12);border:1px solid rgba(0,194,255,.3);display:flex;align-items:center;justify-content:center}
 .aria-chat-name{font-family:var(--fd);font-size:.82rem;font-weight:600;color:var(--text)}
 .aria-chat-status{font-size:.65rem;color:var(--green);display:flex;align-items:center;gap:4px}
 .aria-chat-close{background:none;border:none;color:var(--text-3);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .2s;line-height:1}
 .aria-chat-close:hover{color:var(--text)}
-.aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;flex:1;min-height:120px;max-height:340px;overflow-y:auto}
-.aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55}
+.aria-chat-msgs{padding:1rem;display:flex;flex-direction:column;gap:.65rem;flex:1;min-height:0;overflow-y:auto}
+.aria-msg{max-width:85%;padding:.55rem .85rem;border-radius:10px;font-size:.82rem;line-height:1.55;overflow-wrap:anywhere;word-break:break-word}
 .aria-msg-bot{background:var(--bg-3);color:var(--text-2);align-self:flex-start;border-bottom-left-radius:3px}
 .aria-msg-user{background:rgba(0,194,255,.12);color:var(--text);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid rgba(0,194,255,.2)}
-.aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative}
+.aria-chat-input-row{flex-shrink:0;display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--bg-3);position:relative}
 .aria-chat-input{flex:1;background:var(--bg-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
 .aria-chat-input:focus{border-color:var(--accent)}
 .aria-chat-input::placeholder{color:var(--text-3)}
 .aria-send-btn{background:var(--accent);color:#04121f;border:none;border-radius:8px;padding:.5rem .85rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:var(--fd);transition:opacity .2s}
 .aria-send-btn:hover{opacity:.85}
-.aria-trigger-btn{background:var(--accent);color:#04121f;border:none;border-radius:100px;padding:.7rem 1.35rem;font-family:var(--fd);font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:.55rem;box-shadow:0 8px 30px rgba(0,194,255,.35);transition:transform .2s,box-shadow .2s}
-.aria-trigger-btn:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,194,255,.45)}
-.aria-trigger-pulse{width:8px;height:8px;border-radius:50%;background:rgba(4,18,31,.5);animation:pulse-dot 1.5s ease-in-out infinite}
-@media(max-width:900px){.aria-chat-box{width:calc(100vw - 3rem)}.aria-widget{right:1rem;bottom:1rem}.aria-widget.toast-active{bottom:5.5rem}}
+.toast.shift-for-aria{right:calc(380px + 1.75rem)}
+@media(max-width:900px){.aria-widget{width:100%}.main.aria-open{margin-right:0}.toast.shift-for-aria{right:1.75rem}}
 
 /* CONTEXT MENU */
 .ctx-menu{position:fixed;z-index:800;background:var(--bg-2);border:1px solid var(--border-light);border-radius:10px;box-shadow:var(--shadow);padding:.35rem;min-width:180px;display:none}
@@ -475,6 +491,10 @@ input:checked + .slider::before{transform:translateX(18px)}
         <button class="icon-btn" onclick="toggleGlobalSearch()" aria-label="Search everything">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
+        <button class="icon-btn" onclick="toggleAriaChat()" aria-label="Ask ARIA — online" id="aria-toggle-btn" title="ARIA is available">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <span class="aria-avail-badge" id="aria-avail-badge" style="display:none"></span>
+        </button>
         <button class="icon-btn" onclick="toggleNotifPanel()" aria-label="Notifications">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span class="dot-badge" id="topbar-notif-dot" style="display:none"></span>
@@ -572,6 +592,13 @@ input:checked + .slider::before{transform:translateX(18px)}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-contact-info">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-hdr"><div class="modal-title">Contact</div><button class="modal-close" onclick="closeModal('modal-contact-info')">✕</button></div>
+    <div id="contact-info-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><div class="toast-accent" id="toast-accent"></div><div id="toast-msg"></div></div>
 
 <!-- CONTEXT MENU (chat rows) -->
@@ -582,35 +609,35 @@ input:checked + .slider::before{transform:translateX(18px)}
   <div class="ctx-item" id="ctx-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Mark as Done</div>
 </div>
 
-<!-- ARIA WIDGET -->
+<!-- ASSIGN CONVERSATION MENU (chat panel header) -->
+<div class="ctx-menu" id="chat-assign-menu"></div>
+<!-- CHAT PANEL OVERFLOW MENU (chat panel header ⋯) -->
+<div class="ctx-menu" id="chat-overflow-menu"></div>
+
+<!-- ARIA PANEL (docked right-hand side) -->
 <div class="aria-widget" id="aria-widget">
-  <div class="aria-chat-box" id="aria-chat-box">
-    <div class="aria-chat-hdr">
-      <div class="aria-chat-hdr-left">
-        <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
-        <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status" id="aria-scope-status"><span class="live-dot"></span>Online</div></div>
-      </div>
-      <div style="display:flex;align-items:center;gap:2px">
-        <button class="aria-chat-close" onclick="clearAriaConversation()" title="Clear conversation">🗑</button>
-        <button class="aria-chat-close" onclick="toggleAriaChat()">✕</button>
-      </div>
+  <div class="aria-chat-hdr">
+    <div class="aria-chat-hdr-left">
+      <div class="aria-chat-av"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+      <div><div class="aria-chat-name">ARIA</div><div class="aria-chat-status" id="aria-scope-status"><span class="live-dot"></span>Online</div></div>
     </div>
-    <div class="aria-chat-msgs" id="aria-msgs">
-      <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
-    </div>
-    <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
-    <div class="aria-chat-input-row">
-      <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
-      <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
-      <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
-      <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
-      <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
-      <div class="emoji-pop" id="emoji-pop-aria-input"></div>
+    <div style="display:flex;align-items:center;gap:2px">
+      <button class="aria-chat-close" onclick="clearAriaConversation()" title="Clear conversation">🗑</button>
+      <button class="aria-chat-close" onclick="toggleAriaChat()" title="Close panel">✕</button>
     </div>
   </div>
-  <button class="aria-trigger-btn" onclick="toggleAriaChat()">
-    <span class="aria-trigger-pulse"></span> Ask ARIA
-  </button>
+  <div class="aria-chat-msgs" id="aria-msgs">
+    <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
+  </div>
+  <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
+  <div class="aria-chat-input-row">
+    <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
+    <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
+    <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
+    <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+    <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
+    <div class="emoji-pop" id="emoji-pop-aria-input"></div>
+  </div>
 </div>
 
 <script>
@@ -621,14 +648,34 @@ let _sb=null, sbUser=null;
 
 const _sbScript=document.createElement('script');
 _sbScript.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-_sbScript.onload=()=>{ try{ _sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); boot(); }catch(e){ authFail(); } };
+// supabase-js only ever puts a generic "Edge Function returned a non-2xx
+// status code" on error.message for a failed function call — the real
+// {error:"..."} body the function actually sent back only lives on
+// error.context, the raw Response. Wrapping invoke() once here means every
+// call site's existing `error.message` / `data.error` handling just works,
+// instead of needing this unwrap repeated at each of the ~30 call sites.
+function wrapFunctionsInvoke(sb){
+  const rawInvoke=sb.functions.invoke.bind(sb.functions);
+  sb.functions.invoke=async(name,opts)=>{
+    const res=await rawInvoke(name,opts);
+    if(res.error&&res.error.context&&typeof res.error.context.json==='function'){
+      try{
+        const body=await res.error.context.clone().json();
+        if(body&&body.error)res.error=new Error(body.error);
+      }catch(_e){}
+    }
+    return res;
+  };
+  return sb;
+}
+_sbScript.onload=()=>{ try{ _sb=wrapFunctionsInvoke(window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)); boot(); }catch(e){ authFail(); } };
 _sbScript.onerror=()=>authFail();
 document.head.appendChild(_sbScript);
 function authFail(){ document.getElementById('auth-gate-text').textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.'; }
 
 async function boot(){
   const {data:{session}}=await _sb.auth.getSession();
-  if(!session){ window.location.href='home.html'; return; }
+  if(!session){ window.location.href='/home'; return; }
   // A signed-in session that hasn't completed its 2FA (AAL2) challenge yet
   // must not reach the dashboard — bounce back to the login page's code step.
   // Wrapped defensively: if this check itself fails for any reason, fail
@@ -636,7 +683,7 @@ async function boot(){
   try{
     const {data:aal}=await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
     if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
-      window.location.href='home.html#login'; return;
+      window.location.href='/home#login'; return;
     }
   }catch(e){}
   sbUser=session.user;
@@ -671,6 +718,7 @@ async function boot(){
   if(currentUser.isStaff)await loadStaffCompanies();
   renderShell();
   initAriaScope();
+  if(window.innerWidth>900)toggleAriaChat();
   showSection('pulse');
   document.getElementById('auth-gate').style.display='none';
   document.getElementById('app').classList.add('ready');
@@ -1010,6 +1058,10 @@ async function loadRemoteData(){
     _zoomConnection=zc||null;
   }catch(e){ _zoomConnection=null; }
   try{
+    const {data:trc}=await _sb.from('client_trello_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _trelloConnection=trc||null;
+  }catch(e){ _trelloConnection=null; }
+  try{
     const {data:gcc}=await _sb.from('client_googlecalendar_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
     _googleCalendarConnection=gcc||null;
   }catch(e){ _googleCalendarConnection=null; }
@@ -1074,7 +1126,11 @@ function chatFromConversation(c,allMsgs){
     owner:ownerMember?ownerMember.name:(c.ai_handled?'ARIA':'Unassigned'),
     last:transcript.length?transcript[transcript.length-1].text:(draft?'Draft ready — needs review':'No messages yet'),
     messages:transcript,
-    ariaDraft:draft?draft.content:null
+    ariaDraft:draft?draft.content:null,
+    createdAt:c.created_at||null,
+    resolvedAt:c.resolved_at||null,
+    aiHandled:!!c.ai_handled,
+    escalatedTo:c.escalated_to||null
   };
 }
 async function refreshChatMessages(c){
@@ -1087,13 +1143,14 @@ async function refreshChatMessages(c){
       if(_activeChatId===c.id){
         const wrap=document.getElementById('chat-panel-wrap'); if(wrap)wrap.innerHTML=renderChatPanel(c);
         const scroll=document.getElementById('chat-msgs-scroll'); if(scroll)scroll.scrollTop=scroll.scrollHeight;
+        loadAriaSuggestions(c);
       }else{
-        const w=document.getElementById('chat-list-wrap'); if(w){w.innerHTML=chatListHtml();wireChatList();}
+        const w=document.getElementById('chat-list-rows'); if(w){w.innerHTML=chatListHtml();wireChatList();}
       }
     }
   }catch(e){}
 }
-async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='home.html'; }
+async function doLogout(){ if(_sb) await _sb.auth.signOut(); window.location.href='/home'; }
 
 // ─── THEME ───────────────────────────────────────────────
 // The server-stored value (user_profiles.links.theme) is the source of
@@ -1129,6 +1186,7 @@ let _livechatConnection=null;
 let _hubspotConnection=null;
 let _slackConnection=null;
 let _zoomConnection=null;
+let _trelloConnection=null;
 let _googleCalendarConnection=null;
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
@@ -1172,7 +1230,8 @@ function defaultState(){
       {key:'slack',name:'Slack',desc:'Mirror your Supanta notifications into a Slack channel.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Start an instant video call with a customer straight from a chat.',color:'#2D8CFF',connected:false},
       {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false},
-      {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false}
+      {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false},
+      {key:'trello',name:'Trello',desc:'Send a conversation to a Trello board so your team can track it as a card.',color:'#0079BF',connected:false}
     ],
     notifications:[],
     kbDocs:[
@@ -1267,12 +1326,14 @@ function showSection(key){
 }
 function renderSection(){
   const m=document.getElementById('main-content');
+  m.classList.toggle('content-tight',currentSection==='chats');
   const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,appointments:renderAppointments,integrations:renderIntegrations,notifications:renderNotifications,settings:renderSettings};
   m.innerHTML=(fns[currentSection]||(()=>''))();
   if(currentSection==='chats')wireChatList();
   if(currentSection==='tickets')wireKanban();
   if(currentSection==='settings'&&_settingsTab==='security')refreshMfaStatus();
   if(currentSection==='integrations'&&_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
+  if(currentSection==='integrations'&&_trelloConnection&&_trelloConnection.status==='connected')loadTrelloBoardsIntoSelect();
 }
 function initialsOf(name){return (name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 function avatarHtml(name,color,size){size=size||30;return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*.32}px;background-color:${color||'var(--accent)'};color:#04121f">${initialsOf(name)}</div>`;}
@@ -1306,7 +1367,7 @@ function renderPulse(){
   <div class="card"><div class="card-title">Welcome back, ${fn}</div><p style="color:var(--text-3);font-size:.85rem;line-height:1.7">Here's a snapshot of how things are running today. Head to Chats or Tickets to jump into live work, or grab a full report below.</p></div>
   <div class="card">
     <div class="chart-card-hd">
-      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's chats vs. tickets ARIA closed on its own</div></div>
+      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's conversations vs. those ARIA resolved without escalating to a human</div></div>
       ${pulseChartActions('conversations')}
     </div>
     ${_pulseView.conversations==='table'?dataTableHtml('conversations'):renderConversationsChart()}
@@ -1346,17 +1407,42 @@ function moveChartTip(evt){
 function hideChartTip(){const tip=document.getElementById('chart-tip'); if(tip)tip.style.display='none';}
 
 // ─── PULSE CHART DATA (shared by the SVG chart, the table view, and CSV export) ───
+// Real trailing-7-day buckets from each conversation's actual timestamps —
+// not a fabricated shape scaled off today's totals.
+function last7DayBuckets(){
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
+    days.push(d);
+  }
+  return days;
+}
+function dayBucketLabel(d,isToday){
+  return isToday?'Today':d.toLocaleDateString(undefined,{weekday:'short'});
+}
 function getConversationsChartData(){
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
-  const shape=[.5,.64,.56,.78,.7,.9,1];
-  const base=STATE.chats.length;
-  return shape.map((f,i)=>({label:days[i],v:Math.round(f*base)}));
+  const days=last7DayBuckets();
+  return days.map((d,i)=>{
+    const next=new Date(d); next.setDate(d.getDate()+1);
+    const v=STATE.chats.filter(c=>{
+      if(!c.createdAt)return false;
+      const t=new Date(c.createdAt).getTime();
+      return t>=d.getTime()&&t<next.getTime();
+    }).length;
+    return {label:dayBucketLabel(d,i===days.length-1),v};
+  });
 }
 function getAriaClosedChartData(){
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
-  const shape=[.35,.48,.4,.6,.52,.75,1];
-  const base=STATE.tickets.filter(t=>listKind(t.status)==='done'&&t.owner==='ARIA').length;
-  return shape.map((f,i)=>({label:days[i],v:Math.round(f*base)}));
+  const days=last7DayBuckets();
+  return days.map((d,i)=>{
+    const next=new Date(d); next.setDate(d.getDate()+1);
+    const v=STATE.chats.filter(c=>{
+      if(!c.aiHandled||c.escalatedTo||!c.resolvedAt)return false;
+      const t=new Date(c.resolvedAt).getTime();
+      return t>=d.getTime()&&t<next.getTime();
+    }).length;
+    return {label:dayBucketLabel(d,i===days.length-1),v};
+  });
 }
 function getTicketStatusData(){
   return [
@@ -1408,34 +1494,30 @@ function renderConversationsChart(){
   const w=760,h=180,pad={t:14,r:16,b:26,l:16};
   const innerW=w-pad.l-pad.r,innerH=h-pad.t-pad.b;
   const max=Math.max(...data.map(d=>d.v),...ariaData.map(d=>d.v),1);
-  const stepX=innerW/(data.length-1);
-  const toPts=series=>series.map((d,i)=>[pad.l+i*stepX, pad.t+innerH-(d.v/max)*innerH]);
-  const toLine=pts=>pts.map((p,i)=>(i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
-  const pts=toPts(data);
-  const line=toLine(pts);
-  const area=line+` L${pts[pts.length-1][0].toFixed(1)},${(pad.t+innerH).toFixed(1)} L${pts[0][0].toFixed(1)},${(pad.t+innerH).toFixed(1)} Z`;
-  const ariaPts=toPts(ariaData);
-  const ariaLine=toLine(ariaPts);
-  const grid=[0,.5,1].map(f=>{const y=(pad.t+innerH*f).toFixed(1);return `<line x1="${pad.l}" y1="${y}" x2="${w-pad.r}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;}).join('');
-  const dots=pts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="var(--bg-2)" stroke="var(--accent)" stroke-width="2" style="cursor:pointer" onmouseenter="showChartTip(event,'${data[i].label}: ${data[i].v} conversations')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`).join('');
-  const ariaDots=ariaPts.map((p,i)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--bg-2)" stroke="var(--accent-2)" stroke-width="2" style="cursor:pointer" onmouseenter="showChartTip(event,'${ariaData[i].label}: ${ariaData[i].v} closed by ARIA')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`).join('');
-  const labels=data.map((d,i)=>`<text x="${pts[i][0].toFixed(1)}" y="${h-6}" font-size="10" fill="var(--text-3)" text-anchor="middle">${d.label}</text>`).join('');
+  const n=data.length;
+  const slotW=innerW/n;
+  const barW=Math.min(22,slotW*.32);
+  const gap=4;
+  const grid=[pad.t,pad.t+innerH/2,pad.t+innerH].map(y=>`<line x1="${pad.l}" y1="${y.toFixed(1)}" x2="${w-pad.r}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`).join('');
+  let bars='',labels='';
+  for(let i=0;i<n;i++){
+    const slotCx=pad.l+slotW*i+slotW/2;
+    const x1=slotCx-gap/2-barW, x2=slotCx+gap/2;
+    const v1=data[i].v, v2=ariaData[i].v;
+    const h1=Math.max((v1/max)*innerH,v1>0?2:0), h2=Math.max((v2/max)*innerH,v2>0?2:0);
+    const y1=pad.t+innerH-h1, y2=pad.t+innerH-h2;
+    bars+=`<rect x="${x1.toFixed(1)}" y="${y1.toFixed(1)}" width="${barW.toFixed(1)}" height="${h1.toFixed(1)}" rx="3" fill="var(--accent)" style="cursor:pointer" onmouseenter="showChartTip(event,'${data[i].label}: ${v1} conversation${v1===1?'':'s'}')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`;
+    bars+=`<rect x="${x2.toFixed(1)}" y="${y2.toFixed(1)}" width="${barW.toFixed(1)}" height="${h2.toFixed(1)}" rx="3" fill="var(--accent-2)" style="cursor:pointer" onmouseenter="showChartTip(event,'${ariaData[i].label}: ${v2} closed by ARIA')" onmousemove="moveChartTip(event)" onmouseleave="hideChartTip()"/>`;
+    labels+=`<text x="${slotCx.toFixed(1)}" y="${h-6}" font-size="10" fill="var(--text-3)" text-anchor="middle">${data[i].label}</text>`;
+  }
   return `
   <div class="chart-legend">
     <span class="chart-legend-item"><span class="legend-dot" style="background:var(--accent)"></span>All Conversations</span>
     <span class="chart-legend-item"><span class="legend-dot" style="background:var(--accent-2)"></span>Closed by ARIA</span>
   </div>
   <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" style="overflow:visible;display:block">
-    <defs><linearGradient id="pulseAreaGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="var(--accent)" stop-opacity=".32"/>
-      <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
-    </linearGradient></defs>
     ${grid}
-    <path d="${area}" fill="url(#pulseAreaGrad)"/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${ariaLine}" fill="none" stroke="var(--accent-2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>
-    ${dots}
-    ${ariaDots}
+    ${bars}
     ${labels}
   </svg>`;
 }
@@ -1570,7 +1652,7 @@ async function addTeamMember(){
   const btn=document.querySelector('#modal-add-member .btn-acc');
   if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
   try{
-    const redirectTo=window.location.origin+window.location.pathname.replace(/app\.html$/,'home.html');
+    const redirectTo=window.location.origin+'/home';
     const {data,error}=await _sb.functions.invoke('invite-team-member',{body:{email,full_name:name,job_title:role,redirect_to:redirectTo}});
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     closeModal('modal-add-member');
@@ -1626,17 +1708,19 @@ function renderChats(){
   const list=chatFilteredList();
   if(!_activeChatId||!list.find(c=>c.id===_activeChatId))_activeChatId=list[0]?list[0].id:null;
   return `
-  <div class="tabs">
-    ${['active','archived','done'].map(t=>`<button class="tab-btn ${t===_chatTab?'active':''}" onclick="setChatTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
-  </div>
   <div style="font-size:.7rem;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;font-weight:700;margin-bottom:.5rem">All channels, one inbox</div>
   <div class="tabs" style="margin-bottom:1rem;padding-bottom:0;border-bottom:none">
     <button class="tab-btn ${_chatChannel==='all'?'active':''}" onclick="setChatChannel('all')">All</button>
     ${CHAT_CHANNELS.map(ch=>`<button class="tab-btn ${_chatChannel===ch?'active':''}" onclick="setChatChannel('${ch}')">${INT_ICONS[ch.toLowerCase()]||''} ${ch}</button>`).join('')}
   </div>
   <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
-  <div class="chat-layout">
-    <div class="chat-list" id="chat-list-wrap">${chatListHtml(list)}</div>
+  <div class="chat-layout" id="chat-layout-wrap">
+    <div class="chat-list" id="chat-list-wrap">
+      <div class="chat-list-tabs">
+        ${['active','archived','done'].map(t=>`<button class="tab-btn ${t===_chatTab?'active':''}" onclick="setChatTab('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}
+      </div>
+      <div id="chat-list-rows">${chatListHtml(list)}</div>
+    </div>
     <div id="chat-panel-wrap">${renderChatPanel(list.find(c=>c.id===_activeChatId))}</div>
   </div>`;
 }
@@ -1646,10 +1730,12 @@ function chatListHtml(list){
   if(!list.length)return '<div class="empty-state">No chats match.</div>';
   return list.map(c=>`
         <div class="chat-row ${c.id===_activeChatId?'active':''}" data-id="${c.id}" oncontextmenu="openChatCtxMenu(event,'${c.id}')">
-          ${avatarHtml(c.customer,'#1a2d47',36)}
+          <div class="chat-avatar-wrap">
+            ${avatarHtml(c.customer,'#1a2d47',36)}
+            <div class="chat-channel-badge" style="background:${channelBrandColor(c.channel)}" title="${escapeHtml(c.channel)}">${channelIconSvg(c.channel,9)}</div>
+          </div>
           <div class="chat-row-body">
             <div class="chat-row-name">${escapeHtml(c.customer)}</div>
-            <div class="chat-row-channel"><span class="chan-pill">${INT_ICONS[c.channel.toLowerCase()]||''} ${escapeHtml(c.channel)}</span></div>
             <div class="chat-row-msg">${escapeHtml(c.last)}</div>
           </div>
         </div>`).join('');
@@ -1659,7 +1745,7 @@ function filterChats(v){
   _chatSearch=v;
   const list=chatFilteredList();
   if(!_activeChatId||!list.find(c=>c.id===_activeChatId))_activeChatId=list[0]?list[0].id:null;
-  document.getElementById('chat-list-wrap').innerHTML=chatListHtml(list);
+  document.getElementById('chat-list-rows').innerHTML=chatListHtml(list);
   document.getElementById('chat-panel-wrap').innerHTML=renderChatPanel(list.find(c=>c.id===_activeChatId));
   wireChatList();
   refocusSearch('chat-search');
@@ -1668,7 +1754,20 @@ function wireChatList(){
   document.querySelectorAll('.chat-row').forEach(row=>{
     row.addEventListener('click',()=>{ _activeChatId=row.dataset.id; renderSection(); });
   });
+  fitChatLayout();
+  const active=STATE.chats.find(c=>c.id===_activeChatId);
+  if(active)loadAriaSuggestions(active);
 }
+// Sizes the list+thread grid to exactly fill the remaining viewport below it,
+// so the page itself never scrolls — only the conversation list and the
+// message thread scroll internally, each within their own fixed-height box.
+function fitChatLayout(){
+  const wrap=document.getElementById('chat-layout-wrap');
+  if(!wrap)return;
+  const top=wrap.getBoundingClientRect().top;
+  wrap.style.height=Math.max(360,window.innerHeight-top-24)+'px';
+}
+window.addEventListener('resize',()=>{ if(currentSection==='chats')fitChatLayout(); });
 // The agent who actually handled it (not a generic "Agent" label) — same
 // path for a live chat reply and a call transcript line, since a call is
 // just a chat on the Phone channel under the hood.
@@ -1703,33 +1802,57 @@ function messageHtml(m,c){
 function escapeHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-function ariaSuggestions(c){
-  if(c.ariaDraft)return [c.ariaDraft];
+// Reply suggestions are generated by the suggest-reply edge function from
+// the real conversation transcript + this client's knowledge base — not
+// guessed from keywords — so they're grounded in what the customer actually
+// said. Cached per chat+last-message so switching chats or getting a new
+// message refetches, but re-rendering the same state (e.g. typing) doesn't.
+let _suggestCache={}; // chatId -> {key, suggestions:[]|null (null = loading)}
+let _dismissedSuggestChats={}; // chatId -> the cache key it was dismissed at
+function suggestionCacheKey(c){
+  const last=c.messages&&c.messages.length?c.messages[c.messages.length-1]:null;
+  return (last?last.time+'|'+(last.text||'').length:'empty')+'|'+c.messages.length;
+}
+async function loadAriaSuggestions(c){
+  const key=suggestionCacheKey(c);
+  // A dismiss only sticks for the message state it was dismissed at — a genuinely
+  // new customer message afterward re-earns a suggestion, it doesn't stay hidden forever.
+  if(_dismissedSuggestChats[c.id]!==key)delete _dismissedSuggestChats[c.id];
+  if(c.ariaDraft){ renderSuggestWrap(c.id,[c.ariaDraft]); return; }
   const last=[...c.messages].reverse().find(m=>m.who==='customer');
-  const text=(last?last.text:'').toLowerCase();
-  if(/refund|charge|billing|duplicate|invoice/.test(text))return [
-    "I'm sorry about that — I can see the duplicate charge and I'm processing a refund now, it should reflect in 3-5 business days.",
-    "Let me pull up your billing history to confirm — one moment.",
-    "I've flagged this to our billing specialist, they'll follow up shortly."
-  ];
-  if(/order|ship|status|track|deliver/.test(text))return [
-    "Let me check your order status — one moment.",
-    "Your order has shipped and is on its way, I'll share the tracking link.",
-    "Apologies for the delay — I'll escalate this for expedited shipping."
-  ];
-  if(/cancel|unsubscribe/.test(text))return [
-    "I can help with that cancellation — can you confirm the account email?",
-    "I've processed the cancellation, you'll receive a confirmation email shortly."
-  ];
-  if(/stock|available|back in stock/.test(text))return [
-    "Yes, that item is back in stock — want me to send the link?",
-    "Let me check current stock levels for you."
-  ];
-  return [
-    "Thanks for reaching out — let me look into that for you.",
-    "Could you share a bit more detail so I can help faster?",
-    "I've noted this and I'm following up now."
-  ];
+  if(!last||!c.dbId){ renderSuggestWrap(c.id,[]); return; }
+  const cached=_suggestCache[c.id];
+  if(cached&&cached.key===key){ renderSuggestWrap(c.id,cached.suggestions); return; }
+  _suggestCache[c.id]={key,suggestions:null};
+  renderSuggestWrap(c.id,null);
+  try{
+    const {data,error}=await _sb.functions.invoke('suggest-reply',{body:{conversation_id:c.dbId}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const suggestions=Array.isArray(data.suggestions)?data.suggestions:[];
+    _suggestCache[c.id]={key,suggestions};
+    if(_activeChatId===c.id)renderSuggestWrap(c.id,suggestions);
+  }catch(e){
+    _suggestCache[c.id]={key,suggestions:[]};
+    if(_activeChatId===c.id)renderSuggestWrap(c.id,[]);
+  }
+}
+function renderSuggestWrap(chatId,suggestions){
+  const el=document.getElementById('suggest-wrap-'+chatId);
+  if(!el||_dismissedSuggestChats[chatId]!==undefined){ if(el)el.style.display='none'; return; }
+  if(suggestions===null){
+    el.style.display='block';
+    el.querySelector('.suggest-chips').innerHTML='<span style="font-size:.78rem;color:var(--text-3)">Thinking of replies…</span>';
+    return;
+  }
+  if(!suggestions.length){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.querySelector('.suggest-chips').innerHTML=suggestions.map(s=>`<button class="suggest-chip" onclick="useSuggestion(this)">${escapeHtml(s)}</button>`).join('');
+}
+function dismissSuggestions(chatId){
+  const cached=_suggestCache[chatId];
+  _dismissedSuggestChats[chatId]=cached?cached.key:'';
+  const el=document.getElementById('suggest-wrap-'+chatId);
+  if(el)el.style.display='none';
 }
 function useSuggestion(el){
   const inp=document.getElementById('reply-input');
@@ -1739,24 +1862,24 @@ function useSuggestion(el){
 }
 function renderChatPanel(c){
   if(!c)return '<div class="chat-panel"><div class="empty-state" style="margin:auto">Select a conversation</div></div>';
-  const suggestions=ariaSuggestions(c);
   return `
   <div class="chat-panel">
     <div class="chat-panel-hd">
-      <div><div style="font-weight:600;font-size:.9rem">${escapeHtml(c.customer)}</div><div style="font-size:.72rem;color:var(--text-3)">${escapeHtml(c.channel)} · Owner: ${escapeHtml(c.owner)} · ${escapeHtml(c.id)}</div></div>
-      <div style="display:flex;gap:.5rem">
-        ${c.dbId&&_googleCalendarConnection&&_googleCalendarConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="openScheduleMeetingModal('${c.dbId}')">Schedule meeting</button>`:''}
-        ${c.dbId&&_zoomConnection&&_zoomConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="startZoomCall('${c.dbId}')">Start Zoom call</button>`:''}
-        ${c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected'?`<button class="btn btn-ghost btn-sm" onclick="syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</button>`:''}
-        <button class="btn btn-ghost btn-sm" onclick="downloadChat('${c.id}')">Download Transcript</button>
+      <div>
+        <div class="chat-panel-hd-name">${escapeHtml(c.customer)}</div>
+        <div class="chat-assign-trigger" onclick="openAssignMenu(event,'${c.id}')">${c.owner==='Unassigned'?'Assign this conversation':'Assigned to '+escapeHtml(c.owner)} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+      </div>
+      <div class="chat-panel-hd-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openContactInfo('${c.id}')">See contact</button>
+        <button class="chat-overflow-btn" onclick="openChatOverflowMenu(event,'${c.id}')" title="More">⋯</button>
       </div>
     </div>
     <div class="chat-msgs" id="chat-msgs-scroll">
       ${c.messages.map(m=>messageHtml(m,c)).join('')}
     </div>
-    <div class="suggest-wrap">
-      <div class="suggest-lbl">✨ ARIA suggests</div>
-      <div class="suggest-chips">${suggestions.map(s=>`<button class="suggest-chip" onclick="useSuggestion(this)">${escapeHtml(s)}</button>`).join('')}</div>
+    <div class="suggest-wrap" id="suggest-wrap-${c.id}" style="display:none">
+      <div class="suggest-lbl">✨ ARIA suggests <button class="suggest-close" onclick="dismissSuggestions('${c.id}')" title="Dismiss">✕</button></div>
+      <div class="suggest-chips"></div>
     </div>
     <div id="reply-img-preview-wrap"></div>
     <div class="reply-row">
@@ -2645,6 +2768,7 @@ const CHANNEL_ICON_PATHS={
   zoom:'<path d="M5.033 14.649H.743a.74.74 0 0 1-.686-.458.74.74 0 0 1 .16-.808L3.19 10.41H1.06A1.06 1.06 0 0 1 0 9.35h3.957c.301 0 .57.18.686.458a.74.74 0 0 1-.161.808L1.51 13.59h2.464c.585 0 1.06.475 1.06 1.06zM24 11.338c0-1.14-.927-2.066-2.066-2.066-.61 0-1.158.265-1.537.686a2.061 2.061 0 0 0-1.536-.686c-1.14 0-2.066.926-2.066 2.066v3.311a1.06 1.06 0 0 0 1.06-1.06v-2.251a1.004 1.004 0 0 1 2.013 0v2.251c0 .586.474 1.06 1.06 1.06v-3.311a1.004 1.004 0 0 1 2.012 0v2.251c0 .586.475 1.06 1.06 1.06zM16.265 12a2.728 2.728 0 1 1-5.457 0 2.728 2.728 0 0 1 5.457 0zm-1.06 0a1.669 1.669 0 1 0-3.338 0 1.669 1.669 0 0 0 3.338 0zm-4.82 0a2.728 2.728 0 1 1-5.458 0 2.728 2.728 0 0 1 5.457 0zm-1.06 0a1.669 1.669 0 1 0-3.338 0 1.669 1.669 0 0 0 3.338 0z"/>',
   googlecalendar:'<path d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"/>',
   hubspot:'<path d="M18.164 7.93V5.084a2.198 2.198 0 001.267-1.978v-.067A2.2 2.2 0 0017.238.845h-.067a2.2 2.2 0 00-2.193 2.193v.067a2.196 2.196 0 001.252 1.973l.013.006v2.852a6.22 6.22 0 00-2.969 1.31l.012-.01-7.828-6.095A2.497 2.497 0 104.3 4.656l-.012.006 7.697 5.991a6.176 6.176 0 00-1.038 3.446c0 1.343.425 2.588 1.147 3.607l-.013-.02-2.342 2.343a1.968 1.968 0 00-.58-.095h-.002a2.033 2.033 0 102.033 2.033 1.978 1.978 0 00-.1-.595l.005.014 2.317-2.317a6.247 6.247 0 104.782-11.134l-.036-.005zm-.964 9.378a3.206 3.206 0 113.215-3.207v.002a3.206 3.206 0 01-3.207 3.207z"/>',
+  trello:'<path d="M21.147 0H2.853A2.86 2.86 0 000 2.853v18.294A2.86 2.86 0 002.853 24h18.294A2.86 2.86 0 0024 21.147V2.853A2.86 2.86 0 0021.147 0zM10.34 17.287a.953.953 0 01-.953.953h-4a.954.954 0 01-.954-.953V5.38a.953.953 0 01.954-.953h4a.954.954 0 01.953.953zm9.233-5.467a.944.944 0 01-.953.947h-4a.947.947 0 01-.953-.947V5.38a.953.953 0 01.953-.953h4a.954.954 0 01.953.953z"/>',
   google:'<path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>',
   // Generic (non-brand) glyphs — used where the integration is a category/protocol
   // rather than a single company's mark (SMS, a live-chat widget), or where the
@@ -2690,7 +2814,7 @@ function intGridHtml(){
   const list=STATE.integrations.filter(i=>!q||i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q));
   if(!list.length)return '<div class="empty-state">No integrations match your search.</div>';
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):i.key==='googlecalendar'?googleCalendarIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='telegram'?telegramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):i.key==='slack'?slackIntegrationCardHtml(i):i.key==='zoom'?zoomIntegrationCardHtml(i):i.key==='googlecalendar'?googleCalendarIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -3210,11 +3334,124 @@ async function cancelAppointment(id){
     toast('Could not cancel — '+(e.message||e),'var(--danger)');
   }
 }
+function trelloIntegrationCardHtml(i){
+  const conn=_trelloConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    ${isConnected?`
+      <div class="int-desc">${conn.list_name?`Sending cards to <strong>${escapeHtml(conn.board_name||'')} / ${escapeHtml(conn.list_name)}</strong>.`:'Pick a board, then a list, to send cards to:'}</div>
+      <select class="rb-select" id="trello-board-select" onchange="onTrelloBoardChange(this)"><option value="">Loading boards…</option></select>
+      <select class="rb-select" id="trello-list-select" onchange="setTrelloList(this)" style="display:none"><option value="">Select a list…</option></select>
+      <button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectTrello()">Disconnect</button>
+    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTrelloConnectModal()">Connect</button>`}
+  </div>`;
+}
+function openTrelloConnectModal(){
+  document.getElementById('ci-title').textContent='Connect Trello';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Get your API key from <a href="https://trello.com/power-ups/admin" target="_blank" rel="noopener" style="color:var(--accent)">trello.com/power-ups/admin</a> (create a Power-Up if you don't have one), then click "Token" on that same page to generate and copy a token. Paste both below.</p>
+    <div class="form-group"><label>API Key</label><input class="rb-input" id="trello-api-key"/></div>
+    <div class="form-group"><label>Token</label><input class="rb-input" type="password" id="trello-token"/></div>
+    <button class="btn btn-acc" style="width:100%" id="trello-submit" onclick="submitTrelloConnect()">Test &amp; Connect</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitTrelloConnect(){
+  const btn=document.getElementById('trello-submit');
+  const api_key=document.getElementById('trello-api-key').value.trim();
+  const token=document.getElementById('trello-token').value.trim();
+  if(!api_key||!token){toast('Fill in the API key and token','var(--danger)');return;}
+  btn.disabled=true;btn.textContent='Verifying with Trello…';
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-save-credentials',{body:{api_key,token}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('Trello connected','var(--green)');
+    closeModal('modal-connect-int');
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+    loadTrelloBoardsIntoSelect();
+  }catch(e){
+    toast(e.message||'Could not connect Trello','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function loadTrelloBoardsIntoSelect(){
+  const sel=document.getElementById('trello-board-select');
+  if(!sel||!_sb)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-list-boards',{body:{}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const current=_trelloConnection?.board_id;
+    sel.innerHTML='<option value="">Select a board…</option>'+(data.boards||[]).map(b=>`<option value="${b.id}" data-name="${escapeHtml(b.name)}" ${b.id===current?'selected':''}>${escapeHtml(b.name)}</option>`).join('');
+    if(current)onTrelloBoardChange(sel,true);
+  }catch(e){
+    sel.innerHTML='<option value="">Could not load boards</option>';
+  }
+}
+async function onTrelloBoardChange(sel,skipClear){
+  const opt=sel.selectedOptions[0];
+  const listSel=document.getElementById('trello-list-select');
+  if(!opt||!opt.value){ listSel.style.display='none'; return; }
+  listSel.style.display='block';
+  listSel.innerHTML='<option value="">Loading lists…</option>';
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-list-lists',{body:{board_id:opt.value}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const current=skipClear?_trelloConnection?.list_id:null;
+    listSel.dataset.boardId=opt.value;
+    listSel.dataset.boardName=opt.dataset.name;
+    listSel.innerHTML='<option value="">Select a list…</option>'+(data.lists||[]).map(l=>`<option value="${l.id}" data-name="${escapeHtml(l.name)}" ${l.id===current?'selected':''}>${escapeHtml(l.name)}</option>`).join('');
+  }catch(e){
+    listSel.innerHTML='<option value="">Could not load lists</option>';
+  }
+}
+async function setTrelloList(sel){
+  const opt=sel.selectedOptions[0];
+  if(!opt||!opt.value)return;
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-set-list',{body:{board_id:sel.dataset.boardId,board_name:sel.dataset.boardName,list_id:opt.value,list_name:opt.dataset.name}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast(`Now sending cards to ${sel.dataset.boardName} / ${opt.dataset.name}`,'var(--green)');
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+    loadTrelloBoardsIntoSelect();
+  }catch(e){
+    toast('Could not set list — '+(e.message||e),'var(--danger)');
+  }
+}
+async function disconnectTrello(){
+  if(!confirm('Disconnect Trello?'))return;
+  if(_trelloConnection&&_sb){
+    try{ await _sb.from('client_trello_connections').update({status:'disconnected'}).eq('id',_trelloConnection.id); }catch(e){}
+  }
+  _trelloConnection=null;
+  toast('Trello disconnected','var(--accent)');
+  renderSection();
+}
+async function sendConversationToTrello(conversationId){
+  if(!_sb)return;
+  toast('Sending to Trello…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('trello-create-card',{body:{conversation_id:conversationId}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast(data.updated?'Trello card updated':'Trello card created','var(--green)');
+  }catch(e){
+    toast('Could not send to Trello — '+(e.message||e),'var(--danger)');
+  }
+}
 function filterIntegrations(v){
   _intSearch=v;
   document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
   refocusSearch('int-search');
   if(_slackConnection&&_slackConnection.status==='connected')loadSlackChannelsIntoSelect();
+  if(_trelloConnection&&_trelloConnection.status==='connected')loadTrelloBoardsIntoSelect();
 }
 function toggleIntegration(key,checked,actor){
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
@@ -4038,18 +4275,19 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 function closeAllModals(){ document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); }
 document.addEventListener('click',e=>{ if(e.target.classList.contains('modal-overlay'))e.target.classList.remove('open'); });
-// Toast and the ARIA widget both sit bottom-right, so a visible toast would
-// otherwise sit right on top of the Ask ARIA button — raise the widget out
-// of the way for as long as the toast is showing.
-function setToastActive(active){
+// The ARIA panel docks along the right edge, so a bottom-right toast would
+// otherwise sit underneath it while the panel is open — shift the toast
+// left by the panel's width for as long as it's open.
+function ariaPanelOpen(){
   const w=document.getElementById('aria-widget');
-  if(w)w.classList.toggle('toast-active',active);
+  return !!(w&&w.classList.contains('open'));
 }
 function toast(msg,color){
   const t=document.getElementById('toast'),ta=document.getElementById('toast-accent'),tm=document.getElementById('toast-msg');
   ta.style.background=color||'var(--accent)'; tm.textContent=msg; tm.innerHTML=msg;
-  t.classList.add('show'); setToastActive(true); clearTimeout(window._toastTimer);
-  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); setToastActive(false); },3000);
+  t.classList.toggle('shift-for-aria',ariaPanelOpen());
+  t.classList.add('show'); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); },3000);
 }
 // Same toast, but with a clickable Undo action and a longer window to use it —
 // for cheap, safely-reversible changes (a status flip), not destructive ones.
@@ -4058,9 +4296,10 @@ function toastUndo(msg,color,undoFn){
   ta.style.background=color||'var(--accent)';
   const undoId='toast-undo-'+Date.now();
   tm.innerHTML=`<span>${msg}</span> <button id="${undoId}" class="btn btn-ghost btn-sm" style="margin-left:.5rem;padding:.15rem .55rem">Undo</button>`;
-  t.classList.add('show'); setToastActive(true); clearTimeout(window._toastTimer);
-  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); setToastActive(false); },6000);
-  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); setToastActive(false); clearTimeout(window._toastTimer); undoFn(); };
+  t.classList.toggle('shift-for-aria',ariaPanelOpen());
+  t.classList.add('show'); clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>{ t.classList.remove('show'); },6000);
+  document.getElementById(undoId).onclick=()=>{ t.classList.remove('show'); clearTimeout(window._toastTimer); undoFn(); };
 }
 
 // ─── ARIA WIDGET (calls the client-assistant Supabase Edge Function) ─────
@@ -4070,6 +4309,8 @@ function initAriaScope(){
   const inp=document.getElementById('aria-input');
   const btn=document.getElementById('aria-send-btn');
   const attachBtn=document.getElementById('aria-attach-btn');
+  const availBadge=document.getElementById('aria-avail-badge');
+  if(availBadge)availBadge.style.display=activeClientId()?'block':'none';
   if(activeClientId()){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>${co}`;
@@ -4101,8 +4342,9 @@ async function maybeSuggestMfa(){
   }catch(e){}
 }
 function toggleAriaChat(){
-  const b=document.getElementById('aria-chat-box');
+  const b=document.getElementById('aria-widget');
   b.classList.toggle('open');
+  document.querySelector('.main').classList.toggle('aria-open',b.classList.contains('open'));
   if(b.classList.contains('open')&&!document.getElementById('aria-input').disabled)document.getElementById('aria-input').focus();
 }
 let _ariaPendingFile=null;
@@ -4237,7 +4479,7 @@ function tryAriaAction(text,file){
   m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
   if(m){
     const wantConnect=m[1]==='connect'||m[1]==='enable'||m[1]==='turn on';
-    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot'};
+    const aliasMap={whatsapp:'whatsapp',email:'email',instagram:'instagram',x:'x',twitter:'x',facebook:'facebook',phone:'phone',telegram:'telegram',sms:'sms',livechat:'livechat',tiktok:'tiktok',slack:'slack',zoom:'zoom',googlecalendar:'googlecalendar',calendar:'googlecalendar',hubspot:'hubspot',trello:'trello'};
     const key=aliasMap[m[2].trim().replace(/\s+/g,'')];
     const i=key&&STATE.integrations.find(x=>x.key===key);
     if(i){
@@ -4294,6 +4536,18 @@ function ariaPlainHistory(){
     content:m.html.replace(/<[^>]+>/g,'').trim()
   })).filter(m=>m.content);
 }
+// supabase-js gives a generic "Edge Function returned a non-2xx status code"
+// for any failed function call — the real {error:"..."} body the function
+// actually sent back is only reachable via error.context, the raw Response.
+async function realFunctionError(error){
+  try{
+    if(error&&error.context&&typeof error.context.json==='function'){
+      const body=await error.context.clone().json();
+      if(body&&body.error)return new Error(body.error);
+    }
+  }catch(_e){}
+  return error instanceof Error?error:new Error((error&&error.message)||String(error));
+}
 async function sendAriaMsg(){
   if(!activeClientId()||!_sb)return;
   const inp=document.getElementById('aria-input');
@@ -4342,7 +4596,7 @@ async function sendAriaMsg(){
 
   try{
     const {data,error}=await _sb.functions.invoke('client-assistant',{body});
-    if(error)throw error;
+    if(error)throw await realFunctionError(error);
     if(data&&data.error)throw new Error(data.error);
     document.getElementById('aria-typing')?.remove();
     ariaAppend('bot',data.reply||"Sorry, I couldn't come up with a response just now.");
@@ -4353,7 +4607,8 @@ async function sendAriaMsg(){
     }
   }catch(e){
     document.getElementById('aria-typing')?.remove();
-    ariaAppend('bot',"Sorry, I'm having trouble connecting right now — try again shortly.");
+    const detail=(e&&e.message)?String(e.message):'';
+    ariaAppend('bot',`Sorry, something went wrong on my end${detail?' — '+escapeHtml(detail):''}. Try again in a moment.`);
   }
 }
 function fileToBase64(file){
@@ -4379,8 +4634,85 @@ function closeChatCtxMenu(){ document.getElementById('chat-ctx-menu').classList.
 document.getElementById('ctx-download').addEventListener('click',()=>{ if(_ctxChatId)downloadChat(_ctxChatId); closeChatCtxMenu(); });
 document.getElementById('ctx-archive').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'archived'); closeChatCtxMenu(); });
 document.getElementById('ctx-done').addEventListener('click',()=>{ if(_ctxChatId)setChatStatus(_ctxChatId,'done'); closeChatCtxMenu(); });
-document.addEventListener('click',e=>{ if(!e.target.closest('.ctx-menu'))closeChatCtxMenu(); });
-document.addEventListener('scroll',closeChatCtxMenu,true);
+document.addEventListener('click',e=>{ if(!e.target.closest('.ctx-menu')){closeChatCtxMenu();closeAllCtxMenus();} });
+document.addEventListener('scroll',closeAllCtxMenus,true);
+
+// ─── ASSIGN CONVERSATION (chat panel header) ─────────────
+function positionCtxMenu(menu,e){
+  const x=Math.min(e.clientX,window.innerWidth-220), y=Math.min(e.clientY,window.innerHeight-260);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+function openAssignMenu(e,chatId){
+  e.stopPropagation();
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  const menu=document.getElementById('chat-assign-menu');
+  const humans=STATE.team.filter(t=>t.type!=='agent');
+  const rows=[
+    `<div class="assign-menu-item ${c.owner==='ARIA'?'active':''}" onclick="assignConversation('${chatId}',null,'ARIA')">${avatarHtml('ARIA','#6b5bff',20)} ARIA</div>`,
+    ...humans.map(m=>`<div class="assign-menu-item ${c.owner===m.name?'active':''}" onclick="assignConversation('${chatId}','${m.dbId||''}','${escapeHtml(m.name).replace(/'/g,"\\'")}')">${avatarHtml(m.name,m.color,20)} ${escapeHtml(m.name)}</div>`),
+    `<div class="ctx-sep"></div>`,
+    `<div class="assign-menu-item ${c.owner==='Unassigned'?'active':''}" onclick="assignConversation('${chatId}',null,'Unassigned')">Unassign</div>`
+  ];
+  menu.innerHTML=rows.join('');
+  positionCtxMenu(menu,e);
+  document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
+  menu.classList.add('open');
+}
+async function assignConversation(chatId,teamDbId,displayName){
+  const c=STATE.chats.find(x=>x.id===chatId);
+  document.getElementById('chat-assign-menu').classList.remove('open');
+  if(!c)return;
+  c.owner=displayName;
+  if(c.dbId&&_sb){
+    try{ await _sb.from('conversations').update({escalated_to:teamDbId,ai_handled:displayName==='ARIA'}).eq('id',c.dbId); }
+    catch(e){}
+  }
+  saveState(); renderSection();
+  toast(displayName==='Unassigned'?'Conversation unassigned':'Assigned to '+displayName,'var(--accent)');
+}
+
+// ─── CHAT PANEL OVERFLOW MENU ────────────────────────────
+function openChatOverflowMenu(e,chatId){
+  e.stopPropagation();
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  const menu=document.getElementById('chat-overflow-menu');
+  const items=[];
+  if(c.dbId&&_googleCalendarConnection&&_googleCalendarConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();openScheduleMeetingModal('${c.dbId}')">Schedule meeting</div>`);
+  if(c.dbId&&_zoomConnection&&_zoomConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();startZoomCall('${c.dbId}')">Start Zoom call</div>`);
+  if(c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</div>`);
+  if(c.dbId&&_trelloConnection&&_trelloConnection.status==='connected'&&_trelloConnection.list_id)
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();sendConversationToTrello('${c.dbId}')">Send to Trello</div>`);
+  if(items.length)items.push('<div class="ctx-sep"></div>');
+  items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();downloadChat('${chatId}')">Download Transcript</div>`);
+  items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();setChatStatus('${chatId}','archived')">Archive</div>`);
+  items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();setChatStatus('${chatId}','done')">Mark as Done</div>`);
+  menu.innerHTML=items.join('');
+  positionCtxMenu(menu,e);
+  document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
+  menu.classList.add('open');
+}
+function closeAllCtxMenus(){ document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open')); }
+
+// ─── CONTACT INFO (chat panel header) ────────────────────
+function openContactInfo(chatId){
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
+  document.getElementById('contact-info-body').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:1.25rem">
+      ${avatarHtml(c.customer,'#1a2d47',56)}
+      <div style="font-weight:700;font-size:1rem;margin-top:.7rem">${escapeHtml(c.customer)}</div>
+      <div style="font-size:.78rem;color:var(--text-3);margin-top:2px">${channelIconSvg(c.channel,13)} ${escapeHtml(c.channel)}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.7rem;font-size:.82rem">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-3)">Conversation</span><span>${escapeHtml(c.id)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-3)">Status</span><span style="text-transform:capitalize">${escapeHtml(c.status)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--text-3)">Assigned to</span><span>${escapeHtml(c.owner)}</span></div>
+    </div>`;
+  openModal('modal-contact-info');
+}
+
 function setChatStatus(id,status,skipUndoToast){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
   const prevStatus=c.status;

@@ -1,1 +1,5 @@
-/  /home.html  200
+/            /home.html   200
+/home        /home.html   200
+/app         /app.html    200
+/home.html   /home        301
+/app.html    /app         301
