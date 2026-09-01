@@ -506,7 +506,7 @@ input:checked + .slider::before{transform:translateX(18px)}
         <div style="padding:.75rem;border-bottom:1px solid var(--border)">
           <div class="search-bar-wrap" style="margin-bottom:0">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="position:absolute;left:.8rem;top:50%;transform:translateY(-50%);color:var(--text-3)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input class="search-bar" id="global-search-input" placeholder="Search tickets, chats, team…" oninput="runGlobalSearch(this.value)"/>
+            <input class="search-bar" id="global-search-input" type="search" autocomplete="off" name="global-search-q" placeholder="Search tickets, chats, team…" oninput="runGlobalSearch(this.value)"/>
           </div>
         </div>
         <div id="global-search-results"></div>
@@ -1219,20 +1219,13 @@ function defaultState(){
     integrations:[
       {key:'whatsapp',name:'WhatsApp',desc:'Route WhatsApp conversations into your shared inbox.',color:'#25D366',connected:true},
       {key:'email',name:'Email',desc:'Connect a support inbox to route email tickets automatically.',color:'#00c2ff',connected:true},
-      {key:'instagram',name:'Instagram',desc:'Route Instagram DMs from your linked account into your shared inbox.',color:'#E1306C',connected:false},
-      {key:'x',name:'X (Twitter)',desc:'Monitor mentions and DMs for support requests.',color:'#ffffff',connected:false},
-      {key:'facebook',name:'Facebook',desc:'Route Messenger DMs from your Page into your shared inbox.',color:'#1877F2',connected:false},
       {key:'phone',name:'Phone',desc:'Voice call routing for inbound and outbound support calls.',color:'#f5a623',connected:false},
-      {key:'telegram',name:'Telegram',desc:'Route Telegram bot DMs into your shared inbox.',color:'#26A5E4',connected:false},
       {key:'sms',name:'SMS',desc:'Text-message support for order updates, OTPs and quick replies.',color:'var(--accent)',connected:false},
-      {key:'livechat',name:'Live Chat',desc:'An embeddable widget so visitors can chat with ARIA/agents on your own site.',color:'var(--accent-2)',connected:false},
-      // ^ intentionally not "coming soon" — see livechatIntegrationCardHtml
-      {key:'tiktok',name:'TikTok',desc:'Reply to comments and DMs on your TikTok account.',color:'var(--text)',connected:false},
+      {key:'telegram',name:'Telegram',desc:'Route Telegram bot DMs into your shared inbox.',color:'#26A5E4',connected:false},
       {key:'slack',name:'Slack',desc:'Mirror your Supanta notifications into a Slack channel.',color:'#4A154B',connected:false},
       {key:'zoom',name:'Zoom',desc:'Start an instant video call with a customer straight from a chat.',color:'#2D8CFF',connected:false},
-      {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false},
       {key:'hubspot',name:'HubSpot',desc:'Sync a conversation\'s contact and a support ticket to your HubSpot CRM.',color:'#FF7A59',connected:false},
-      {key:'trello',name:'Trello',desc:'Send a conversation to a Trello board so your team can track it as a card.',color:'#0079BF',connected:false}
+      {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false}
     ],
     notifications:[],
     kbDocs:[
@@ -1610,7 +1603,7 @@ function renderTeams(){
   if(_teamsTab==='groups')return renderTeamsTabs()+renderGroups();
   return renderTeamsTabs()+`
   <div class="toolbar-row">
-    <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="team-search" placeholder="Search team members…" value="${_teamSearch}" oninput="filterTeams(this.value)"/></div>
+    <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="team-search" type="search" autocomplete="off" name="team-search-q" placeholder="Search team members…" value="${_teamSearch}" oninput="filterTeams(this.value)"/></div>
     <button class="btn btn-acc" onclick="openModal('modal-add-member')">+ Add to Team</button>
   </div>
   <div class="card" style="padding:0" id="team-list-wrap">${teamListHtml()}</div>`;
@@ -1714,7 +1707,7 @@ function renderChats(){
     <button class="tab-btn ${_chatChannel==='all'?'active':''}" onclick="setChatChannel('all')">All</button>
     ${CHAT_CHANNELS.map(ch=>`<button class="tab-btn ${_chatChannel===ch?'active':''}" onclick="setChatChannel('${ch}')">${INT_ICONS[ch.toLowerCase()]||''} ${ch}</button>`).join('')}
   </div>
-  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
+  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="chat-search" type="search" autocomplete="off" name="chat-search-q" placeholder="Search chats by customer, channel or message…" value="${_chatSearch}" oninput="filterChats(this.value)"/></div>
   <div class="chat-layout" id="chat-layout-wrap">
     <div class="chat-list" id="chat-list-wrap">
       <div class="chat-list-tabs">
@@ -2063,7 +2056,7 @@ function defaultListForKind(kind){ return ticketListsSorted().find(l=>l.kind===k
 function renderTickets(){
   return `
   <div class="toolbar-row">
-    <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="ticket-search" placeholder="Search tickets by subject, client, ID or owner…" value="${_ticketSearch}" oninput="filterTickets(this.value)"/></div>
+    <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="ticket-search" type="search" autocomplete="off" name="ticket-search-q" placeholder="Search tickets by subject, client, ID or owner…" value="${_ticketSearch}" oninput="filterTickets(this.value)"/></div>
     <button class="btn btn-acc" onclick="openAddTicket()">+ New Ticket</button>
   </div>
   <div id="bulk-bar-wrap">${bulkBarHtml()}</div>
@@ -2807,7 +2800,7 @@ const INT_ICONS=new Proxy({},{get:(_,key)=>channelIconSvg(key,20)});
 let _intSearch='';
 function renderIntegrations(){
   return `
-  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="int-search" placeholder="Search integrations by name…" value="${_intSearch}" oninput="filterIntegrations(this.value)"/></div>
+  <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="int-search" type="search" autocomplete="off" name="int-search-q" placeholder="Search integrations by name…" value="${_intSearch}" oninput="filterIntegrations(this.value)"/></div>
   <div id="int-grid-wrap">${intGridHtml()}</div>`;
 }
 function intGridHtml(){
