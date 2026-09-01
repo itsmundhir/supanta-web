@@ -453,6 +453,7 @@ input:checked + .slider::before{transform:translateX(18px)}
       <div class="nav-item" data-sec="teams" onclick="showSection('teams')"><span class="nav-ico">◎</span> <span class="lbl">Teams</span></div>
       <div class="nav-item" data-sec="chats" onclick="showSection('chats')"><span class="nav-ico">◈</span> <span class="lbl">Chats</span></div>
       <div class="nav-item" data-sec="tickets" onclick="showSection('tickets')"><span class="nav-ico">▤</span> <span class="lbl">Tickets</span></div>
+      <div class="nav-item" data-sec="appointments" onclick="showSection('appointments')"><span class="nav-ico">◷</span> <span class="lbl">Appointments</span></div>
       <div class="nav-item" id="nav-integrations" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
       <div class="sb-bottom">
         <div class="nav-sec-lbl lbl">General</div>
@@ -934,6 +935,12 @@ async function loadRemoteData(){
     if(fields&&fields.length)STATE.ticketCustomFields=fields.map(f=>({id:f.id,name:f.name,position:f.position}));
   }catch(e){}
   try{
+    const {data:appts}=await _sb.from('client_appointments').select('*').eq('client_id',activeClientId()).order('start_time',{ascending:true});
+    if(appts&&appts.length){
+      STATE.appointments=appts.map(r=>({id:r.id,conversationId:r.conversation_id,contactName:r.contact_name,contactEmail:r.contact_email,title:r.title,startTime:r.start_time,endTime:r.end_time,eventLink:r.event_link,meetLink:r.meet_link,status:r.status,createdByName:r.created_by_name}));
+    }
+  }catch(e){}
+  try{
     const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',activeClientId()).order('issue_date',{ascending:false});
     if(invs&&invs.length){
       STATE.invoices=invs.map(r=>({id:r.display_id,dbId:r.id,date:r.issue_date,dueDate:r.due_date,amount:(r.currency==='USD'?'$':r.currency+' ')+Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}),status:r.status}));
@@ -1149,6 +1156,7 @@ function defaultState(){
     ],
     chats:[],
     tickets:[],
+    appointments:[],
     integrations:[
       {key:'whatsapp',name:'WhatsApp',desc:'Route WhatsApp conversations into your shared inbox.',color:'#25D366',connected:true},
       {key:'email',name:'Email',desc:'Connect a support inbox to route email tickets automatically.',color:'#00c2ff',connected:true},
@@ -1238,6 +1246,7 @@ const SECTION_META={
   teams:['Teams','Manage who — and what — is on your team'],
   chats:['Chats','Active, archived and completed conversations'],
   tickets:['Tickets','Board view — drag or reassign across owners'],
+  appointments:['Appointments','Meetings your team has scheduled with clients'],
   integrations:['Integrations','Connect the channels you support customers on'],
   notifications:['Notifications','Everything that needs your attention'],
   settings:['Settings','Profile, workspace, display & billing']
@@ -1258,7 +1267,7 @@ function showSection(key){
 }
 function renderSection(){
   const m=document.getElementById('main-content');
-  const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,integrations:renderIntegrations,notifications:renderNotifications,settings:renderSettings};
+  const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,appointments:renderAppointments,integrations:renderIntegrations,notifications:renderNotifications,settings:renderSettings};
   m.innerHTML=(fns[currentSection]||(()=>''))();
   if(currentSection==='chats')wireChatList();
   if(currentSection==='tickets')wireKanban();
@@ -3064,12 +3073,102 @@ async function submitScheduleMeeting(conversationId){
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     toast('Meeting scheduled','var(--green)');
     closeModal('modal-connect-int');
+    if(data.appointment){
+      STATE.appointments.push({id:data.appointment.id,conversationId:data.appointment.conversation_id,contactName:data.appointment.contact_name,contactEmail:data.appointment.contact_email,title:data.appointment.title,startTime:data.appointment.start_time,endTime:data.appointment.end_time,eventLink:data.appointment.event_link,meetLink:data.appointment.meet_link,status:data.appointment.status,createdByName:data.appointment.created_by_name});
+    }
     const c=STATE.chats.find(x=>x.dbId===conversationId);
     if(c)await refreshChatMessages(c);
   }catch(e){
     toast('Could not schedule — '+(e.message||e),'var(--danger)');
   }finally{
     btn.disabled=false;btn.textContent='Schedule';
+  }
+}
+// ─── APPOINTMENTS ────────────────────────────────────────
+function renderAppointments(){
+  const upcoming=STATE.appointments.filter(a=>a.status==='scheduled').sort((a,b)=>new Date(a.startTime)-new Date(b.startTime));
+  const past=STATE.appointments.filter(a=>a.status!=='scheduled').sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+  if(!_googleCalendarConnection||_googleCalendarConnection.status!=='connected'){
+    return `<div class="card" style="text-align:center;padding:2.5rem 1.5rem">
+      <div style="font-weight:600;margin-bottom:.4rem">Connect Google Calendar to schedule appointments</div>
+      <div style="font-size:.82rem;color:var(--text-3);margin-bottom:1rem">Appointments your team books with clients will show up here once Google Calendar is connected.</div>
+      <button class="btn btn-acc btn-sm" onclick="showSection('integrations')">Go to Integrations</button>
+    </div>`;
+  }
+  return `
+  <div class="toolbar-row">
+    <div style="font-size:.82rem;color:var(--text-3)">${upcoming.length} upcoming</div>
+    <button class="btn btn-acc" onclick="openNewAppointmentModal()">+ New Appointment</button>
+  </div>
+  <div class="card" style="padding:0;margin-bottom:1.25rem">
+    <div style="padding:1rem 1.25rem .5rem;font-weight:600;font-size:.85rem">Upcoming</div>
+    ${upcoming.length?upcoming.map(appointmentRowHtml).join(''):'<div class="empty-state">No upcoming appointments.</div>'}
+  </div>
+  ${past.length?`<div class="card" style="padding:0">
+    <div style="padding:1rem 1.25rem .5rem;font-weight:600;font-size:.85rem">Past</div>
+    ${past.map(appointmentRowHtml).join('')}
+  </div>`:''}`;
+}
+function appointmentRowHtml(a){
+  const statusBadge=a.status==='cancelled'?'<span class="badge badge-archived">Cancelled</span>':a.status==='completed'?'<span class="badge badge-done">Completed</span>':'<span class="badge badge-active">Scheduled</span>';
+  return `<div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border)">
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:.88rem;display:flex;align-items:center;gap:.5rem">${escapeHtml(a.title)} ${statusBadge}</div>
+      <div style="font-size:.76rem;color:var(--text-3)">${fmtDueDate(a.startTime,true)} · ${escapeHtml(a.contactName||'No contact')}${a.createdByName?' · Booked by '+escapeHtml(a.createdByName):''}</div>
+    </div>
+    ${a.meetLink&&a.status==='scheduled'?`<a class="btn btn-ghost btn-sm" href="${a.meetLink}" target="_blank" rel="noopener">Join</a>`:''}
+    ${a.conversationId?`<button class="btn btn-ghost btn-sm" onclick="gsGoChat('${STATE.chats.find(c=>c.dbId===a.conversationId)?.id||''}')">Open Chat</button>`:''}
+    ${a.status==='scheduled'?`<button class="btn btn-ghost btn-sm" onclick="cancelAppointment('${a.id}')">Cancel</button>`:''}
+  </div>`;
+}
+function openNewAppointmentModal(){
+  document.getElementById('ci-title').textContent='New Appointment';
+  document.getElementById('ci-body').innerHTML=`
+    <div class="form-group"><label>Title</label><input class="rb-input" id="ap-title" placeholder="Call with customer"/></div>
+    <div class="form-group"><label>Contact Name</label><input class="rb-input" id="ap-contact-name" placeholder="Optional"/></div>
+    <div class="form-group"><label>Contact Email</label><input class="rb-input" id="ap-contact-email" type="email" placeholder="Optional — added as an invitee"/></div>
+    <div class="form-group"><label>Date &amp; Time</label><input class="rb-input" type="datetime-local" id="ap-start"/></div>
+    <div class="form-group"><label>Duration (minutes)</label><input class="rb-input" type="number" id="ap-duration" value="30"/></div>
+    <button class="btn btn-acc" style="width:100%" id="ap-submit" onclick="submitNewAppointment()">Schedule</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitNewAppointment(){
+  const btn=document.getElementById('ap-submit');
+  const title=document.getElementById('ap-title').value.trim();
+  const contactName=document.getElementById('ap-contact-name').value.trim();
+  const contactEmail=document.getElementById('ap-contact-email').value.trim();
+  const start=document.getElementById('ap-start').value;
+  const duration=document.getElementById('ap-duration').value;
+  if(!start){toast('Pick a date and time','var(--danger)');return;}
+  btn.disabled=true;btn.textContent='Scheduling…';
+  try{
+    const {data,error}=await _sb.functions.invoke('googlecalendar-create-event',{body:{start_time:new Date(start).toISOString(),duration_minutes:Number(duration)||30,title:title||undefined,contact_name:contactName||undefined,contact_email:contactEmail||undefined}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast('Appointment scheduled','var(--green)');
+    closeModal('modal-connect-int');
+    if(data.appointment){
+      STATE.appointments.push({id:data.appointment.id,conversationId:data.appointment.conversation_id,contactName:data.appointment.contact_name,contactEmail:data.appointment.contact_email,title:data.appointment.title,startTime:data.appointment.start_time,endTime:data.appointment.end_time,eventLink:data.appointment.event_link,meetLink:data.appointment.meet_link,status:data.appointment.status,createdByName:data.appointment.created_by_name});
+    }
+    renderSection();
+    logActivity('Scheduled appointment',title||contactName||'Untitled');
+  }catch(e){
+    toast('Could not schedule — '+(e.message||e),'var(--danger)');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Schedule';}
+  }
+}
+async function cancelAppointment(id){
+  if(!confirm('Cancel this appointment?'))return;
+  try{
+    const {data,error}=await _sb.functions.invoke('googlecalendar-cancel-event',{body:{appointment_id:id}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const a=STATE.appointments.find(x=>x.id===id);
+    if(a)a.status='cancelled';
+    renderSection();
+    toast('Appointment cancelled','var(--accent)');
+  }catch(e){
+    toast('Could not cancel — '+(e.message||e),'var(--danger)');
   }
 }
 function filterIntegrations(v){
