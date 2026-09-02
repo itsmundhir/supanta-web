@@ -991,7 +991,7 @@ async function loadRemoteData(){
   }catch(e){}
   try{
     const {data:qq}=await _sb.from('client_quick_questions').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
-    if(qq)STATE.quickQuestions=qq.map(r=>({id:r.id,question:r.question,position:r.position}));
+    if(qq)STATE.quickQuestions=qq.map(r=>({id:r.id,question:r.question,answer:r.answer,position:r.position}));
   }catch(e){}
   try{
     const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',activeClientId()).order('issue_date',{ascending:false});
@@ -4025,10 +4025,11 @@ function renderSettingsTab(t){
     </div>
     <div class="card">
       <div class="card-title">Quick Questions</div>
-      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Shown as clickable suggestion chips on your public ARIA chat widget, so visitors can ask common questions with one click. Up to 6 are shown, in this order.</p>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Shown as clickable suggestion chips on your public ARIA chat widget, so visitors can ask common questions with one click. Up to 6 are shown, in this order. Give one an exact answer and ARIA shows it instantly when clicked — leave the answer blank and ARIA will generate a live answer from your knowledge base instead.</p>
       <div id="quick-questions-list">${quickQuestionsListHtml()}</div>
-      <div style="display:flex;gap:.5rem;margin-top:${STATE.quickQuestions.length?'1rem':'0'}">
-        <input class="rb-input" id="qq-new-input" placeholder="e.g. What does Supanta cost?" onkeydown="if(event.key==='Enter')addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}/>
+      <div style="border-top:1px solid var(--border);padding-top:${STATE.quickQuestions.length?'1rem':'0'}">
+        <div class="form-group"><label>New question</label><input class="rb-input" id="qq-new-input" placeholder="e.g. What does Supanta cost?" ${STATE.quickQuestions.length>=6?'disabled':''}/></div>
+        <div class="form-group"><label>Answer (optional)</label><textarea class="rb-textarea" id="qq-new-answer" placeholder="Leave blank to let ARIA answer live from your knowledge base" style="min-height:70px" ${STATE.quickQuestions.length>=6?'disabled':''}></textarea></div>
         <button class="btn btn-acc btn-sm" onclick="addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}>Add</button>
       </div>
       ${STATE.quickQuestions.length>=6?'<div style="font-size:.72rem;color:var(--text-3);margin-top:.5rem">Maximum of 6 reached — remove one to add another.</div>':''}
@@ -4269,31 +4270,49 @@ function removeKbDoc(id){ STATE.kbDocs=STATE.kbDocs.filter(d=>d.id!==id); saveSt
 function quickQuestionsListHtml(){
   if(!STATE.quickQuestions.length)return '<div class="empty-state">No quick questions yet — visitors will just see the plain chat input.</div>';
   return STATE.quickQuestions.map((q,i)=>`
-    <div class="kb-doc-row">
-      <div style="font-size:.85rem;flex:1;min-width:0">${escapeHtml(q.question)}</div>
-      <div style="display:flex;gap:.25rem;align-items:center">
-        <button class="btn btn-ghost btn-sm" ${i===0?'disabled':''} onclick="moveQuickQuestion('${q.id}',-1)" title="Move up">↑</button>
-        <button class="btn btn-ghost btn-sm" ${i===STATE.quickQuestions.length-1?'disabled':''} onclick="moveQuickQuestion('${q.id}',1)" title="Move down">↓</button>
-        <button class="btn btn-ghost btn-sm" onclick="removeQuickQuestion('${q.id}')">Remove</button>
+    <div style="border:1px solid var(--border);border-radius:10px;padding:.75rem;margin-bottom:.6rem">
+      <div style="display:flex;align-items:flex-start;gap:.5rem">
+        <div style="font-weight:600;font-size:.85rem;flex:1;min-width:0">${escapeHtml(q.question)}</div>
+        <div style="display:flex;gap:.25rem;align-items:center;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" ${i===0?'disabled':''} onclick="moveQuickQuestion('${q.id}',-1)" title="Move up">↑</button>
+          <button class="btn btn-ghost btn-sm" ${i===STATE.quickQuestions.length-1?'disabled':''} onclick="moveQuickQuestion('${q.id}',1)" title="Move down">↓</button>
+          <button class="btn btn-ghost btn-sm" onclick="removeQuickQuestion('${q.id}')">Remove</button>
+        </div>
       </div>
+      <textarea class="rb-textarea" id="qq-answer-${q.id}" placeholder="Leave blank to let ARIA answer live from your knowledge base" style="min-height:60px;margin-top:.5rem;font-size:.8rem" onblur="saveQuickQuestionAnswer('${q.id}',this.value)">${escapeHtml(q.answer||'')}</textarea>
     </div>`).join('');
 }
 async function addQuickQuestion(){
   const inp=document.getElementById('qq-new-input');
+  const answerInp=document.getElementById('qq-new-answer');
   const question=inp.value.trim();
+  const answer=answerInp.value.trim();
   if(!question){toast('Enter a question first','var(--danger)');return;}
   if(STATE.quickQuestions.length>=6){toast('Remove one first — maximum of 6','var(--danger)');return;}
   if(!activeClientId()||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
   const position=STATE.quickQuestions.length;
   try{
-    const {data,error}=await _sb.from('client_quick_questions').insert({client_id:activeClientId(),question,position}).select().single();
+    const {data,error}=await _sb.from('client_quick_questions').insert({client_id:activeClientId(),question,answer:answer||null,position}).select().single();
     if(error)throw error;
-    STATE.quickQuestions.push({id:data.id,question:data.question,position:data.position});
-    inp.value='';
+    STATE.quickQuestions.push({id:data.id,question:data.question,answer:data.answer,position:data.position});
+    inp.value='';answerInp.value='';
     renderSection();
     toast('Quick question added','var(--green)');
   }catch(e){
     toast('Could not add — '+(e.message||e),'var(--danger)');
+  }
+}
+async function saveQuickQuestionAnswer(id,value){
+  const answer=value.trim();
+  const q=STATE.quickQuestions.find(x=>x.id===id); if(!q)return;
+  if(q.answer===answer||(!q.answer&&!answer))return;
+  q.answer=answer||null;
+  if(!_sb)return;
+  try{
+    await _sb.from('client_quick_questions').update({answer:answer||null}).eq('id',id);
+    toast('Answer saved','var(--green)');
+  }catch(e){
+    toast('Could not save answer — '+(e.message||e),'var(--danger)');
   }
 }
 async function removeQuickQuestion(id){
