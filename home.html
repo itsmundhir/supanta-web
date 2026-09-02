@@ -1000,7 +1000,6 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       }
     }
     function escapeHtmlAria(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-    let _ariaQuickQuestionsData=[];
     async function loadAriaQuickQuestions(){
       if(_ariaQuickQuestionsRequested)return;
       _ariaQuickQuestionsRequested=true;
@@ -1010,28 +1009,19 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
         const data=await res.json();
         const qs=(data&&data.questions)||[];
         if(!qs.length)return;
-        _ariaQuickQuestionsData=qs;
         const wrap=document.createElement('div');
         wrap.className='aria-quick-questions';
         wrap.id='aria-quick-questions';
-        wrap.innerHTML=qs.map((q,i)=>`<button class="aria-quick-chip" onclick="sendAriaQuickQuestion(${i})">${escapeHtmlAria(q.question)}</button>`).join('');
+        wrap.innerHTML=qs.map(q=>`<button class="aria-quick-chip" onclick="sendAriaQuickQuestion(this)">${escapeHtmlAria(q.question)}</button>`).join('');
         const msgs=document.getElementById('aria-msgs');
         msgs.appendChild(wrap);
         msgs.scrollTop=msgs.scrollHeight;
       }catch(e){}
     }
-    function sendAriaQuickQuestion(i){
-      const q=_ariaQuickQuestionsData[i]; if(!q)return;
+    function sendAriaQuickQuestion(btn){
+      document.getElementById('aria-input').value=btn.textContent;
       document.getElementById('aria-quick-questions')?.remove();
-      if(q.answer){
-        const msgs=document.getElementById('aria-msgs');
-        msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${escapeHtmlAria(q.question)}</div>`;
-        msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">${escapeHtmlAria(q.answer)}</div>`;
-        msgs.scrollTop=msgs.scrollHeight;
-      }else{
-        document.getElementById('aria-input').value=q.question;
-        sendAriaMsg();
-      }
+      sendAriaMsg();
     }
 
     async function sendAriaMsg(){
