@@ -319,6 +319,9 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .aria-msg-bot{background:var(--dark-3);color:var(--grey-2);align-self:flex-start;border-bottom-left-radius:3px}
 .aria-msg-user{background:rgba(0,194,255,.12);color:var(--white);align-self:flex-end;border-bottom-right-radius:3px;border:1px solid rgba(0,194,255,.2)}
 .aria-chat-input-row{display:flex;gap:.5rem;padding:.85rem;border-top:1px solid var(--border);background:var(--dark-3)}
+.aria-quick-questions{display:flex;flex-direction:column;gap:.4rem;margin-top:.25rem}
+.aria-quick-chip{align-self:flex-start;max-width:100%;background:var(--dark-3);border:1px solid var(--border-light);color:var(--grey-2);font-family:var(--fb);font-size:.76rem;line-height:1.4;padding:.45rem .75rem;border-radius:999px;cursor:pointer;text-align:left;transition:border-color .2s,color .2s}
+.aria-quick-chip:hover{border-color:var(--accent);color:var(--white)}
 .aria-chat-input{flex:1;background:var(--dark-4);border:1px solid var(--border-light);border-radius:8px;padding:.5rem .75rem;color:var(--white);font-size:.82rem;font-family:var(--fb);outline:none;transition:border-color .2s}
 .aria-chat-input:focus{border-color:rgba(0,194,255,.4)}
 .aria-chat-input::placeholder{color:var(--grey)}
@@ -986,15 +989,44 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     const ARIA_SUPANTA_CLIENT_ID = '30aa317f-05fd-4e14-b979-98a9348933df';
     let _ariaLastUserMsg = '';
     let _ariaLeadShownForSession = false;
+    let _ariaQuickQuestionsRequested = false;
 
     function toggleAriaChat(){
       const b=document.getElementById('aria-chat-box');
       b.classList.toggle('open');
-      if(b.classList.contains('open'))document.getElementById('aria-input').focus();
+      if(b.classList.contains('open')){
+        document.getElementById('aria-input').focus();
+        loadAriaQuickQuestions();
+      }
+    }
+    function escapeHtmlAria(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    async function loadAriaQuickQuestions(){
+      if(_ariaQuickQuestionsRequested)return;
+      _ariaQuickQuestionsRequested=true;
+      try{
+        const res=await fetch(SUPABASE_URL+'/functions/v1/public-aria-quick-questions?client_id='+encodeURIComponent(ARIA_SUPANTA_CLIENT_ID));
+        if(!res.ok)return;
+        const data=await res.json();
+        const qs=(data&&data.questions)||[];
+        if(!qs.length)return;
+        const wrap=document.createElement('div');
+        wrap.className='aria-quick-questions';
+        wrap.id='aria-quick-questions';
+        wrap.innerHTML=qs.map(q=>`<button class="aria-quick-chip" onclick="sendAriaQuickQuestion(this)">${escapeHtmlAria(q.question)}</button>`).join('');
+        const msgs=document.getElementById('aria-msgs');
+        msgs.appendChild(wrap);
+        msgs.scrollTop=msgs.scrollHeight;
+      }catch(e){}
+    }
+    function sendAriaQuickQuestion(btn){
+      document.getElementById('aria-input').value=btn.textContent;
+      document.getElementById('aria-quick-questions')?.remove();
+      sendAriaMsg();
     }
 
     async function sendAriaMsg(){
       const inp=document.getElementById('aria-input');const msg=inp.value.trim();if(!msg)return;
+      document.getElementById('aria-quick-questions')?.remove();
       const msgs=document.getElementById('aria-msgs');
       msgs.innerHTML+=`<div class="aria-msg aria-msg-user">${msg}</div>`;
       _ariaLastUserMsg = msg;

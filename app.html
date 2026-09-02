@@ -990,6 +990,10 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
+    const {data:qq}=await _sb.from('client_quick_questions').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
+    if(qq)STATE.quickQuestions=qq.map(r=>({id:r.id,question:r.question,position:r.position}));
+  }catch(e){}
+  try{
     const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',activeClientId()).order('issue_date',{ascending:false});
     if(invs&&invs.length){
       STATE.invoices=invs.map(r=>({id:r.display_id,dbId:r.id,date:r.issue_date,dueDate:r.due_date,amount:(r.currency==='USD'?'$':r.currency+' ')+Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}),status:r.status}));
@@ -1228,6 +1232,7 @@ function defaultState(){
       {key:'googlecalendar',name:'Google Calendar',desc:'Schedule a meeting with a customer straight from a chat.',color:'#4285F4',connected:false}
     ],
     notifications:[],
+    quickQuestions:[],
     kbDocs:[
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
       {id:2,name:'Product FAQ — Spring Catalog.docx',size:'88 KB',added:'2026-05-11'}
@@ -4017,6 +4022,16 @@ function renderSettingsTab(t){
           <div><div style="font-weight:500;font-size:.85rem">${d.name}</div><div style="font-size:.72rem;color:var(--text-3)">${d.size} · Added ${d.added}</div></div>
           <button class="btn btn-ghost btn-sm" onclick="removeKbDoc(${d.id})">Remove</button>
         </div>`).join(''):'<div class="empty-state">No documents yet.</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Questions</div>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Shown as clickable suggestion chips on your public ARIA chat widget, so visitors can ask common questions with one click. Up to 6 are shown, in this order.</p>
+      <div id="quick-questions-list">${quickQuestionsListHtml()}</div>
+      <div style="display:flex;gap:.5rem;margin-top:${STATE.quickQuestions.length?'1rem':'0'}">
+        <input class="rb-input" id="qq-new-input" placeholder="e.g. What does Supanta cost?" onkeydown="if(event.key==='Enter')addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}/>
+        <button class="btn btn-acc btn-sm" onclick="addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}>Add</button>
+      </div>
+      ${STATE.quickQuestions.length>=6?'<div style="font-size:.72rem;color:var(--text-3);margin-top:.5rem">Maximum of 6 reached — remove one to add another.</div>':''}
     </div>`;
   if(t==='invoices')return `
     <div class="card">
@@ -4249,6 +4264,61 @@ async function uploadKbDocs(){
   logActivity('Added to knowledge base',Array.from(files).map(f=>f.name).join(', '));
 }
 function removeKbDoc(id){ STATE.kbDocs=STATE.kbDocs.filter(d=>d.id!==id); saveState();renderSection(); }
+
+// ─── QUICK QUESTIONS (public ARIA widget) ─────────────────
+function quickQuestionsListHtml(){
+  if(!STATE.quickQuestions.length)return '<div class="empty-state">No quick questions yet — visitors will just see the plain chat input.</div>';
+  return STATE.quickQuestions.map((q,i)=>`
+    <div class="kb-doc-row">
+      <div style="font-size:.85rem;flex:1;min-width:0">${escapeHtml(q.question)}</div>
+      <div style="display:flex;gap:.25rem;align-items:center">
+        <button class="btn btn-ghost btn-sm" ${i===0?'disabled':''} onclick="moveQuickQuestion('${q.id}',-1)" title="Move up">↑</button>
+        <button class="btn btn-ghost btn-sm" ${i===STATE.quickQuestions.length-1?'disabled':''} onclick="moveQuickQuestion('${q.id}',1)" title="Move down">↓</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeQuickQuestion('${q.id}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+async function addQuickQuestion(){
+  const inp=document.getElementById('qq-new-input');
+  const question=inp.value.trim();
+  if(!question){toast('Enter a question first','var(--danger)');return;}
+  if(STATE.quickQuestions.length>=6){toast('Remove one first — maximum of 6','var(--danger)');return;}
+  if(!activeClientId()||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
+  const position=STATE.quickQuestions.length;
+  try{
+    const {data,error}=await _sb.from('client_quick_questions').insert({client_id:activeClientId(),question,position}).select().single();
+    if(error)throw error;
+    STATE.quickQuestions.push({id:data.id,question:data.question,position:data.position});
+    inp.value='';
+    renderSection();
+    toast('Quick question added','var(--green)');
+  }catch(e){
+    toast('Could not add — '+(e.message||e),'var(--danger)');
+  }
+}
+async function removeQuickQuestion(id){
+  try{
+    if(_sb)await _sb.from('client_quick_questions').delete().eq('id',id);
+    STATE.quickQuestions=STATE.quickQuestions.filter(q=>q.id!==id);
+    renderSection();
+  }catch(e){
+    toast('Could not remove — '+(e.message||e),'var(--danger)');
+  }
+}
+async function moveQuickQuestion(id,dir){
+  const i=STATE.quickQuestions.findIndex(q=>q.id===id); if(i<0)return;
+  const j=i+dir; if(j<0||j>=STATE.quickQuestions.length)return;
+  const a=STATE.quickQuestions[i],b=STATE.quickQuestions[j];
+  [a.position,b.position]=[b.position,a.position];
+  STATE.quickQuestions.sort((x,y)=>x.position-y.position);
+  renderSection();
+  if(_sb){
+    try{
+      await _sb.from('client_quick_questions').update({position:a.position}).eq('id',a.id);
+      await _sb.from('client_quick_questions').update({position:b.position}).eq('id',b.id);
+    }catch(e){}
+  }
+}
 
 // ─── MODALS / TOAST ──────────────────────────────────────
 function openModal(id){document.getElementById(id).classList.add('open');}
