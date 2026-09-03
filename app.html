@@ -4030,7 +4030,7 @@ function renderSettingsTab(t){
         <input class="rb-input" id="qq-new-input" placeholder="e.g. What does Supanta cost?" onkeydown="if(event.key==='Enter')addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}/>
         <button class="btn btn-acc btn-sm" onclick="addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}>Add</button>
       </div>
-      ${STATE.quickQuestions.length>=6?'<div style="font-size:.72rem;color:var(--text-3);margin-top:.5rem">Maximum of 6 reached — remove one to add another.</div>':''}
+      ${STATE.quickQuestions.length>=6?'<div style="font-size:.72rem;color:var(--text-3);margin-top:.5rem">Maximum of 6 reached, remove one to add another.</div>':''}
     </div>`;
   if(t==='invoices')return `
     <div class="card">
@@ -4266,7 +4266,7 @@ function removeKbDoc(id){ STATE.kbDocs=STATE.kbDocs.filter(d=>d.id!==id); saveSt
 
 // ─── QUICK QUESTIONS (public ARIA widget) ─────────────────
 function quickQuestionsListHtml(){
-  if(!STATE.quickQuestions.length)return '<div class="empty-state">No quick questions yet — visitors will just see the plain chat input.</div>';
+  if(!STATE.quickQuestions.length)return '<div class="empty-state">No quick questions yet, visitors will just see the plain chat input.</div>';
   return STATE.quickQuestions.map((q,i)=>`
     <div class="kb-doc-row">
       <div style="font-size:.85rem;flex:1;min-width:0">${escapeHtml(q.question)}</div>
@@ -4281,7 +4281,7 @@ async function addQuickQuestion(){
   const inp=document.getElementById('qq-new-input');
   const question=inp.value.trim();
   if(!question){toast('Enter a question first','var(--danger)');return;}
-  if(STATE.quickQuestions.length>=6){toast('Remove one first — maximum of 6','var(--danger)');return;}
+  if(STATE.quickQuestions.length>=6){toast('Remove one first, maximum of 6','var(--danger)');return;}
   if(!activeClientId()||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
   const position=STATE.quickQuestions.length;
   try{
@@ -4292,7 +4292,7 @@ async function addQuickQuestion(){
     renderSection();
     toast('Quick question added','var(--green)');
   }catch(e){
-    toast('Could not add — '+(e.message||e),'var(--danger)');
+    toast('Could not add: '+(e.message||e),'var(--danger)');
   }
 }
 async function removeQuickQuestion(id){
@@ -4301,7 +4301,7 @@ async function removeQuickQuestion(id){
     STATE.quickQuestions=STATE.quickQuestions.filter(q=>q.id!==id);
     renderSection();
   }catch(e){
-    toast('Could not remove — '+(e.message||e),'var(--danger)');
+    toast('Could not remove: '+(e.message||e),'var(--danger)');
   }
 }
 async function moveQuickQuestion(id,dir){
