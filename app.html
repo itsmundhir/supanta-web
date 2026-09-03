@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="robots" content="noindex, nofollow"/>
-<title>Supanta — Dashboard</title><link rel="icon" type="image/png" href="favicon.png"/><link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
+<title>Supanta | Dashboard</title><link rel="icon" type="image/png" href="favicon.png"/><link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root,:root[data-theme="dark"]{
@@ -433,7 +433,7 @@ input:checked + .slider::before{transform:translateX(18px)}
 <div id="onboard-gate">
   <div class="card">
     <div style="font-family:var(--fd,inherit);font-size:1.1rem;font-weight:700;margin-bottom:.3rem">Welcome to Supanta</div>
-    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1.5rem">You're signed in — just tell us a bit about your business to finish setting up your account.</p>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1.5rem">You're signed in, just tell us a bit about your business to finish setting up your account.</p>
     <div class="form-group"><label>Company name</label><input class="rb-input" id="ob-company" placeholder="Your company"/></div>
     <div class="form-group"><label>What are you looking for?</label><select class="rb-select" id="ob-service"><option value="" disabled selected>Select a service</option><option>Customer Support</option><option>Sales &amp; Lead Generation (SDR)</option><option>Back-Office Operations</option><option>Full Platform</option></select></div>
     <div class="form-group"><label>Anything else we should know? (optional)</label><textarea class="rb-textarea" id="ob-notes" placeholder="Team size, ticket volume, channels..."></textarea></div>
@@ -447,14 +447,14 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="sb-logo"><svg width="26" height="26" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#lg)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#lg)"/></svg> <span class="lbl">Supanta</span></div>
     <div class="sb-user">
       <div class="avatar" id="sb-avatar"></div>
-      <div class="lbl" style="min-width:0"><div class="sb-user-name" id="sb-user-name">—</div><div class="sb-user-title" id="sb-user-title">—</div></div>
+      <div class="lbl" style="min-width:0"><div class="sb-user-name" id="sb-user-name"></div><div class="sb-user-title" id="sb-user-title"></div></div>
     </div>
     <div class="sb-switcher" id="sb-switcher" style="display:none">
       <div class="switcher-btn" onclick="toggleCompanySwitcher(event)">
         <div class="avatar" id="switcher-avatar" style="width:24px;height:24px;font-size:.66rem"></div>
         <div class="lbl" style="min-width:0;flex:1">
           <div class="sb-switcher-eyebrow">Viewing</div>
-          <div class="sb-switcher-name" id="switcher-company-name">—</div>
+          <div class="sb-switcher-name" id="switcher-company-name"></div>
         </div>
         <span class="nav-badge lbl" id="switcher-badge" style="display:none;margin-left:0"></span>
         <svg class="lbl" id="switcher-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -492,7 +492,7 @@ input:checked + .slider::before{transform:translateX(18px)}
         <button class="icon-btn" onclick="toggleGlobalSearch()" aria-label="Search everything">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         </button>
-        <button class="icon-btn" onclick="toggleAriaChat()" aria-label="Ask ARIA — online" id="aria-toggle-btn" title="ARIA is available">
+        <button class="icon-btn" onclick="toggleAriaChat()" aria-label="Ask ARIA, online" id="aria-toggle-btn" title="ARIA is available">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
           <span class="aria-avail-badge" id="aria-avail-badge" style="display:none"></span>
         </button>
@@ -628,14 +628,14 @@ input:checked + .slider::before{transform:translateX(18px)}
     </div>
   </div>
   <div class="aria-chat-msgs" id="aria-msgs">
-    <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account — or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
+    <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account, or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
   </div>
   <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
   <div class="aria-chat-input-row">
     <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
     <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
     <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
-    <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA — or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+    <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
     <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     <div class="emoji-pop" id="emoji-pop-aria-input"></div>
   </div>
@@ -735,7 +735,7 @@ function handleEmailConnectRedirect(){
   const result=params.get('email_connect');
   if(!result)return;
   const msg=params.get('msg')||'';
-  toast(result==='success'?('Email connected — '+msg):('Could not connect email — '+msg),result==='success'?'var(--green)':'var(--danger)');
+  toast(result==='success'?('Email connected: '+msg):('Could not connect email: '+msg),result==='success'?'var(--green)':'var(--danger)');
   params.delete('email_connect');params.delete('msg');
   const qs=params.toString();
   window.history.replaceState({},'',window.location.pathname+(qs?'?'+qs:''));
@@ -750,7 +750,7 @@ function handleIntegrationConnectRedirect(){
   const result=params.get('result');
   const msg=params.get('msg')||'';
   const label=key.charAt(0).toUpperCase()+key.slice(1);
-  toast(result==='success'?(`${label} connected — ${msg}`):(`Could not connect ${label} — ${msg}`),result==='success'?'var(--green)':'var(--danger)');
+  toast(result==='success'?(`${label} connected: ${msg}`):(`Could not connect ${label}: ${msg}`),result==='success'?'var(--green)':'var(--danger)');
   params.delete('int_connect');params.delete('result');params.delete('msg');
   const qs=params.toString();
   window.history.replaceState({},'',window.location.pathname+(qs?'?'+qs:''));
@@ -773,7 +773,7 @@ async function submitOnboarding(){
     if(error||data?.error)throw error||new Error(data.error);
     window.location.reload();
   }catch(e){
-    err.textContent=(e&&e.message)||'Could not finish setup — please try again.';err.style.display='block';
+    err.textContent=(e&&e.message)||'Could not finish setup, please try again.';err.style.display='block';
     btn.textContent='Finish setup';btn.disabled=false;
   }
 }
@@ -902,10 +902,10 @@ function handleTicketRealtime(payload){
   const r=payload.new;
   let t=STATE.tickets.find(x=>x.dbId===r.id);
   if(t){
-    t.subject=r.subject;t.client=r.customer_name||'—';t.owner=r.owner_name||'—';
+    t.subject=r.subject;t.client=r.customer_name||'N/A';t.owner=r.owner_name||'N/A';
     t.status=r.status;t.priority=r.priority;t.csat=r.csat||null;t.dueAt=r.due_at||null;
   }else{
-    STATE.tickets.unshift({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null});
+    STATE.tickets.unshift({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'N/A',owner:r.owner_name||'N/A',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null});
   }
   saveState();
   if(currentSection==='tickets')refreshTicketsBoard();
@@ -959,7 +959,7 @@ async function loadRemoteData(){
   try{
     const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
     if(tks&&tks.length){
-      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'—',owner:r.owner_name||'—',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null,labelIds:r.label_ids||[],customFields:r.custom_fields||{}}));
+      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'N/A',owner:r.owner_name||'N/A',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null,labelIds:r.label_ids||[],customFields:r.custom_fields||{}}));
     }
   }catch(e){}
   try{
@@ -1129,7 +1129,7 @@ function chatFromConversation(c,allMsgs){
     channel:CHANNEL_DB_TO_DISPLAY[c.channel]||c.channel,
     status:STATUS_DB_TO_UI[c.status]||'active',
     owner:ownerMember?ownerMember.name:(c.ai_handled?'ARIA':'Unassigned'),
-    last:transcript.length?transcript[transcript.length-1].text:(draft?'Draft ready — needs review':'No messages yet'),
+    last:transcript.length?transcript[transcript.length-1].text:(draft?'Draft ready, needs review':'No messages yet'),
     messages:transcript,
     ariaDraft:draft?draft.content:null,
     createdAt:c.created_at||null,
@@ -1198,9 +1198,9 @@ function defaultState(){
   return {
     profile:{title:'Team Member',avatar:'',companyAvatar:'',companyName:'Your Company'},
     savedResponses:[
-      {id:1,label:'Order status template',text:'Thanks for reaching out! Let me check your order status — one moment while I pull that up.'},
-      {id:2,label:'Refund apology',text:'I\'m sorry for the inconvenience — I can see the issue and I\'m processing a refund now. It should reflect in 3-5 business days.'},
-      {id:3,label:'Password reset instructions',text:'No problem! Head to Settings > Security and click "Reset Password" — you\'ll get an email with a reset link within a minute.'}
+      {id:1,label:'Order status template',text:'Thanks for reaching out! Let me check your order status, one moment while I pull that up.'},
+      {id:2,label:'Refund apology',text:'I\'m sorry for the inconvenience, I can see the issue and I\'m processing a refund now. It should reflect in 3-5 business days.'},
+      {id:3,label:'Password reset instructions',text:'No problem! Head to Settings > Security and click "Reset Password", you\'ll get an email with a reset link within a minute.'}
     ],
     team:[
       {id:1,name:'ARIA',email:'aria@supanta.ai',role:'AI Agent · Always On',type:'agent',color:'#00c2ff'},
@@ -1210,11 +1210,11 @@ function defaultState(){
     ],
     groups:[
       {id:1,name:'General',members:[1,2,3,4],messages:[
-        {from:'Nomsa Dube',text:'Morning team — heads up, BrandCo has a product launch this week so expect higher volume.',time:'08:31'},
+        {from:'Nomsa Dube',text:'Morning team, heads up, BrandCo has a product launch this week so expect higher volume.',time:'08:31'},
         {from:'Liam Dlamini',text:'Noted, thanks for the heads up 👍',time:'08:33'}
       ]},
       {id:2,name:'Escalations',members:[1,2,3],messages:[
-        {from:'ARIA',text:'Escalated CHT-102 (Sarah Lee) — possible duplicate billing charge.',time:'11:03'}
+        {from:'ARIA',text:'Escalated CHT-102 (Sarah Lee), possible duplicate billing charge.',time:'11:03'}
       ]}
     ],
     chats:[],
@@ -1235,7 +1235,7 @@ function defaultState(){
     quickQuestions:[],
     kbDocs:[
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
-      {id:2,name:'Product FAQ — Spring Catalog.docx',size:'88 KB',added:'2026-05-11'}
+      {id:2,name:'Product FAQ - Spring Catalog.docx',size:'88 KB',added:'2026-05-11'}
     ],
     activity:[],
     wisePayee:{name:'Supanta (Pty) Ltd',email:'payments@supanta.com',reference:'Use your invoice number as the payment reference'},
@@ -1300,14 +1300,14 @@ function toggleSidebar(force){
   sb.classList.toggle('open',open); bd.classList.toggle('open',open);
 }
 const SECTION_META={
-  pulse:['Pulse','Live performance & downloadable reports'],
-  teams:['Teams','Manage who — and what — is on your team'],
-  chats:['Chats','Active, archived and completed conversations'],
-  tickets:['Tickets','Board view — drag or reassign across owners'],
-  appointments:['Appointments','Meetings your team has scheduled with clients'],
-  integrations:['Integrations','Connect the channels you support customers on'],
-  notifications:['Notifications','Everything that needs your attention'],
-  settings:['Settings','Profile, workspace, display & billing']
+  pulse:['Pulse',''],
+  teams:['Teams',''],
+  chats:['Chats',''],
+  tickets:['Tickets',''],
+  appointments:['Appointments',''],
+  integrations:['Integrations',''],
+  notifications:['Notifications',''],
+  settings:['Settings','']
 };
 function showSection(key){
   if((key==='pulse'||key==='integrations')&&!canSeeReports()){
@@ -1358,15 +1358,15 @@ function renderPulse(){
   const deflection=computeAiDeflection();
   return `
   <div class="grid-4" style="margin-bottom:1.25rem">
-    <div class="stat-card"><div class="stat-lbl">CSAT</div>${csat?`<div class="stat-val" style="color:var(--green)">${csat.pct}%</div><div class="card-sub" style="margin:.2rem 0 0">From ${csat.n} rated ticket${csat.n===1?'':'s'}</div>`:`<div class="stat-val" style="font-size:1rem;color:var(--text-3)">No ratings yet</div>`}</div>
-    <div class="stat-card"><div class="stat-lbl">AI Deflection</div>${deflection?`<div class="stat-val" style="color:var(--accent)">${deflection.pct}%</div><div class="card-sub" style="margin:.2rem 0 0">Of ${deflection.n} conversation${deflection.n===1?'':'s'}</div>`:`<div class="stat-val" style="font-size:1rem;color:var(--text-3)">No data yet</div>`}</div>
+    <div class="stat-card"><div class="stat-lbl">CSAT</div>${csat?`<div class="stat-val" style="color:var(--green)">${csat.pct}%</div>`:`<div class="stat-val" style="font-size:1rem;color:var(--text-3)">No ratings yet</div>`}</div>
+    <div class="stat-card"><div class="stat-lbl">AI Deflection</div>${deflection?`<div class="stat-val" style="color:var(--accent)">${deflection.pct}%</div>`:`<div class="stat-val" style="font-size:1rem;color:var(--text-3)">No data yet</div>`}</div>
     <div class="stat-card"><div class="stat-lbl">Active Chats</div><div class="stat-val">${activeChats}</div></div>
     <div class="stat-card"><div class="stat-lbl">Open Tickets</div><div class="stat-val">${openTk}</div></div>
   </div>
   <div class="card"><div class="card-title">Welcome back, ${fn}</div><p style="color:var(--text-3);font-size:.85rem;line-height:1.7">Here's a snapshot of how things are running today. Head to Chats or Tickets to jump into live work, or grab a full report below.</p></div>
   <div class="card">
     <div class="chart-card-hd">
-      <div><div class="card-title" style="margin-bottom:.25rem">Conversation Volume</div><div class="card-sub" style="margin:0">This week's conversations vs. those ARIA resolved without escalating to a human</div></div>
+      <div><div class="card-title">Conversation Volume</div></div>
       ${pulseChartActions('conversations')}
     </div>
     ${_pulseView.conversations==='table'?dataTableHtml('conversations'):renderConversationsChart()}
@@ -1383,7 +1383,7 @@ function renderPulse(){
   </div>
   <div class="card">
     <div class="card-title">Downloadable Reports</div>
-    ${['Monthly Summary — May 2026','QA & CSAT Report — May 2026','ARIA Deflection Report — May 2026'].map(r=>`
+    ${['Monthly Summary: May 2026','QA & CSAT Report: May 2026','ARIA Deflection Report: May 2026'].map(r=>`
       <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;border-bottom:1px solid var(--border)">
         <div><div style="font-weight:500;font-size:.86rem">${r}</div><div style="font-size:.72rem;color:var(--text-3)">PDF · Ready</div></div>
         <button class="btn btn-ghost btn-sm" onclick="downloadReport('${r}')">Download</button>
@@ -1639,7 +1639,7 @@ async function addTeamMember(){
   if(!name){toast('Name is required','var(--danger)');return;}
   const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
   if(type==='agent'){
-    STATE.team.push({id:++_teamId,name,email:email||'—',role,type,color:colors[STATE.team.length%colors.length]});
+    STATE.team.push({id:++_teamId,name,email:email||'N/A',role,type,color:colors[STATE.team.length%colors.length]});
     saveState();closeModal('modal-add-member');
     ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
     renderSection();toast(`${name} added to the team`,'var(--green)');
@@ -1661,7 +1661,7 @@ async function addTeamMember(){
     saveState();renderSection();
     logActivity('Invited team member',`${name} (${email})`);
   }catch(e){
-    toast('Could not send invite — '+e.message,'var(--danger)');
+    toast('Could not send invite: '+e.message,'var(--danger)');
   }
   if(btn){btn.disabled=false;btn.textContent='Add Member';}
 }
@@ -1673,7 +1673,7 @@ async function toggleTeamAdmin(targetId,makeAdmin){
     toast(makeAdmin?'Teammate is now a business admin':'Admin access removed','var(--green)');
     await loadRemoteData();renderSection();
   }catch(e){
-    toast('Could not update role — '+e.message,'var(--danger)');
+    toast('Could not update role: '+e.message,'var(--danger)');
   }
 }
 async function removeTeamMember(id){
@@ -1686,7 +1686,7 @@ async function removeTeamMember(id){
       const {data,error}=await _sb.functions.invoke('remove-team-member',{body:{user_id:m.dbId}});
       if(error||data?.error)throw new Error((data&&data.error)||error.message);
     }catch(e){
-      toast('Could not remove teammate — '+e.message,'var(--danger)');
+      toast('Could not remove teammate: '+e.message,'var(--danger)');
       return;
     }
   }
@@ -1928,7 +1928,7 @@ async function sendReply(chatId){
       await refreshChatMessages(c);
     }catch(e){
       inp.value=text;
-      toast('Could not send — '+(e.message||e),'var(--danger)');
+      toast('Could not send: '+(e.message||e),'var(--danger)');
     }finally{
       inp.disabled=false;
     }
@@ -1947,7 +1947,7 @@ async function sendReply(chatId){
   if(hadImage){
     setTimeout(()=>{
       const c2=STATE.chats.find(x=>x.id===chatId); if(!c2)return;
-      c2.messages.push({who:'aria',text:"I can see the image you shared — noted and added to this conversation's context.",time:nowTime()});
+      c2.messages.push({who:'aria',text:"I can see the image you shared, noted and added to this conversation's context.",time:nowTime()});
       saveState();
       if(currentSection==='chats'&&_activeChatId===chatId)renderSection();
     },900);
@@ -2040,7 +2040,7 @@ function deleteSavedResponse(id){
 }
 function downloadChat(id){
   const c=STATE.chats.find(x=>x.id===id); if(!c)return;
-  const txt=`Conversation ${c.id} — ${c.customer} (${c.channel})\n\n`+c.messages.map(m=>`[${m.time}] ${messageSenderInfo(m,c).name}: ${m.text}`).join('\n');
+  const txt=`Conversation ${c.id}: ${c.customer} (${c.channel})\n\n`+c.messages.map(m=>`[${m.time}] ${messageSenderInfo(m,c).name}: ${m.text}`).join('\n');
   const blob=new Blob([txt],{type:'text/plain'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=id+'_transcript.txt';a.click();
   toast('Transcript downloaded','var(--accent)');
@@ -2160,7 +2160,7 @@ function kanbanHtml(){
                 <span class="badge badge-${t.priority==='high'?'high':t.priority==='med'?'med':'low'}">${t.priority}</span>
               </div>
               <div class="tk-subject" style="cursor:pointer" onclick="openTicketDetail('${t.id}')">${t.subject}</div>
-              ${isOverdue(t)?`<div style="font-size:.68rem;color:var(--danger);font-weight:700;margin-bottom:.4rem">Overdue — due ${fmtDueDate(t.dueAt,true)}</div>`:t.dueAt&&listKind(t.status)==='active'?`<div style="font-size:.68rem;color:var(--text-3);margin-bottom:.4rem">Due ${fmtDueDate(t.dueAt,true)}</div>`:''}
+              ${isOverdue(t)?`<div style="font-size:.68rem;color:var(--danger);font-weight:700;margin-bottom:.4rem">Overdue: due ${fmtDueDate(t.dueAt,true)}</div>`:t.dueAt&&listKind(t.status)==='active'?`<div style="font-size:.68rem;color:var(--text-3);margin-bottom:.4rem">Due ${fmtDueDate(t.dueAt,true)}</div>`:''}
               <div class="tk-foot">
                 <div class="tk-owner">${avatarHtml(t.owner,'#1a2d47',20)} <span>${t.client}</span></div>
                 <select class="owner-select" onchange="reassignTicket('${t.id}',this.value)">
@@ -2258,11 +2258,11 @@ function persistNewTicket(t){
   }).select().single().then(({data,error})=>{ if(!error&&data)t.dbId=data.id; }).catch(()=>{});
 }
 function createTicket({subject,client,owner,priority,actor,dueAt}){
-  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'—',owner,status:defaultListForKind('active').id,priority,dueAt:dueAt||null};
+  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'N/A',owner,status:defaultListForKind('active').id,priority,dueAt:dueAt||null};
   STATE.tickets.unshift(t);
   saveState();
   persistNewTicket(t);
-  pushNotification(`New ticket ${t.id} opened${client&&client!=='—'?` for ${client}`:''}: "${subject}"`);
+  pushNotification(`New ticket ${t.id} opened${client&&client!=='N/A'?` for ${client}`:''}: "${subject}"`);
   logActivity('Created ticket',t.id,actor);
   return t;
 }
@@ -2274,7 +2274,7 @@ function parseDueInputValue(value){
 }
 function addTicket(){
   const subject=document.getElementById('nt-subject').value.trim();
-  const client=document.getElementById('nt-client').value.trim()||'—';
+  const client=document.getElementById('nt-client').value.trim()||'N/A';
   const owner=document.getElementById('nt-owner').value;
   const priority=document.getElementById('nt-priority').value;
   const due=document.getElementById('nt-due').value;
@@ -2549,7 +2549,7 @@ function deleteTicketLabel(ticketId,labelId){
 }
 function ticketLabelsHtml(t){
   const labels=STATE.ticketLabels||[];
-  if(!labels.length)return '<div class="empty-state">No labels yet — click "+ New Label" to create one.</div>';
+  if(!labels.length)return '<div class="empty-state">No labels yet, click "+ New Label" to create one.</div>';
   const active=t.labelIds||[];
   return labels.map(l=>`<span class="label-pill ${active.includes(l.id)?'':'off'}" style="background:${l.color}" onclick="toggleTicketLabel('${t.id}','${l.id}')">${l.name}<span class="lp-x" onclick="event.stopPropagation();deleteTicketLabel('${t.id}','${l.id}')">✕</span></span>`).join('');
 }
@@ -2588,7 +2588,7 @@ function deleteCustomField(ticketId,fieldId){
 }
 function ticketCustomFieldsHtml(t){
   const fields=STATE.ticketCustomFields||[];
-  if(!fields.length)return '<div class="empty-state">No custom fields yet — click "+ Add Field" to create one.</div>';
+  if(!fields.length)return '<div class="empty-state">No custom fields yet, click "+ Add Field" to create one.</div>';
   const vals=t.customFields||{};
   return fields.map(f=>`<div class="cf-row">
     <label title="${f.name}">${f.name}</label>
@@ -2633,7 +2633,7 @@ function hideQuickAddCard(listId){
 function submitQuickAddCard(listId){
   const inp=document.getElementById('qa-card-input-'+listId);
   const subject=inp?inp.value.trim():''; if(!subject)return;
-  const t={id:'SUP-'+(++_tkSeq),subject,client:'—',owner:currentUser.name,status:listId,priority:'med',dueAt:null};
+  const t={id:'SUP-'+(++_tkSeq),subject,client:'N/A',owner:currentUser.name,status:listId,priority:'med',dueAt:null};
   STATE.tickets.unshift(t);
   saveState();
   persistNewTicket(t);
@@ -2664,10 +2664,10 @@ function openForwardToChat(){
   const id=document.getElementById('td-title').textContent;
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
   const sel=document.getElementById('fwd-chat-select');
-  const chatOpts=STATE.chats.map(c=>`<option value="chat:${c.id}">${c.customer} — ${c.channel}</option>`).join('');
+  const chatOpts=STATE.chats.map(c=>`<option value="chat:${c.id}">${c.customer} · ${c.channel}</option>`).join('');
   const groupOpts=(STATE.groups||[]).map(g=>`<option value="group:${g.id}"># ${g.name}</option>`).join('');
   sel.innerHTML=(chatOpts?`<optgroup label="Conversations">${chatOpts}</optgroup>`:'')+(groupOpts?`<optgroup label="Team Groups">${groupOpts}</optgroup>`:'');
-  document.getElementById('fwd-chat-message').value=`Re: ticket ${t.id} — ${t.subject}\nStatus: ${listName(t.status)}${t.owner?` · Owner: ${t.owner}`:''}`;
+  document.getElementById('fwd-chat-message').value=`Re: ticket ${t.id}: ${t.subject}\nStatus: ${listName(t.status)}${t.owner?` · Owner: ${t.owner}`:''}`;
   openModal('modal-forward-chat');
 }
 function submitForwardToChat(){
@@ -2831,7 +2831,7 @@ function emailIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>${conn.email_address||'—'}</strong> via ${conn.method==='gmail_oauth'?'Google':'IMAP'}.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.email_address||'N/A'}</strong> via ${conn.method==='gmail_oauth'?'Google':'IMAP'}.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectEmail()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openEmailConnectModal()">Connect</button>`}
@@ -2846,7 +2846,7 @@ function whatsappIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>${conn.display_phone_number||conn.phone_number_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.display_phone_number||conn.phone_number_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectWhatsapp()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openWhatsappConnectModal()">Connect</button>`}
@@ -2861,7 +2861,7 @@ function facebookIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>${conn.page_name||conn.page_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.page_name||conn.page_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectFacebook()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openFacebookConnectModal()">Connect</button>`}
@@ -2876,7 +2876,7 @@ function instagramIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>@${conn.ig_username||conn.ig_account_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>@${conn.ig_username||conn.ig_account_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectInstagram()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openInstagramConnectModal()">Connect</button>`}
@@ -2891,7 +2891,7 @@ function telegramIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>@${conn.bot_username||conn.bot_id}</strong>.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>@${conn.bot_username||conn.bot_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectTelegram()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTelegramConnectModal()">Connect</button>`}
@@ -2925,7 +2925,7 @@ async function enableLivechat(){
     toast('Live Chat enabled','var(--green)');
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
   }catch(e){
-    toast('Could not enable Live Chat — '+(e.message||e),'var(--danger)');
+    toast('Could not enable Live Chat: '+(e.message||e),'var(--danger)');
   }
 }
 async function disableLivechat(){
@@ -2940,7 +2940,7 @@ async function disableLivechat(){
 function copyLivechatSnippet(){
   if(!_livechatConnection)return;
   const snippet=`<script src="${SUPABASE_URL}/functions/v1/livechat-widget?key=${_livechatConnection.widget_key}" async><\/script>`;
-  navigator.clipboard?.writeText(snippet).then(()=>toast('Snippet copied','var(--green)')).catch(()=>toast('Could not copy — select and copy manually','var(--danger)'));
+  navigator.clipboard?.writeText(snippet).then(()=>toast('Snippet copied','var(--green)')).catch(()=>toast('Could not copy, select and copy manually','var(--danger)'));
 }
 function hubspotIntegrationCardHtml(i){
   const conn=_hubspotConnection;
@@ -2951,7 +2951,7 @@ function hubspotIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected to portal <strong>${conn.portal_id||'—'}</strong>. Sync a conversation to HubSpot from its chat panel.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected to portal <strong>${conn.portal_id||'N/A'}</strong>. Sync a conversation to HubSpot from its chat panel.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectHubspot()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startHubspotConnect()">Connect with HubSpot</button>`}
@@ -2965,7 +2965,7 @@ async function startHubspotConnect(){
     if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
     window.location.href=data.url;
   }catch(e){
-    toast('Could not start HubSpot connect — '+(e.message||e),'var(--danger)');
+    toast('Could not start HubSpot connect: '+(e.message||e),'var(--danger)');
   }
 }
 async function disconnectHubspot(){
@@ -2985,7 +2985,7 @@ async function syncConversationToHubspot(conversationId){
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     toast('Synced to HubSpot','var(--green)');
   }catch(e){
-    toast('Could not sync — '+(e.message||e),'var(--danger)');
+    toast('Could not sync: '+(e.message||e),'var(--danger)');
   }
 }
 function slackIntegrationCardHtml(i){
@@ -3004,7 +3004,7 @@ function slackIntegrationCardHtml(i){
         <button class="btn btn-ghost btn-sm" onclick="sendSlackTestMessage()">Send test message</button>
         <button class="btn btn-ghost btn-sm" onclick="disconnectSlack()">Disconnect</button>
       </div>
-    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startSlackConnect()">Connect with Slack</button>`}
+    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startSlackConnect()">Connect with Slack</button>`}
   </div>`;
 }
 async function loadSlackChannelsIntoSelect(){
@@ -3030,7 +3030,7 @@ async function setSlackChannel(sel){
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
     loadSlackChannelsIntoSelect();
   }catch(e){
-    toast('Could not set channel — '+(e.message||e),'var(--danger)');
+    toast('Could not set channel: '+(e.message||e),'var(--danger)');
   }
 }
 async function startSlackConnect(){
@@ -3041,7 +3041,7 @@ async function startSlackConnect(){
     if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
     window.location.href=data.url;
   }catch(e){
-    toast('Could not start Slack connect — '+(e.message||e),'var(--danger)');
+    toast('Could not start Slack connect: '+(e.message||e),'var(--danger)');
   }
 }
 async function sendSlackTestMessage(){
@@ -3051,7 +3051,7 @@ async function sendSlackTestMessage(){
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     toast('Test message sent to Slack','var(--green)');
   }catch(e){
-    toast('Could not send — '+(e.message||e),'var(--danger)');
+    toast('Could not send: '+(e.message||e),'var(--danger)');
   }
 }
 async function disconnectSlack(){
@@ -3072,7 +3072,7 @@ function zoomIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>${conn.zoom_account_email||'your Zoom account'}</strong>. Start a call from a chat's panel.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.zoom_account_email||'your Zoom account'}</strong>. Start a call from a chat's panel.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectZoom()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openZoomConnectModal()">Connect</button>`}
@@ -3081,7 +3081,7 @@ function zoomIntegrationCardHtml(i){
 function openZoomConnectModal(){
   document.getElementById('ci-title').textContent='Connect Zoom';
   document.getElementById('ci-body').innerHTML=`
-    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Create a <strong>Server-to-Server OAuth</strong> app in the <a href="https://marketplace.zoom.us/" target="_blank" rel="noopener" style="color:var(--accent)">Zoom App Marketplace</a> (Build App → Server-to-Server OAuth — no redirect URL needed) with the <code>meeting:write:meeting</code> scope, then paste its credentials below.</p>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Create a <strong>Server-to-Server OAuth</strong> app in the <a href="https://marketplace.zoom.us/" target="_blank" rel="noopener" style="color:var(--accent)">Zoom App Marketplace</a> (Build App → Server-to-Server OAuth, no redirect URL needed) with the <code>meeting:write:meeting</code> scope, then paste its credentials below.</p>
     <div class="form-group"><label>Account ID</label><input class="rb-input" id="zoom-account-id"/></div>
     <div class="form-group"><label>Client ID</label><input class="rb-input" id="zoom-client-id"/></div>
     <div class="form-group"><label>Client Secret</label><input class="rb-input" type="password" id="zoom-client-secret"/></div>
@@ -3127,11 +3127,11 @@ async function startZoomCall(conversationId){
   try{
     const {data,error}=await _sb.functions.invoke('zoom-create-meeting',{body:{conversation_id:conversationId}});
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
-    toast('Zoom meeting created — link posted to chat','var(--green)');
+    toast('Zoom meeting created, link posted to chat','var(--green)');
     const c=STATE.chats.find(x=>x.dbId===conversationId);
     if(c)await refreshChatMessages(c);
   }catch(e){
-    toast('Could not start call — '+(e.message||e),'var(--danger)');
+    toast('Could not start call: '+(e.message||e),'var(--danger)');
   }
 }
 function googleCalendarIntegrationCardHtml(i){
@@ -3143,7 +3143,7 @@ function googleCalendarIntegrationCardHtml(i){
       <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
       <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
     </div>
-    <div class="int-desc">${isConnected?`Connected as <strong>${conn.google_email||'your Google account'}</strong>. Schedule a meeting from a chat's panel.`:isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div>
+    <div class="int-desc">${isConnected?`Connected as <strong>${conn.google_email||'your Google account'}</strong>. Schedule a meeting from a chat's panel.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectGoogleCalendar()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startGoogleCalendarConnect()">Connect with Google</button>`}
@@ -3157,7 +3157,7 @@ async function startGoogleCalendarConnect(){
     if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
     window.location.href=data.url;
   }catch(e){
-    toast('Could not start Google connect — '+(e.message||e),'var(--danger)');
+    toast('Could not start Google connect: '+(e.message||e),'var(--danger)');
   }
 }
 async function disconnectGoogleCalendar(){
@@ -3197,7 +3197,7 @@ async function submitScheduleMeeting(conversationId){
     const c=STATE.chats.find(x=>x.dbId===conversationId);
     if(c)await refreshChatMessages(c);
   }catch(e){
-    toast('Could not schedule — '+(e.message||e),'var(--danger)');
+    toast('Could not schedule: '+(e.message||e),'var(--danger)');
   }finally{
     btn.disabled=false;btn.textContent='Schedule';
   }
@@ -3273,7 +3273,7 @@ async function submitReschedule(id){
     toast('Appointment rescheduled','var(--green)');
     logActivity('Rescheduled appointment',a?a.title:id);
   }catch(e){
-    toast('Could not reschedule — '+(e.message||e),'var(--danger)');
+    toast('Could not reschedule: '+(e.message||e),'var(--danger)');
   }finally{
     if(btn){btn.disabled=false;btn.textContent='Save New Time';}
   }
@@ -3283,7 +3283,7 @@ function openNewAppointmentModal(){
   document.getElementById('ci-body').innerHTML=`
     <div class="form-group"><label>Title</label><input class="rb-input" id="ap-title" placeholder="Call with customer"/></div>
     <div class="form-group"><label>Contact Name</label><input class="rb-input" id="ap-contact-name" placeholder="Optional"/></div>
-    <div class="form-group"><label>Contact Email</label><input class="rb-input" id="ap-contact-email" type="email" placeholder="Optional — added as an invitee"/></div>
+    <div class="form-group"><label>Contact Email</label><input class="rb-input" id="ap-contact-email" type="email" placeholder="Optional, added as an invitee"/></div>
     <div class="form-group"><label>Date &amp; Time</label><input class="rb-input" type="datetime-local" id="ap-start"/></div>
     <div class="form-group"><label>Duration (minutes)</label><input class="rb-input" type="number" id="ap-duration" value="30"/></div>
     <button class="btn btn-acc" style="width:100%" id="ap-submit" onclick="submitNewAppointment()">Schedule</button>
@@ -3310,7 +3310,7 @@ async function submitNewAppointment(){
     renderSection();
     logActivity('Scheduled appointment',title||contactName||'Untitled');
   }catch(e){
-    toast('Could not schedule — '+(e.message||e),'var(--danger)');
+    toast('Could not schedule: '+(e.message||e),'var(--danger)');
   }finally{
     if(btn){btn.disabled=false;btn.textContent='Schedule';}
   }
@@ -3325,7 +3325,7 @@ async function cancelAppointment(id){
     renderSection();
     toast('Appointment cancelled','var(--accent)');
   }catch(e){
-    toast('Could not cancel — '+(e.message||e),'var(--danger)');
+    toast('Could not cancel: '+(e.message||e),'var(--danger)');
   }
 }
 function trelloIntegrationCardHtml(i){
@@ -3342,7 +3342,7 @@ function trelloIntegrationCardHtml(i){
       <select class="rb-select" id="trello-board-select" onchange="onTrelloBoardChange(this)"><option value="">Loading boards…</option></select>
       <select class="rb-select" id="trello-list-select" onchange="setTrelloList(this)" style="display:none"><option value="">Select a list…</option></select>
       <button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectTrello()">Disconnect</button>
-    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong — reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTrelloConnectModal()">Connect</button>`}
+    `:`<div class="int-desc">${isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div><button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTrelloConnectModal()">Connect</button>`}
   </div>`;
 }
 function openTrelloConnectModal(){
@@ -3417,7 +3417,7 @@ async function setTrelloList(sel){
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
     loadTrelloBoardsIntoSelect();
   }catch(e){
-    toast('Could not set list — '+(e.message||e),'var(--danger)');
+    toast('Could not set list: '+(e.message||e),'var(--danger)');
   }
 }
 async function disconnectTrello(){
@@ -3437,7 +3437,7 @@ async function sendConversationToTrello(conversationId){
     if(error||data?.error)throw new Error((data&&data.error)||error.message);
     toast(data.updated?'Trello card updated':'Trello card created','var(--green)');
   }catch(e){
-    toast('Could not send to Trello — '+(e.message||e),'var(--danger)');
+    toast('Could not send to Trello: '+(e.message||e),'var(--danger)');
   }
 }
 function toggleIntegration(key,checked,actor){
@@ -3474,7 +3474,7 @@ async function startGmailConnect(){
     if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
     window.location.href=data.url;
   }catch(e){
-    toast('Could not start Google connect — '+(e.message||e),'var(--danger)');
+    toast('Could not start Google connect: '+(e.message||e),'var(--danger)');
   }
 }
 async function submitImapConnect(){
@@ -3516,7 +3516,7 @@ async function disconnectEmail(){
 function openWhatsappConnectModal(){
   document.getElementById('ci-title').textContent='Connect WhatsApp';
   document.getElementById('ci-body').innerHTML=`
-    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect a WhatsApp Business number so inbound messages become conversations here, with ARIA replying automatically. You'll need a Meta app with the WhatsApp product added — grab the Phone Number ID, a permanent access token, and the App Secret from your Meta App dashboard.</p>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect a WhatsApp Business number so inbound messages become conversations here, with ARIA replying automatically. You'll need a Meta app with the WhatsApp product added, grab the Phone Number ID, a permanent access token, and the App Secret from your Meta App dashboard.</p>
     <div class="form-group"><label>Phone Number ID</label><input class="rb-input" id="wa-phone-number-id" placeholder="e.g. 109876543210987"/></div>
     <div class="form-group"><label>Access Token</label><input class="rb-input" type="password" id="wa-access-token"/></div>
     <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="wa-app-secret"/></div>
@@ -3543,7 +3543,7 @@ async function submitWhatsappConnect(){
     resultEl.style.display='block';
     resultEl.innerHTML=`
       <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
-        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step — configure this in your Meta App's WhatsApp &gt; Configuration:</div>
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step, configure this in your Meta App's WhatsApp &gt; Configuration:</div>
         <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Callback URL</div>
         <input class="rb-input" readonly value="${data.webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
         <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Verify Token</div>
@@ -3569,7 +3569,7 @@ async function disconnectWhatsapp(){
 function openFacebookConnectModal(){
   document.getElementById('ci-title').textContent='Connect Facebook';
   document.getElementById('ci-body').innerHTML=`
-    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Facebook Page so Messenger DMs become conversations here, with ARIA replying automatically. This is DMs only — comments on posts aren't handled. You'll need a Meta app with the Messenger product added to your Page — grab a Page Access Token and the App Secret from your Meta App dashboard.</p>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Facebook Page so Messenger DMs become conversations here, with ARIA replying automatically. This is DMs only, comments on posts aren't handled. You'll need a Meta app with the Messenger product added to your Page, grab a Page Access Token and the App Secret from your Meta App dashboard.</p>
     <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="fb-access-token"/></div>
     <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="fb-app-secret"/></div>
     <button class="btn btn-acc" style="width:100%" id="fb-submit" onclick="submitFacebookConnect()">Test &amp; Connect</button>
@@ -3594,12 +3594,12 @@ async function submitFacebookConnect(){
     resultEl.style.display='block';
     resultEl.innerHTML=`
       <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
-        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step — configure this in your Meta App's Messenger &gt; Settings &gt; Webhooks:</div>
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step, configure this in your Meta App's Messenger &gt; Settings &gt; Webhooks:</div>
         <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Callback URL</div>
         <input class="rb-input" readonly value="${data.webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
         <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Verify Token</div>
         <input class="rb-input" readonly value="${data.verify_token}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
-        <div style="font-size:.76rem;color:var(--text-3)">Subscribe the Page to the <strong>messages</strong> webhook field only — comments/feed events aren't handled.</div>
+        <div style="font-size:.76rem;color:var(--text-3)">Subscribe the Page to the <strong>messages</strong> webhook field only, comments/feed events aren't handled.</div>
       </div>`;
     await loadRemoteData();
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
@@ -3621,7 +3621,7 @@ async function disconnectFacebook(){
 function openInstagramConnectModal(){
   document.getElementById('ci-title').textContent='Connect Instagram';
   document.getElementById('ci-body').innerHTML=`
-    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Instagram professional account so DMs become conversations here, with ARIA replying automatically. Instagram DMs go through the Facebook Page your Instagram account is linked to — use the same Page Access Token as your Facebook connection (with the instagram_manage_messages permission added) and the same App Secret.</p>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Instagram professional account so DMs become conversations here, with ARIA replying automatically. Instagram DMs go through the Facebook Page your Instagram account is linked to, use the same Page Access Token as your Facebook connection (with the instagram_manage_messages permission added) and the same App Secret.</p>
     <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="ig-access-token"/></div>
     <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="ig-app-secret"/></div>
     <button class="btn btn-acc" style="width:100%" id="ig-submit" onclick="submitInstagramConnect()">Test &amp; Connect</button>
@@ -3646,12 +3646,12 @@ async function submitInstagramConnect(){
     resultEl.style.display='block';
     resultEl.innerHTML=`
       <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
-        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step — configure this in your Meta App's Instagram &gt; Webhooks (or Messenger &gt; Webhooks, subscribed to the Instagram object):</div>
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step, configure this in your Meta App's Instagram &gt; Webhooks (or Messenger &gt; Webhooks, subscribed to the Instagram object):</div>
         <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Callback URL</div>
         <input class="rb-input" readonly value="${data.webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
         <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">Verify Token</div>
         <input class="rb-input" readonly value="${data.verify_token}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
-        <div style="font-size:.76rem;color:var(--text-3)">Subscribe to the <strong>messages</strong> field only — comments aren't handled.</div>
+        <div style="font-size:.76rem;color:var(--text-3)">Subscribe to the <strong>messages</strong> field only, comments aren't handled.</div>
       </div>`;
     await loadRemoteData();
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
@@ -3673,7 +3673,7 @@ async function disconnectInstagram(){
 function openTelegramConnectModal(){
   document.getElementById('ci-title').textContent='Connect Telegram';
   document.getElementById('ci-body').innerHTML=`
-    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Message <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--accent)">@BotFather</a> on Telegram, create a bot with <code>/newbot</code>, and paste the token it gives you below. We'll register the webhook automatically — no extra setup needed.</p>
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Message <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--accent)">@BotFather</a> on Telegram, create a bot with <code>/newbot</code>, and paste the token it gives you below. We'll register the webhook automatically, no extra setup needed.</p>
     <div class="form-group"><label>Bot Token</label><input class="rb-input" type="password" id="tg-bot-token" placeholder="123456789:AAExample-Token"/></div>
     <button class="btn btn-acc" style="width:100%" id="tg-submit" onclick="submitTelegramConnect()">Test &amp; Connect</button>
   `;
@@ -3688,7 +3688,7 @@ async function submitTelegramConnect(){
     const {data,error}=await _sb.functions.invoke('telegram-save-credentials',{body:{bot_token}});
     if(error)throw error;
     if(data&&data.error)throw new Error(data.error);
-    toast(`Telegram connected — @${data.bot_username||'bot'}`,'var(--green)');
+    toast(`Telegram connected: @${data.bot_username||'bot'}`,'var(--green)');
     closeModal('modal-connect-int');
     await loadRemoteData();
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
@@ -3733,14 +3733,13 @@ function renderNotifList(){
 function renderActivityLog(){
   const list=STATE.activity||[];
   return `
-  <div class="card-sub" style="margin-top:0">Who did what, across your whole team — including ARIA. Click an entry to jump there.</div>
   <div class="card" style="padding:0">
     ${list.length?list.map(a=>{
       const clickable=!!activityNavFor(a);
       return `
       <div class="notif-item read" style="cursor:${clickable?'pointer':'default'}" ${clickable?`onclick="goToActivity(${a.id})"`:''}>
         <div class="notif-dot" style="background:${a.actor==='ARIA'?'var(--accent-2)':'var(--accent)'}"></div>
-        <div><div><strong>${a.actor}</strong> ${a.action}${a.target?` — <span style="color:var(--text-2)">${a.target}</span>`:''}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.25rem">${a.time}</div></div>
+        <div><div><strong>${a.actor}</strong> ${a.action}${a.target?` · <span style="color:var(--text-2)">${a.target}</span>`:''}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.25rem">${a.time}</div></div>
         ${clickable?`<div style="margin-left:auto;color:var(--text-3);font-size:.72rem;flex-shrink:0">View →</div>`:''}
       </div>`;
     }).join(''):'<div class="empty-state">No activity recorded yet.</div>'}
@@ -3893,7 +3892,7 @@ function runGlobalSearch(v){
     .map(t=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTicket('${t.id}')"><div class="notif-dot" style="background:var(--accent)"></div><div><div>${t.subject}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${t.id} · ${t.client} · ${t.owner}</div></div></div>`);
 
   const ch=STATE.chats.filter(c=>c.customer.toLowerCase().includes(q)||c.last.toLowerCase().includes(q)||c.channel.toLowerCase().includes(q)||c.owner.toLowerCase().includes(q)).slice(0,5)
-    .map(c=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoChat('${c.id}')"><div class="notif-dot" style="background:var(--green)"></div><div><div>${escapeHtml(c.customer)} <span style="color:var(--text-3);font-weight:400">— ${escapeHtml(c.channel)}</span></div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${escapeHtml(c.last)}</div></div></div>`);
+    .map(c=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoChat('${c.id}')"><div class="notif-dot" style="background:var(--green)"></div><div><div>${escapeHtml(c.customer)} <span style="color:var(--text-3);font-weight:400">· ${escapeHtml(c.channel)}</span></div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${escapeHtml(c.last)}</div></div></div>`);
 
   const tm=STATE.team.filter(m=>m.name.toLowerCase().includes(q)||m.email.toLowerCase().includes(q)||m.role.toLowerCase().includes(q)).slice(0,5)
     .map(m=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoTeam()"><div class="notif-dot" style="background:#a99cff"></div><div><div>${m.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${m.role}</div></div></div>`);
@@ -3997,7 +3996,7 @@ function renderSettingsTab(t){
     </div>
     <div class="card">
       <div class="card-title">Export Your Data</div>
-      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Download everything this dashboard has for your business — tickets, conversations, team, invoices, knowledge base and activity log — as a single JSON file.</p>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Download everything this dashboard has for your business: tickets, conversations, team, invoices, knowledge base and activity log, as a single JSON file.</p>
       <button class="btn btn-ghost" onclick="exportAllData()">Download All Data (JSON)</button>
     </div>`;
   if(t==='display')return `
@@ -4011,7 +4010,7 @@ function renderSettingsTab(t){
   if(t==='kb')return `
     <div class="card">
       <div class="card-title">Add Documents for ARIA</div>
-      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Upload your own documents so ARIA can read and use them. Since this is your company's information, no approval step is required — it's added straight to your knowledge base.</p>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Upload your own documents so ARIA can read and use them. Since this is your company's information, no approval step is required, it's added straight to your knowledge base.</p>
       <input type="file" id="kb-file-input" multiple/>
       <button class="btn btn-acc" style="margin-top:.85rem" onclick="uploadKbDocs()">Add to Knowledge Base</button>
     </div>
@@ -4036,7 +4035,7 @@ function renderSettingsTab(t){
   if(t==='invoices')return `
     <div class="card">
       <div class="card-title">Pay via Wise</div>
-      <p style="font-size:.82rem;color:var(--text-3);line-height:1.7;margin-bottom:1rem">Invoices are settled by bank transfer through <strong>Wise</strong> — no card or subscription on file. Send payment to the details below, using the invoice number as your reference.</p>
+      <p style="font-size:.82rem;color:var(--text-3);line-height:1.7;margin-bottom:1rem">Invoices are settled by bank transfer through <strong>Wise</strong>, no card or subscription on file. Send payment to the details below, using the invoice number as your reference.</p>
       <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:.25rem 1.1rem">
         <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--text-3)">Payee name</span><span style="font-weight:600">${STATE.wisePayee.name}</span></div>
         <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--text-3)">Wise email</span><span style="font-weight:600">${STATE.wisePayee.email}</span></div>
@@ -4085,7 +4084,7 @@ function teamAccessBodyHtml(){
         <div><div style="font-weight:600;font-size:.85rem">${e.full_name||e.email}</div><div style="font-size:.72rem;color:var(--text-3)">${e.email}</div></div>
         <span class="badge ${isSuper?'badge-high':'badge-active'}" style="margin-left:auto">${isSuper?'Super Admin':'Admin'}</span>
       </div>
-      ${isSuper?`<div style="font-size:.78rem;color:var(--text-3);padding:.5rem 0 0">Full access to every company — Super Admins can't be restricted.</div>`:`
+      ${isSuper?`<div style="font-size:.78rem;color:var(--text-3);padding:.5rem 0 0">Full access to every company, Super Admins can't be restricted.</div>`:`
       <div class="team-access-chips">
         ${assignedCos.length?assignedCos.map(c=>`<span class="ta-chip">${c.company_name}<button onclick="toggleEmployeeCompany('${e.id}','${c.id}',false)" aria-label="Remove ${c.company_name}">×</button></span>`).join(''):'<span style="font-size:.76rem;color:var(--text-3)">No companies assigned yet</span>'}
       </div>
@@ -4145,7 +4144,7 @@ async function changePassword(){
     document.getElementById('set-pwd-1').value='';document.getElementById('set-pwd-2').value='';
     toast('Password updated','var(--green)');
   }catch(e){
-    toast('Could not update password — '+e.message,'var(--danger)');
+    toast('Could not update password: '+e.message,'var(--danger)');
   }
 }
 
@@ -4187,7 +4186,7 @@ async function startMfaEnroll(){
         <button class="btn btn-ghost" onclick="cancelMfaEnroll()">Cancel</button>
       </div>`;
   }catch(e){
-    wrap.innerHTML='<div class="empty-state">Could not start 2FA setup — '+e.message+'</div>';
+    wrap.innerHTML='<div class="empty-state">Could not start 2FA setup: '+e.message+'</div>';
   }
 }
 async function confirmMfaEnroll(){
@@ -4203,7 +4202,7 @@ async function confirmMfaEnroll(){
     refreshMfaStatus();
     logActivity('Enabled two-factor authentication',currentUser.name);
   }catch(e){
-    toast('Incorrect code — try again','var(--danger)');
+    toast('Incorrect code, try again','var(--danger)');
   }
 }
 async function cancelMfaEnroll(){
@@ -4220,7 +4219,7 @@ async function disableMfa(factorId){
     refreshMfaStatus();
     logActivity('Disabled two-factor authentication',currentUser.name);
   }catch(e){
-    toast('Could not turn off 2FA — '+e.message,'var(--danger)');
+    toast('Could not turn off 2FA: '+e.message,'var(--danger)');
   }
 }
 
@@ -4251,7 +4250,7 @@ let _kbId=100;
 async function uploadKbDocs(){
   const files=document.getElementById('kb-file-input').files;
   if(!files.length){toast('Choose at least one file','var(--danger)');return;}
-  if(!activeClientId()){toast('Your account isn\'t linked to a business — contact support before adding documents','var(--danger)');return;}
+  if(!activeClientId()){toast('Your account isn\'t linked to a business, contact support before adding documents','var(--danger)');return;}
   const today=new Date().toISOString().slice(0,10);
   Array.from(files).forEach(f=>{
     STATE.kbDocs.push({id:++_kbId,name:f.name,size:Math.round(f.size/1024)+' KB',added:today});
@@ -4364,16 +4363,16 @@ function initAriaScope(){
   if(activeClientId()){
     const co=currentUser.companyName||STATE.profile.companyName||'your business';
     statusEl.innerHTML=`<span class="live-dot"></span>${co}`;
-    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA — your assistant for <strong>${co}</strong>. Ask me anything, or ask me to do something, like "create a ticket for a broken checkout" or "add this doc to the knowledge base". How can I help today?</div>`;
+    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Hi, I'm ARIA, your assistant for <strong>${co}</strong>. Ask me anything, or ask me to do something, like "create a ticket for a broken checkout" or "add this doc to the knowledge base". How can I help today?</div>`;
     loadAriaHistory();
     _ariaHistory.forEach(m=>{ msgs.innerHTML+=`<div class="aria-msg aria-msg-${m.who}">${m.html}</div>`; });
     msgs.scrollTop=msgs.scrollHeight;
-    inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA — or tell it what to do…';
+    inp.disabled=false;btn.disabled=false;attachBtn.disabled=false;inp.placeholder='Ask ARIA or tell it what to do…';
     maybeSuggestMfa();
   }else{
     statusEl.innerHTML=`<span class="live-dot" style="background:var(--warning)"></span>Not linked to a business`;
-    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Your account isn't linked to a business yet, so I can't answer company-specific questions here — this keeps me from ever mixing up data between businesses. Please contact support to get your workspace connected.</div>`;
-    inp.disabled=true;btn.disabled=true;attachBtn.disabled=true;inp.placeholder='ARIA unavailable — no business linked';
+    msgs.innerHTML=`<div class="aria-msg aria-msg-bot">Your account isn't linked to a business yet, so I can't answer company-specific questions here, this keeps me from ever mixing up data between businesses. Please contact support to get your workspace connected.</div>`;
+    inp.disabled=true;btn.disabled=true;attachBtn.disabled=true;inp.placeholder='ARIA unavailable, no business linked';
   }
 }
 // Proactive nudge, not saved to persisted history so it naturally
@@ -4386,7 +4385,7 @@ async function maybeSuggestMfa(){
     const has2fa=(data?.totp||[]).some(f=>f.status==='verified');
     if(!has2fa){
       const msgs=document.getElementById('aria-msgs'); if(!msgs)return;
-      msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">By the way — your account doesn't have two-factor authentication set up yet. It only takes a minute and adds real protection.<button class="btn btn-sm btn-acc" style="margin-top:.5rem;display:block" onclick="toggleAriaChat();showSection('settings');_settingsTab='security';renderSection();">Set up 2FA</button></div>`;
+      msgs.innerHTML+=`<div class="aria-msg aria-msg-bot">By the way, your account doesn't have two-factor authentication set up yet. It only takes a minute and adds real protection.<button class="btn btn-sm btn-acc" style="margin-top:.5rem;display:block" onclick="toggleAriaChat();showSection('settings');_settingsTab='security';renderSection();">Set up 2FA</button></div>`;
       msgs.scrollTop=msgs.scrollHeight;
     }
   }catch(e){}
@@ -4427,15 +4426,15 @@ function tryAriaAction(text,file){
   const low=t.toLowerCase();
 
   if(file && /(knowledge base|\bkb\b)/.test(low) && /add|upload|save/.test(low)){
-    if(!canSeeReports())return "Only business admins can add documents to the knowledge base — ask an admin on your team to add this one.";
+    if(!canSeeReports())return "Only business admins can add documents to the knowledge base, ask an admin on your team to add this one.";
     addFileToKnowledgeBase(file);
-    return `Done — I've added <strong>${file.name}</strong> to ${currentUser.companyName||'your'} knowledge base. I can reference it in future answers.`;
+    return `Done: I've added <strong>${file.name}</strong> to ${currentUser.companyName||'your'} knowledge base. I can reference it in future answers.`;
   }
 
   let m=low.match(/^(?:please\s+)?(?:create|open|raise|log)\s+(?:a\s+|new\s+)?ticket\b(.*)$/);
   if(m){
     let rest=t.slice(t.toLowerCase().indexOf(m[0].toLowerCase())+m[0].length-m[1].length).trim();
-    let client='—', priority='med';
+    let client='N/A', priority='med';
     const forMatch=rest.match(/\bfor\s+([A-Za-z0-9&' ]+?)(?:\s+about\b|\s+regarding\b|:|$)/i);
     let subject=rest;
     if(forMatch){
@@ -4447,7 +4446,7 @@ function tryAriaAction(text,file){
     if(!subject)subject='New ticket from ARIA';
     const newTk=createTicket({subject,client,owner:currentUser.name,priority,actor:'ARIA'});
     if(currentSection==='tickets')renderSection();
-    return `Done — I've opened <strong>${newTk.id}</strong>${client!=='—'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
+    return `Done: I've opened <strong>${newTk.id}</strong>${client!=='N/A'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
   }
 
   m=low.match(/^(?:please\s+)?add\s+(.+?)\s+to\s+(?:the\s+)?team\b(.*)$/);
@@ -4456,9 +4455,9 @@ function tryAriaAction(text,file){
     const roleMatch=t.match(/\bas\s+(?:an?\s+)?([A-Za-z ]+)$/i);
     const role=roleMatch?roleMatch[1].trim():'Team Member';
     const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
-    STATE.team.push({id:++_teamId,name,email:'—',role,type:'human',color:colors[STATE.team.length%colors.length]});
+    STATE.team.push({id:++_teamId,name,email:'N/A',role,type:'human',color:colors[STATE.team.length%colors.length]});
     saveState(); if(currentSection==='teams')renderSection();
-    return `Done — I've added <strong>${name}</strong> to the team as ${role}.`;
+    return `Done: I've added <strong>${name}</strong> to the team as ${role}.`;
   }
 
   m=low.match(/^(?:please\s+)?(?:create|start|make)\s+(?:a\s+)?group\s+(?:called|named)\s+(.+)$/);
@@ -4477,7 +4476,7 @@ function tryAriaAction(text,file){
         }).catch(()=>{});
     }
     logActivity('Created group',name,'ARIA');
-    return `Done — I've created the <strong>#${name}</strong> group. Add teammates to it from Teams → Groups.`;
+    return `Done: I've created the <strong>#${name}</strong> group. Add teammates to it from Teams → Groups.`;
   }
 
   m=low.match(/^mark\s+(ticket|chat)\s+([\w-]+)\s+as\s+(done|archived|active)$/);
@@ -4489,13 +4488,13 @@ function tryAriaAction(text,file){
       if(!tk)return `I couldn't find a ticket with ID ${id}.`;
       const list=defaultListForKind(status);
       moveTicket(tk.id,list.id,'ARIA');
-      return `Done — ${tk.id} is now in ${list.name}.`;
+      return `Done: ${tk.id} is now in ${list.name}.`;
     }else{
       const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
       if(!ch)return `I couldn't find a chat with ID ${id}.`;
       ch.status=status; saveState(); if(currentSection==='chats')renderSection();
       logActivity(`Marked chat ${status}`,`${ch.customer} (${ch.id})`,'ARIA');
-      return `Done — the conversation with ${ch.customer} is now marked ${status}.`;
+      return `Done: the conversation with ${ch.customer} is now marked ${status}.`;
     }
   }
 
@@ -4512,7 +4511,7 @@ function tryAriaAction(text,file){
       _sb.functions.invoke('remove-team-member',{body:{user_id:dbId}}).catch(()=>{});
     }
     logActivity('Removed team member',member.name,'ARIA');
-    return `Done — I've removed ${member.name} from the team.`;
+    return `Done: I've removed ${member.name} from the team.`;
   }
 
   m=low.match(/^(?:please\s+)?(?:reassign|assign)\s+(?:ticket\s+)?([\w-]+)\s+to\s+(.+)$/);
@@ -4523,7 +4522,7 @@ function tryAriaAction(text,file){
     if(!tk)return `I couldn't find a ticket with ID ${idRaw.toUpperCase()}.`;
     reassignTicket(tk.id,owner,'ARIA');
     if(currentSection==='tickets')renderSection();
-    return `Done — ${tk.id} is now assigned to ${owner}.`;
+    return `Done: ${tk.id} is now assigned to ${owner}.`;
   }
 
   m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
@@ -4535,20 +4534,20 @@ function tryAriaAction(text,file){
     if(i){
       toggleIntegration(key,wantConnect,'ARIA');
       if(currentSection==='integrations')renderSection();
-      return `Done — ${i.name} is now ${wantConnect?'connected':'disconnected'}.`;
+      return `Done: ${i.name} is now ${wantConnect?'connected':'disconnected'}.`;
     }
   }
 
   m=low.match(/^mark all notifications? as read$/);
   if(m){
     markAllRead();
-    return `Done — all notifications are marked as read.`;
+    return `Done: all notifications are marked as read.`;
   }
 
   m=low.match(/^(?:switch to|use|turn on)\s+(dark|light)(?:\s+mode)?$/);
   if(m){
     setTheme(m[1]);
-    return `Done — switched to ${m[1]} mode.`;
+    return `Done: switched to ${m[1]} mode.`;
   }
 
   return null;
@@ -4630,7 +4629,7 @@ async function sendAriaMsg(){
   if(file && file.type && file.type.startsWith('image/')){
     if(!['image/png','image/jpeg','image/webp','image/gif'].includes(file.type)){
       document.getElementById('aria-typing')?.remove();
-      ariaAppend('bot',`I can only read PNG, JPEG, WEBP or GIF images right now — <strong>${file.name}</strong> isn't one of those.`);
+      ariaAppend('bot',`I can only read PNG, JPEG, WEBP or GIF images right now, <strong>${file.name}</strong> isn't one of those.`);
       return;
     }
     const dataUrl=await fileToBase64(file);
@@ -4640,7 +4639,7 @@ async function sendAriaMsg(){
     body.document={media_type:file.type,data:dataUrl.slice(dataUrl.indexOf(',')+1),name:file.name};
   }else if(file){
     document.getElementById('aria-typing')?.remove();
-    ariaAppend('bot',`I can only read images, PDFs, or plain text files right now — <strong>${file.name}</strong> isn't one of those. Say the word if you'd like me to add it to your knowledge base instead.`);
+    ariaAppend('bot',`I can only read images, PDFs, or plain text files right now, <strong>${file.name}</strong> isn't one of those. Say the word if you'd like me to add it to your knowledge base instead.`);
     return;
   }
 
@@ -4658,7 +4657,7 @@ async function sendAriaMsg(){
   }catch(e){
     document.getElementById('aria-typing')?.remove();
     const detail=(e&&e.message)?String(e.message):'';
-    ariaAppend('bot',`Sorry, something went wrong on my end${detail?' — '+escapeHtml(detail):''}. Try again in a moment.`);
+    ariaAppend('bot',`Sorry, something went wrong on my end${detail?': '+escapeHtml(detail):''}. Try again in a moment.`);
   }
 }
 function fileToBase64(file){
@@ -4819,7 +4818,7 @@ function renderGroupChat(g){
           <div class="cm-bubble ${m.from===currentUser.name?'cm-agent':'cm-customer'}">
             <div class="cm-meta">${m.from} · ${m.time}</div>${m.text}
           </div>
-        </div>`).join(''):'<div class="empty-state">No messages yet — say hi 👋</div>'}
+        </div>`).join(''):'<div class="empty-state">No messages yet, say hi 👋</div>'}
     </div>
     <div class="aria-chat-input-row" style="background:transparent;border-top:1px solid var(--border)">
       <input class="aria-chat-input" id="group-msg-input" placeholder="Message #${g.name}…" onkeydown="if(event.key==='Enter')sendGroupMsg(${g.id})"/>
@@ -4840,7 +4839,7 @@ function sendGroupMsg(gid){
 let _grpId=100;
 function openAddGroup(){
   document.getElementById('ng-name').value='';
-  document.getElementById('ng-members').innerHTML=STATE.team.map(m=>`<label><input type="checkbox" value="${m.name}" data-agent="${m.type==='agent'}"/> ${m.name} <span style="color:var(--text-3);font-size:.72rem">— ${m.role}</span></label>`).join('');
+  document.getElementById('ng-members').innerHTML=STATE.team.map(m=>`<label><input type="checkbox" value="${m.name}" data-agent="${m.type==='agent'}"/> ${m.name} <span style="color:var(--text-3);font-size:.72rem">· ${m.role}</span></label>`).join('');
   openModal('modal-add-group');
 }
 function addGroup(){
