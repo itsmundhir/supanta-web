@@ -3,6 +3,9 @@
 /about       /home.html   200
 /services    /home.html   200
 /contact     /home.html   200
+/privacy     /home.html   200
+/terms       /home.html   200
+/cookies     /home.html   200
 /login       /home.html   200
 /app         /app.html    200
 /home.html   /home        301

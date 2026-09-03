@@ -114,7 +114,8 @@ footer{background:var(--dark-2);border-top:1px solid var(--border);padding:2.5re
 .foot-links{display:flex;gap:1.5rem}
 .foot-links a{color:var(--grey);transition:color .2s;cursor:pointer}
 .site-footer{background:var(--dark-2);border-top:1px solid var(--border);padding:3.5rem 5% 0}
-.footer-main{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:2.5rem;padding-bottom:2.5rem}
+.footer-main{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr 1fr;gap:2rem;padding-bottom:2.5rem}
+.footer-col .footer-legal-text{font-size:.82rem;color:var(--grey);margin-bottom:.65rem}
 .footer-brand-logo{display:flex;align-items:center;gap:.55rem;font-family:var(--fd);font-weight:700;font-size:1rem;color:var(--white);margin-bottom:.85rem}
 .footer-tagline{font-size:.8rem;color:var(--grey);line-height:1.6;max-width:230px;margin-bottom:1.1rem;font-weight:300}
 .footer-socials{display:flex;gap:.6rem}
@@ -123,8 +124,14 @@ footer{background:var(--dark-2);border-top:1px solid var(--border);padding:2.5re
 .footer-col h4{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);margin-bottom:.9rem}
 .footer-col a{display:block;font-size:.82rem;color:var(--grey-2);margin-bottom:.65rem;cursor:pointer;transition:color .2s;text-decoration:none}
 .footer-col a:hover{color:var(--accent)}
-.footer-bottom{max-width:1100px;margin:0 auto;border-top:1px solid var(--border);padding:1.35rem 0;font-size:.75rem;color:var(--grey)}
 @media(max-width:680px){.footer-main{grid-template-columns:1fr 1fr;gap:2rem}.footer-brand{grid-column:1/-1}}
+.legal-content{max-width:780px}
+.legal-content h3{font-family:var(--fd);font-size:1.1rem;font-weight:700;margin:2.25rem 0 .85rem}
+.legal-content h3:first-child{margin-top:0}
+.legal-content p{font-size:.88rem;color:var(--grey-2);line-height:1.8;font-weight:300;margin-bottom:1rem}
+.legal-content ul{margin:0 0 1rem 1.2rem;padding:0}
+.legal-content li{font-size:.88rem;color:var(--grey-2);line-height:1.8;font-weight:300;margin-bottom:.4rem}
+.legal-content .legal-updated{font-size:.78rem;color:var(--grey);margin-bottom:2rem}
 .al-badge{display:inline-flex;align-items:center;gap:4px;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:100px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
 .al-none{background:rgba(58,58,74,.4);color:#6b6b8a;border:1px solid rgba(58,58,74,.6)}
 .al-read{background:rgba(30,144,255,.12);color:#60a5fa;border:1px solid rgba(30,144,255,.25)}
@@ -744,8 +751,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
     <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
     <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
   </div>
-  <div class="footer-bottom">&#169; 2026 Supanta. All rights reserved.</div>
 </footer>
 </div>
 
@@ -793,8 +800,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
     <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
     <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
   </div>
-  <div class="footer-bottom">&#169; 2026 Supanta. All rights reserved.</div>
 </footer>
 </div>
 
@@ -856,8 +863,8 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
     <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
     <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
   </div>
-  <div class="footer-bottom">&#169; 2026 Supanta. All rights reserved.</div>
 </footer>
 </div>
 
@@ -913,8 +920,167 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
     <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
     <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
   </div>
-  <div class="footer-bottom">&#169; 2026 Supanta. All rights reserved.</div>
+</footer>
+</div>
+
+<!-- PRIVACY -->
+<div id="page-privacy" class="page">
+<div class="page-hero" style="background:linear-gradient(180deg,var(--dark) 0%,var(--dark-2) 100%)"><div class="hero-bg-grad"></div><div class="hero-grid-bg"></div>
+  <div class="hero-inner"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/" onclick="spaNav(event,'home')">Home</a><span>/</span><span aria-current="page">Privacy Statement</span></nav><div class="slbl">Legal</div><h2 class="ht" style="font-size:2.2rem">Privacy Statement</h2></div>
+</div>
+<section class="sec" style="background:var(--dark-2)"><div class="sec-in">
+  <div class="legal-content">
+    <div class="legal-updated">Last updated: 1 January 2026</div>
+    <h3>Introduction</h3>
+    <p>Supanta ("Supanta", "we", "us", "our") provides an AI-powered contact centre platform that combines an AI agent with human agents to deliver customer support, sales, and back-office services on behalf of our business clients. This Privacy Statement explains what personal information we collect, how we use it, and the choices you have, whether you are a visitor to our website, a contact of one of our clients interacting with our AI agent or human agents, or a user of our dashboard.</p>
+    <h3>Information We Collect</h3>
+    <p>We collect information in the following ways:</p>
+    <ul>
+      <li><strong>Account and contact information</strong> — name, email address, phone number, and company details you provide when you sign up, log in, or submit our contact form.</li>
+      <li><strong>Conversation data</strong> — messages, attachments, and metadata exchanged through voice, chat, WhatsApp, SMS, email, or other supported channels when you contact one of our clients, including transcripts handled by our AI agent and human agents.</li>
+      <li><strong>Usage data</strong> — pages visited, features used, device and browser information, and approximate location, collected automatically as you use our website or dashboard.</li>
+      <li><strong>Integration data</strong> — where a client connects a third-party channel or tool (such as WhatsApp Business, Facebook, Instagram, Telegram, Slack, Zoom, Google Calendar, or HubSpot), we process the data those integrations make available in order to deliver the service.</li>
+      <li><strong>Cookies and similar technologies</strong> — see our <a href="/cookies" onclick="spaNav(event,'cookies')" style="color:var(--accent)">Cookie Information</a> page for details.</li>
+    </ul>
+    <h3>How We Use Information</h3>
+    <p>We use personal information to: operate and improve the Supanta platform; enable our AI agent to understand and resolve enquiries; route conversations to the right human agent with full context; generate performance analytics and reports for our clients; communicate with you about your account or enquiry; maintain the security and integrity of our systems; and meet our legal and regulatory obligations.</p>
+    <h3>Data Sharing and Third Parties</h3>
+    <p>We do not sell personal information. We share information only where necessary to provide the service: with the business you are contacting (our client), with infrastructure providers that host and process data on our behalf (including our database and authentication provider, Supabase), and with the specific third-party channels or tools a client has chosen to connect to their account. Each of these parties is bound by contractual obligations to protect your information and to use it only for the purposes we specify.</p>
+    <h3>Data Security</h3>
+    <p>We apply industry-standard technical and organisational measures to protect personal information, including encryption in transit, role-based access controls, multi-factor authentication for dashboard accounts, and regular security review of our infrastructure. No method of transmission or storage is completely secure, and we cannot guarantee absolute security.</p>
+    <h3>Data Retention</h3>
+    <p>We retain personal information for as long as necessary to provide the service and to satisfy the legal, accounting, or reporting requirements that apply to it. Conversation and ticket records are generally retained for the duration of a client's engagement with Supanta plus a reasonable period afterwards, unless a shorter period is requested or a longer period is required by law.</p>
+    <h3>Your Rights</h3>
+    <p>Depending on where you are located, you may have rights to access, correct, delete, or restrict the use of your personal information, and to object to certain processing or request that your data be transferred elsewhere. Supanta operates in line with the UK General Data Protection Regulation (UK GDPR) and South Africa's Protection of Personal Information Act (POPIA). To exercise any of these rights, contact us using the details below; if your enquiry relates to a specific business using Supanta, we may direct you to that business as the data controller for your information.</p>
+    <h3>International Transfers</h3>
+    <p>Because Supanta operates across multiple countries, personal information may be transferred to and processed in a country other than the one in which it was collected. Where this happens, we take steps to ensure an equivalent level of protection is applied, consistent with UK GDPR and POPIA requirements.</p>
+    <h3>Children's Privacy</h3>
+    <p>Supanta's services are intended for business use and are not directed at children. We do not knowingly collect personal information from children.</p>
+    <h3>Changes to This Statement</h3>
+    <p>We may update this Privacy Statement from time to time to reflect changes in our practices or for legal or regulatory reasons. We will post the updated version on this page with a revised "Last updated" date.</p>
+    <h3>Contact Us</h3>
+    <p>If you have questions about this Privacy Statement or how we handle your information, contact us at <a href="mailto:hello@supanta.com" style="color:var(--accent)">hello@supanta.com</a>.</p>
+  </div>
+</div></section>
+<footer class="site-footer">
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-brand-logo"><svg width="22" height="22" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="flg6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#flg6)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#flg6)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#flg6)"/></svg>Supanta</div>
+      <p class="footer-tagline">Smart Support. Real People. AI-powered customer operations for growing businesses, wherever they are.</p>
+      <div class="footer-socials">
+        <a class="footer-social-btn" href="https://linkedin.com" target="_blank" rel="noopener" aria-label="LinkedIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.15 1.45-2.15 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg></a>
+        <a class="footer-social-btn" href="https://twitter.com" target="_blank" rel="noopener" aria-label="X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.24 2.25h3.3l-7.2 8.23 8.47 11.27h-6.63l-5.2-6.8-5.94 6.8H1.75l7.7-8.8L1.35 2.25h6.8l4.7 6.22 5.4-6.22zm-1.16 17.5h1.83L7.03 4.1H5.06l12.02 15.65z"/></svg></a>
+        <a class="footer-social-btn" href="mailto:hello@supanta.com" aria-label="Email"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></a>
+      </div>
+    </div>
+    <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
+    <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
+    <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
+  </div>
+</footer>
+</div>
+
+<!-- TERMS -->
+<div id="page-terms" class="page">
+<div class="page-hero" style="background:linear-gradient(180deg,var(--dark) 0%,var(--dark-2) 100%)"><div class="hero-bg-grad"></div><div class="hero-grid-bg"></div>
+  <div class="hero-inner"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/" onclick="spaNav(event,'home')">Home</a><span>/</span><span aria-current="page">Terms of Use</span></nav><div class="slbl">Legal</div><h2 class="ht" style="font-size:2.2rem">Terms of Use</h2></div>
+</div>
+<section class="sec" style="background:var(--dark-2)"><div class="sec-in">
+  <div class="legal-content">
+    <div class="legal-updated">Last updated: 1 January 2026</div>
+    <h3>Acceptance of Terms</h3>
+    <p>By accessing or using the Supanta website or dashboard (together, the "Service"), you agree to be bound by these Terms of Use. If you are agreeing on behalf of a business, you confirm you have the authority to bind that business, and "you" refers to that business.</p>
+    <h3>Description of Service</h3>
+    <p>Supanta provides an AI-powered contact centre platform combining an AI agent with skilled human agents, together with a performance dashboard, workflow automation, and customer intelligence tools, delivered across customer support, sales development, and back-office operations service lines.</p>
+    <h3>Account Registration</h3>
+    <p>To access the dashboard, you must register for an account and provide accurate, current information. You are responsible for maintaining the confidentiality of your login credentials and for all activity that occurs under your account. Notify us immediately of any unauthorised use of your account.</p>
+    <h3>Acceptable Use</h3>
+    <p>You agree not to use the Service to: violate any applicable law or regulation; transmit unlawful, defamatory, or infringing content; attempt to gain unauthorised access to any part of the Service or its underlying systems; interfere with or disrupt the integrity or performance of the Service; or use the Service to build a competing product.</p>
+    <h3>Subscription and Payment</h3>
+    <p>Access to the dashboard and related services is provided on the subscription or engagement terms agreed with your account manager. Fees are invoiced according to the schedule set out in your service agreement and are due within the payment terms specified on each invoice.</p>
+    <h3>Intellectual Property</h3>
+    <p>Supanta and its licensors retain all right, title, and interest in and to the Service, including the underlying software, platform, and AI models. You retain ownership of the content and data you submit to the Service. You grant Supanta a licence to use that content solely to provide and improve the Service.</p>
+    <h3>AI-Generated Content</h3>
+    <p>The Service uses an AI agent to draft and, in some cases, send responses on your behalf. While we design the AI agent to be accurate and to defer to a human agent when it is uncertain, AI-generated responses may occasionally be incomplete or incorrect. You remain responsible for reviewing AI-assisted outputs where accuracy is critical.</p>
+    <h3>Third-Party Integrations</h3>
+    <p>The Service may integrate with third-party channels and tools that you choose to connect, such as WhatsApp, Facebook, Instagram, Telegram, Slack, Zoom, Google Calendar, and HubSpot. Your use of those third-party services is subject to their own terms, and Supanta is not responsible for their availability or performance.</p>
+    <h3>Limitation of Liability</h3>
+    <p>To the maximum extent permitted by law, Supanta shall not be liable for any indirect, incidental, special, or consequential damages arising out of or relating to your use of the Service. Our total liability for any claim arising out of these Terms shall not exceed the fees paid by you to Supanta in the twelve months preceding the claim.</p>
+    <h3>Termination</h3>
+    <p>Either party may terminate the Service in accordance with the notice period set out in your service agreement. We may suspend or terminate access immediately if we reasonably believe you have breached these Terms or applicable law.</p>
+    <h3>Governing Law</h3>
+    <p>These Terms are governed by the laws of South Africa, without regard to its conflict of law principles, save where mandatory local consumer protection law requires otherwise.</p>
+    <h3>Changes to These Terms</h3>
+    <p>We may update these Terms from time to time. We will post the updated version on this page with a revised "Last updated" date, and material changes will be communicated to active account holders.</p>
+    <h3>Contact Us</h3>
+    <p>Questions about these Terms can be sent to <a href="mailto:hello@supanta.com" style="color:var(--accent)">hello@supanta.com</a>.</p>
+  </div>
+</div></section>
+<footer class="site-footer">
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-brand-logo"><svg width="22" height="22" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="flg7" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#flg7)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#flg7)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#flg7)"/></svg>Supanta</div>
+      <p class="footer-tagline">Smart Support. Real People. AI-powered customer operations for growing businesses, wherever they are.</p>
+      <div class="footer-socials">
+        <a class="footer-social-btn" href="https://linkedin.com" target="_blank" rel="noopener" aria-label="LinkedIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.15 1.45-2.15 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg></a>
+        <a class="footer-social-btn" href="https://twitter.com" target="_blank" rel="noopener" aria-label="X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.24 2.25h3.3l-7.2 8.23 8.47 11.27h-6.63l-5.2-6.8-5.94 6.8H1.75l7.7-8.8L1.35 2.25h6.8l4.7 6.22 5.4-6.22zm-1.16 17.5h1.83L7.03 4.1H5.06l12.02 15.65z"/></svg></a>
+        <a class="footer-social-btn" href="mailto:hello@supanta.com" aria-label="Email"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></a>
+      </div>
+    </div>
+    <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
+    <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
+    <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
+  </div>
+</footer>
+</div>
+
+<!-- COOKIES -->
+<div id="page-cookies" class="page">
+<div class="page-hero" style="background:linear-gradient(180deg,var(--dark) 0%,var(--dark-2) 100%)"><div class="hero-bg-grad"></div><div class="hero-grid-bg"></div>
+  <div class="hero-inner"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="/" onclick="spaNav(event,'home')">Home</a><span>/</span><span aria-current="page">Cookie Information</span></nav><div class="slbl">Legal</div><h2 class="ht" style="font-size:2.2rem">Cookie Information</h2></div>
+</div>
+<section class="sec" style="background:var(--dark-2)"><div class="sec-in">
+  <div class="legal-content">
+    <div class="legal-updated">Last updated: 1 January 2026</div>
+    <h3>What Are Cookies</h3>
+    <p>Cookies are small text files placed on your device when you visit a website. They are widely used to make websites work, work more efficiently, and provide information to the site owner. Similar technologies, such as local storage, serve comparable purposes.</p>
+    <h3>How We Use Cookies</h3>
+    <p>We use cookies and similar technologies on supanta.com and within the Supanta dashboard for the following purposes:</p>
+    <ul>
+      <li><strong>Essential</strong> — required for core functionality, such as keeping you signed in to your dashboard session and remembering security preferences like two-factor authentication status.</li>
+      <li><strong>Preferences</strong> — remember choices you make, such as display settings, so you don't have to reset them on every visit.</li>
+      <li><strong>Analytics</strong> — help us understand how the website and dashboard are used, so we can improve performance and usability.</li>
+    </ul>
+    <h3>Managing Cookies</h3>
+    <p>Most browsers let you control cookies through their settings, including blocking or deleting them. Because essential cookies are required for the dashboard to function, disabling them will prevent you from signing in or using core features. You can usually find cookie controls in your browser's privacy or security settings.</p>
+    <h3>Third-Party Cookies</h3>
+    <p>Where our website embeds third-party functionality, such as font delivery or the AI chat widget, those providers may set their own cookies or use similar technologies in line with their own policies.</p>
+    <h3>Changes to This Policy</h3>
+    <p>We may update this Cookie Information page from time to time to reflect changes in the cookies we use or for legal or regulatory reasons. We will post the updated version on this page with a revised "Last updated" date.</p>
+    <h3>Contact Us</h3>
+    <p>If you have questions about our use of cookies, contact us at <a href="mailto:hello@supanta.com" style="color:var(--accent)">hello@supanta.com</a>.</p>
+  </div>
+</div></section>
+<footer class="site-footer">
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-brand-logo"><svg width="22" height="22" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#0a1628"/><defs><linearGradient id="flg8" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#80d8ff"/><stop offset="100%" stop-color="#1e90ff"/></linearGradient></defs><path d="M50 22 A28 28 0 0 1 78 50" stroke="url(#flg8)" stroke-width="10" fill="none" stroke-linecap="round"/><path d="M50 22 A28 28 0 0 0 22 50" stroke="url(#flg8)" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="50" cy="52" r="7" fill="url(#flg8)"/></svg>Supanta</div>
+      <p class="footer-tagline">Smart Support. Real People. AI-powered customer operations for growing businesses, wherever they are.</p>
+      <div class="footer-socials">
+        <a class="footer-social-btn" href="https://linkedin.com" target="_blank" rel="noopener" aria-label="LinkedIn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.15 1.45-2.15 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg></a>
+        <a class="footer-social-btn" href="https://twitter.com" target="_blank" rel="noopener" aria-label="X"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.24 2.25h3.3l-7.2 8.23 8.47 11.27h-6.63l-5.2-6.8-5.94 6.8H1.75l7.7-8.8L1.35 2.25h6.8l4.7 6.22 5.4-6.22zm-1.16 17.5h1.83L7.03 4.1H5.06l12.02 15.65z"/></svg></a>
+        <a class="footer-social-btn" href="mailto:hello@supanta.com" aria-label="Email"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></a>
+      </div>
+    </div>
+    <div class="footer-col"><h4>Services</h4><a href="/services" onclick="spaNav(event,'services')">Customer Support</a><a href="/services" onclick="spaNav(event,'services')">Sales &amp; Lead Generation</a><a href="/services" onclick="spaNav(event,'services')">Back-Office Operations</a></div>
+    <div class="footer-col"><h4>About Us</h4><a href="/about" onclick="spaNav(event,'about')">Overview</a><a href="/about" onclick="spaNav(event,'about')">Why Supanta</a></div>
+    <div class="footer-col"><h4>Contact</h4><a href="/contact" onclick="spaNav(event,'contact')">Get in Touch</a><a href="mailto:hello@supanta.com">hello@supanta.com</a></div>
+    <div class="footer-col"><h4>Legal</h4><a href="/privacy" onclick="spaNav(event,'privacy')">Privacy statement</a><a href="/terms" onclick="spaNav(event,'terms')">Terms of use</a><span class="footer-legal-text">Copyright &copy; Supanta 2026</span><a href="/cookies" onclick="spaNav(event,'cookies')">Cookie information</a></div>
+  </div>
 </footer>
 </div>
 
@@ -1162,6 +1328,9 @@ const PAGE_META={
   about:{path:'/about',title:'About Supanta | AI-Powered Contact Centre',desc:"Supanta isn't a chatbot vendor and isn't a traditional BPO. We build the AI platform and run the contact centre, under one roof, accountable for one outcome.",noindex:false},
   services:{path:'/services',title:'Services | Supanta',desc:'Three service lines on one intelligent platform: customer support, sales & lead generation, and back-office operations.',noindex:false},
   contact:{path:'/contact',title:'Contact Us | Supanta',desc:"Tell us about your team size, ticket volume, and channels. We'll have a tailored plan to you within 24 hours.",noindex:false},
+  privacy:{path:'/privacy',title:'Privacy Statement | Supanta',desc:'How Supanta collects, uses, and protects personal information across our website and dashboard.',noindex:false},
+  terms:{path:'/terms',title:'Terms of Use | Supanta',desc:'The terms that govern your use of the Supanta website and dashboard.',noindex:false},
+  cookies:{path:'/cookies',title:'Cookie Information | Supanta',desc:'How Supanta uses cookies and similar technologies, and how to manage them.',noindex:false},
   login:{path:'/login',title:'Log In | Supanta',desc:'Log in to your Supanta dashboard.',noindex:true}
 };
 function pageFromPath(path){
