@@ -306,11 +306,16 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .pkg-feat li::before{content:'checkmark';color:var(--green);font-size:.75rem;flex-shrink:0;margin-top:.15rem;font-style:normal}
 .pkg-feat li:last-child{border-bottom:none}
 /* COOKIE CONSENT BANNER */
-.cookie-banner{position:fixed;left:1.5rem;bottom:1.5rem;z-index:9500;width:360px;max-width:calc(100vw - 3rem);background:var(--dark-2);border:1px solid var(--border-light);border-radius:14px;padding:1.25rem 1.4rem;box-shadow:0 20px 50px rgba(0,0,0,.45)}
-.cookie-banner p{font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300;margin-bottom:1rem}
+.cookie-banner{position:fixed;left:1.5rem;bottom:1.5rem;z-index:9500;width:480px;max-width:calc(100vw - 3rem);background:var(--dark-2);border:1px solid var(--border-light);border-radius:16px;padding:1.75rem 1.85rem;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.cookie-banner h3{font-family:var(--fd);font-size:1.15rem;font-weight:700;margin-bottom:.6rem}
+.cookie-banner p{font-size:.9rem;color:var(--grey-2);line-height:1.7;font-weight:300;margin-bottom:1.35rem}
 .cookie-banner p a{color:var(--accent);text-decoration:none}
-.cookie-banner-actions{display:flex;gap:.6rem;flex-wrap:wrap}
-@media(max-width:480px){.cookie-banner{left:.75rem;right:.75rem;width:auto;bottom:.75rem}}
+.cookie-banner-actions{display:flex;gap:.7rem;flex-wrap:wrap}
+.cookie-banner-actions .btn-sm{padding:.65rem 1.3rem;font-size:.85rem;border-radius:8px}
+.btn-sm-ghost{background:transparent;color:var(--grey-2);border:1px solid var(--border-light)}
+.btn-sm-ghost:hover{border-color:var(--accent);color:var(--white)}
+.btn-sm-link{background:none;border:none;color:var(--accent);cursor:pointer;padding:.65rem 0;font-size:.85rem;font-weight:600}
+@media(max-width:560px){.cookie-banner{left:.75rem;right:.75rem;width:auto;bottom:.75rem;padding:1.4rem 1.5rem}}
 /* ARIA CHAT WIDGET */
 .aria-widget{position:fixed;bottom:2rem;right:2rem;z-index:9000;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem)}
 .aria-chat-box{width:340px;max-height:calc(100vh - 7rem);background:var(--dark-2);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);display:none;flex-direction:column}
@@ -1127,20 +1132,22 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 
 <!-- COOKIE CONSENT BANNER -->
 <div class="cookie-banner" id="cookie-banner" style="display:none">
-  <p>We use essential cookies to keep you signed in and keep the site secure. See our <a href="/cookies" onclick="spaNav(event,'cookies')">Cookie Information</a> for details.</p>
+  <h3>We use cookies</h3>
+  <p>We use essential cookies to keep you signed in and keep the site secure, plus optional cookies to understand how the site is used. See our <a href="/cookies" onclick="spaNav(event,'cookies')">Cookie Information</a> for details.</p>
   <div class="cookie-banner-actions">
-    <button class="btn-sm btn-sm-acc" onclick="acceptCookieConsent()">Accept</button>
-    <button onclick="spaNav(event,'cookies')" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Learn more</button>
+    <button class="btn-sm btn-sm-acc" onclick="setCookieConsent('accepted')">Accept</button>
+    <button class="btn-sm btn-sm-ghost" onclick="setCookieConsent('denied')">Deny</button>
+    <button class="btn-sm-link" onclick="spaNav(event,'cookies')">Cookie Information</button>
   </div>
 </div>
 <script>
-  function acceptCookieConsent(){
-    try{ localStorage.setItem('supanta_cookie_consent','accepted'); }catch(e){}
+  function setCookieConsent(choice){
+    try{ localStorage.setItem('supanta_cookie_consent',choice); }catch(e){}
     const b=document.getElementById('cookie-banner'); if(b)b.style.display='none';
   }
   (function(){
     let consented=false;
-    try{ consented = localStorage.getItem('supanta_cookie_consent')==='accepted'; }catch(e){}
+    try{ consented = !!localStorage.getItem('supanta_cookie_consent'); }catch(e){}
     if(!consented){
       document.addEventListener('DOMContentLoaded',()=>{
         const b=document.getElementById('cookie-banner');
