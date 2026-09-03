@@ -434,7 +434,7 @@ input:checked + .slider::before{transform:translateX(18px)}
   <div class="card">
     <div style="font-family:var(--fd,inherit);font-size:1.1rem;font-weight:700;margin-bottom:.3rem">Welcome to Supanta</div>
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1.5rem">You're signed in, just tell us a bit about your business to finish setting up your account.</p>
-    <div class="form-group"><label>Company name</label><input class="rb-input" id="ob-company" placeholder="Your company"/></div>
+    <div class="form-group"><label>Company name</label><input class="rb-input" id="ob-company" autocomplete="off" placeholder="Your company"/></div>
     <div class="form-group"><label>What are you looking for?</label><select class="rb-select" id="ob-service"><option value="" disabled selected>Select a service</option><option>Customer Support</option><option>Sales &amp; Lead Generation (SDR)</option><option>Back-Office Operations</option><option>Full Platform</option></select></div>
     <div class="form-group"><label>Anything else we should know? (optional)</label><textarea class="rb-textarea" id="ob-notes" placeholder="Team size, ticket volume, channels..."></textarea></div>
     <div id="ob-err" style="color:var(--danger,#ff5a5a);font-size:.78rem;margin-bottom:.75rem;display:none"></div>
@@ -460,7 +460,7 @@ input:checked + .slider::before{transform:translateX(18px)}
         <svg class="lbl" id="switcher-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
       <div class="switcher-menu" onclick="event.stopPropagation()">
-        <div class="switcher-search"><input type="text" placeholder="Search companies…" oninput="renderCompanySwitcherList(this.value)"/></div>
+        <div class="switcher-search"><input type="search" autocomplete="off" name="company-switcher-q" placeholder="Search companies…" oninput="renderCompanySwitcherList(this.value)"/></div>
         <div class="switcher-list" id="switcher-list"></div>
       </div>
     </div>
@@ -521,9 +521,9 @@ input:checked + .slider::before{transform:translateX(18px)}
 <div class="modal-overlay" id="modal-add-member">
   <div class="modal-box">
     <div class="modal-hdr"><div class="modal-title">Add to Team</div><button class="modal-close" onclick="closeModal('modal-add-member')">✕</button></div>
-    <div class="form-group"><label>Name</label><input class="rb-input" id="am-name" placeholder="Full name"/></div>
-    <div class="form-group"><label>Email</label><input class="rb-input" id="am-email" type="email" placeholder="name@company.com"/></div>
-    <div class="form-group"><label>Role / Title</label><input class="rb-input" id="am-role" placeholder="e.g. Support Agent"/></div>
+    <div class="form-group"><label>Name</label><input class="rb-input" id="am-name" autocomplete="off" placeholder="Full name"/></div>
+    <div class="form-group"><label>Email</label><input class="rb-input" id="am-email" autocomplete="off" type="email" placeholder="name@company.com"/></div>
+    <div class="form-group"><label>Role / Title</label><input class="rb-input" id="am-role" autocomplete="off" placeholder="e.g. Support Agent"/></div>
     <div class="form-group"><label>Type</label><select class="rb-select" id="am-type"><option value="human">Human team member</option><option value="agent">Company AI agent</option></select></div>
     <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="addTeamMember()">Add Member</button>
   </div>
@@ -532,8 +532,8 @@ input:checked + .slider::before{transform:translateX(18px)}
 <div class="modal-overlay" id="modal-add-ticket">
   <div class="modal-box">
     <div class="modal-hdr"><div class="modal-title">New Ticket</div><button class="modal-close" onclick="closeModal('modal-add-ticket')">✕</button></div>
-    <div class="form-group"><label>Subject</label><input class="rb-input" id="nt-subject" placeholder="Ticket subject"/></div>
-    <div class="form-group"><label>Client / Company</label><input class="rb-input" id="nt-client" placeholder="Client name"/></div>
+    <div class="form-group"><label>Subject</label><input class="rb-input" id="nt-subject" autocomplete="off" placeholder="Ticket subject"/></div>
+    <div class="form-group"><label>Client / Company</label><input class="rb-input" id="nt-client" autocomplete="off" placeholder="Client name"/></div>
     <div class="form-group"><label>Owner</label><select class="rb-select" id="nt-owner"></select></div>
     <div class="form-group"><label>Priority</label><select class="rb-select" id="nt-priority"><option value="high">High</option><option value="med" selected>Medium</option><option value="low">Low</option></select></div>
     <div class="form-group"><label>Due Date & Time (optional)</label><input class="rb-input" type="datetime-local" id="nt-due"/></div>
@@ -551,7 +551,7 @@ input:checked + .slider::before{transform:translateX(18px)}
 <div class="modal-overlay" id="modal-add-group">
   <div class="modal-box">
     <div class="modal-hdr"><div class="modal-title">New Group</div><button class="modal-close" onclick="closeModal('modal-add-group')">✕</button></div>
-    <div class="form-group"><label>Group Name</label><input class="rb-input" id="ng-name" placeholder="e.g. Support Team"/></div>
+    <div class="form-group"><label>Group Name</label><input class="rb-input" id="ng-name" autocomplete="off" placeholder="e.g. Support Team"/></div>
     <div class="form-group"><label>Members</label><div class="member-pick" id="ng-members"></div></div>
     <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="addGroup()">Create Group</button>
   </div>
@@ -635,7 +635,7 @@ input:checked + .slider::before{transform:translateX(18px)}
     <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
     <button class="reply-icon-btn emoji-trigger" style="width:36px;height:36px;flex-shrink:0" onclick="toggleEmojiPop('aria-input',this)" id="aria-emoji-btn" title="Emoji">😊</button>
     <input type="file" id="aria-file-input" style="display:none" onchange="handleAriaAttachment(this)"/>
-    <input class="aria-chat-input" id="aria-input" placeholder="Ask ARIA or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+    <input class="aria-chat-input" id="aria-input" autocomplete="off" placeholder="Ask ARIA or tell it what to do…" onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
     <button class="aria-send-btn" id="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     <div class="emoji-pop" id="emoji-pop-aria-input"></div>
   </div>
@@ -2351,7 +2351,7 @@ async function openTicketDetail(id){
     <div class="card-title" style="margin-top:1.25rem">Comments</div>
     <div id="td-comments" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;margin-bottom:.85rem"><div class="empty-state">Loading…</div></div>
     <div style="display:flex;gap:.5rem">
-      <input class="rb-input" id="td-comment-input" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')addTicketComment('${t.id}')"/>
+      <input class="rb-input" id="td-comment-input" autocomplete="off" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')addTicketComment('${t.id}')"/>
       <button class="btn btn-acc" onclick="addTicketComment('${t.id}')">Post</button>
     </div>`;
   openModal('modal-ticket-detail');
@@ -2447,7 +2447,7 @@ function checklistsHtml(ticketId){
           <span class="saved-del" onclick="deleteChecklistItem('${ticketId}',${cl.id},${i.id})">✕</span>
         </div>`).join('')}
       <div class="cl-add-row">
-        <input class="rb-input" id="cl-item-input-${cl.id}" placeholder="Add an item…" onkeydown="if(event.key==='Enter')addChecklistItem('${ticketId}',${cl.id})"/>
+        <input class="rb-input" id="cl-item-input-${cl.id}" autocomplete="off" placeholder="Add an item…" onkeydown="if(event.key==='Enter')addChecklistItem('${ticketId}',${cl.id})"/>
         <button class="btn btn-ghost btn-sm" onclick="addChecklistItem('${ticketId}',${cl.id})">Add</button>
       </div>
     </div>`;
@@ -2592,7 +2592,7 @@ function ticketCustomFieldsHtml(t){
   const vals=t.customFields||{};
   return fields.map(f=>`<div class="cf-row">
     <label title="${f.name}">${f.name}</label>
-    <input class="rb-input" value="${vals[f.id]||''}" onchange="setCustomFieldValue('${t.id}','${f.id}',this.value)"/>
+    <input class="rb-input" autocomplete="off" value="${vals[f.id]||''}" onchange="setCustomFieldValue('${t.id}','${f.id}',this.value)"/>
     <span class="saved-del" onclick="deleteCustomField('${t.id}','${f.id}')">✕</span>
   </div>`).join('');
 }
@@ -3082,9 +3082,9 @@ function openZoomConnectModal(){
   document.getElementById('ci-title').textContent='Connect Zoom';
   document.getElementById('ci-body').innerHTML=`
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Create a <strong>Server-to-Server OAuth</strong> app in the <a href="https://marketplace.zoom.us/" target="_blank" rel="noopener" style="color:var(--accent)">Zoom App Marketplace</a> (Build App → Server-to-Server OAuth, no redirect URL needed) with the <code>meeting:write:meeting</code> scope, then paste its credentials below.</p>
-    <div class="form-group"><label>Account ID</label><input class="rb-input" id="zoom-account-id"/></div>
-    <div class="form-group"><label>Client ID</label><input class="rb-input" id="zoom-client-id"/></div>
-    <div class="form-group"><label>Client Secret</label><input class="rb-input" type="password" id="zoom-client-secret"/></div>
+    <div class="form-group"><label>Account ID</label><input class="rb-input" id="zoom-account-id" autocomplete="off"/></div>
+    <div class="form-group"><label>Client ID</label><input class="rb-input" id="zoom-client-id" autocomplete="off"/></div>
+    <div class="form-group"><label>Client Secret</label><input class="rb-input" type="password" id="zoom-client-secret" autocomplete="new-password"/></div>
     <button class="btn btn-acc" style="width:100%" id="zoom-submit" onclick="submitZoomConnect()">Test &amp; Connect</button>
   `;
   openModal('modal-connect-int');
@@ -3172,7 +3172,7 @@ async function disconnectGoogleCalendar(){
 function openScheduleMeetingModal(conversationId){
   document.getElementById('ci-title').textContent='Schedule a Meeting';
   document.getElementById('ci-body').innerHTML=`
-    <div class="form-group"><label>Title</label><input class="rb-input" id="gc-title" placeholder="Call with customer"/></div>
+    <div class="form-group"><label>Title</label><input class="rb-input" id="gc-title" autocomplete="off" placeholder="Call with customer"/></div>
     <div class="form-group"><label>Date &amp; Time</label><input class="rb-input" type="datetime-local" id="gc-start"/></div>
     <div class="form-group"><label>Duration (minutes)</label><input class="rb-input" type="number" id="gc-duration" value="30"/></div>
     <button class="btn btn-acc" style="width:100%" id="gc-submit" onclick="submitScheduleMeeting('${conversationId}')">Schedule</button>
@@ -3281,9 +3281,9 @@ async function submitReschedule(id){
 function openNewAppointmentModal(){
   document.getElementById('ci-title').textContent='New Appointment';
   document.getElementById('ci-body').innerHTML=`
-    <div class="form-group"><label>Title</label><input class="rb-input" id="ap-title" placeholder="Call with customer"/></div>
-    <div class="form-group"><label>Contact Name</label><input class="rb-input" id="ap-contact-name" placeholder="Optional"/></div>
-    <div class="form-group"><label>Contact Email</label><input class="rb-input" id="ap-contact-email" type="email" placeholder="Optional, added as an invitee"/></div>
+    <div class="form-group"><label>Title</label><input class="rb-input" id="ap-title" autocomplete="off" placeholder="Call with customer"/></div>
+    <div class="form-group"><label>Contact Name</label><input class="rb-input" id="ap-contact-name" autocomplete="off" placeholder="Optional"/></div>
+    <div class="form-group"><label>Contact Email</label><input class="rb-input" id="ap-contact-email" autocomplete="off" type="email" placeholder="Optional, added as an invitee"/></div>
     <div class="form-group"><label>Date &amp; Time</label><input class="rb-input" type="datetime-local" id="ap-start"/></div>
     <div class="form-group"><label>Duration (minutes)</label><input class="rb-input" type="number" id="ap-duration" value="30"/></div>
     <button class="btn btn-acc" style="width:100%" id="ap-submit" onclick="submitNewAppointment()">Schedule</button>
@@ -3349,8 +3349,8 @@ function openTrelloConnectModal(){
   document.getElementById('ci-title').textContent='Connect Trello';
   document.getElementById('ci-body').innerHTML=`
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Get your API key from <a href="https://trello.com/power-ups/admin" target="_blank" rel="noopener" style="color:var(--accent)">trello.com/power-ups/admin</a> (create a Power-Up if you don't have one), then click "Token" on that same page to generate and copy a token. Paste both below.</p>
-    <div class="form-group"><label>API Key</label><input class="rb-input" id="trello-api-key"/></div>
-    <div class="form-group"><label>Token</label><input class="rb-input" type="password" id="trello-token"/></div>
+    <div class="form-group"><label>API Key</label><input class="rb-input" id="trello-api-key" autocomplete="off"/></div>
+    <div class="form-group"><label>Token</label><input class="rb-input" type="password" id="trello-token" autocomplete="new-password"/></div>
     <button class="btn btn-acc" style="width:100%" id="trello-submit" onclick="submitTrelloConnect()">Test &amp; Connect</button>
   `;
   openModal('modal-connect-int');
@@ -3455,13 +3455,13 @@ function openEmailConnectModal(){
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect a support mailbox so inbound email becomes conversations here, and replies send from the same address.</p>
     <button class="btn btn-acc" style="width:100%;margin-bottom:1rem" onclick="startGmailConnect()">Connect with Google</button>
     <div style="display:flex;align-items:center;gap:.75rem;margin:1rem 0;color:var(--text-3);font-size:.7rem;font-weight:700;letter-spacing:.04em"><div style="flex:1;height:1px;background:var(--border)"></div>OR CONNECT VIA IMAP<div style="flex:1;height:1px;background:var(--border)"></div></div>
-    <div class="form-group"><label>Email Address</label><input class="rb-input" id="em-email" placeholder="support@yourcompany.com"/></div>
-    <div class="form-group"><label>IMAP Host</label><input class="rb-input" id="em-imap-host" placeholder="imap.gmail.com"/></div>
-    <div class="form-group"><label>IMAP Port</label><input class="rb-input" id="em-imap-port" value="993"/></div>
-    <div class="form-group"><label>Username</label><input class="rb-input" id="em-imap-user"/></div>
-    <div class="form-group"><label>Password / App Password</label><input class="rb-input" type="password" id="em-imap-pass"/></div>
-    <div class="form-group"><label>SMTP Host <span style="color:var(--text-3);font-weight:400">(optional, defaults to IMAP host)</span></label><input class="rb-input" id="em-smtp-host"/></div>
-    <div class="form-group"><label>SMTP Port <span style="color:var(--text-3);font-weight:400">(optional, default 587)</span></label><input class="rb-input" id="em-smtp-port"/></div>
+    <div class="form-group"><label>Email Address</label><input class="rb-input" id="em-email" autocomplete="off" placeholder="support@yourcompany.com"/></div>
+    <div class="form-group"><label>IMAP Host</label><input class="rb-input" id="em-imap-host" autocomplete="off" placeholder="imap.gmail.com"/></div>
+    <div class="form-group"><label>IMAP Port</label><input class="rb-input" id="em-imap-port" autocomplete="off" value="993"/></div>
+    <div class="form-group"><label>Username</label><input class="rb-input" id="em-imap-user" autocomplete="off"/></div>
+    <div class="form-group"><label>Password / App Password</label><input class="rb-input" type="password" id="em-imap-pass" autocomplete="new-password"/></div>
+    <div class="form-group"><label>SMTP Host <span style="color:var(--text-3);font-weight:400">(optional, defaults to IMAP host)</span></label><input class="rb-input" id="em-smtp-host" autocomplete="off"/></div>
+    <div class="form-group"><label>SMTP Port <span style="color:var(--text-3);font-weight:400">(optional, default 587)</span></label><input class="rb-input" id="em-smtp-port" autocomplete="off"/></div>
     <button class="btn btn-ghost" style="width:100%" id="em-imap-submit" onclick="submitImapConnect()">Test &amp; Connect</button>
   `;
   openModal('modal-connect-int');
@@ -3517,9 +3517,9 @@ function openWhatsappConnectModal(){
   document.getElementById('ci-title').textContent='Connect WhatsApp';
   document.getElementById('ci-body').innerHTML=`
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect a WhatsApp Business number so inbound messages become conversations here, with ARIA replying automatically. You'll need a Meta app with the WhatsApp product added, grab the Phone Number ID, a permanent access token, and the App Secret from your Meta App dashboard.</p>
-    <div class="form-group"><label>Phone Number ID</label><input class="rb-input" id="wa-phone-number-id" placeholder="e.g. 109876543210987"/></div>
-    <div class="form-group"><label>Access Token</label><input class="rb-input" type="password" id="wa-access-token"/></div>
-    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="wa-app-secret"/></div>
+    <div class="form-group"><label>Phone Number ID</label><input class="rb-input" id="wa-phone-number-id" autocomplete="off" placeholder="e.g. 109876543210987"/></div>
+    <div class="form-group"><label>Access Token</label><input class="rb-input" type="password" id="wa-access-token" autocomplete="new-password"/></div>
+    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="wa-app-secret" autocomplete="new-password"/></div>
     <button class="btn btn-acc" style="width:100%" id="wa-submit" onclick="submitWhatsappConnect()">Test &amp; Connect</button>
     <div id="wa-connect-result" style="margin-top:1rem;display:none"></div>
   `;
@@ -3570,8 +3570,8 @@ function openFacebookConnectModal(){
   document.getElementById('ci-title').textContent='Connect Facebook';
   document.getElementById('ci-body').innerHTML=`
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Facebook Page so Messenger DMs become conversations here, with ARIA replying automatically. This is DMs only, comments on posts aren't handled. You'll need a Meta app with the Messenger product added to your Page, grab a Page Access Token and the App Secret from your Meta App dashboard.</p>
-    <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="fb-access-token"/></div>
-    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="fb-app-secret"/></div>
+    <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="fb-access-token" autocomplete="new-password"/></div>
+    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="fb-app-secret" autocomplete="new-password"/></div>
     <button class="btn btn-acc" style="width:100%" id="fb-submit" onclick="submitFacebookConnect()">Test &amp; Connect</button>
     <div id="fb-connect-result" style="margin-top:1rem;display:none"></div>
   `;
@@ -3622,8 +3622,8 @@ function openInstagramConnectModal(){
   document.getElementById('ci-title').textContent='Connect Instagram';
   document.getElementById('ci-body').innerHTML=`
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Connect your Instagram professional account so DMs become conversations here, with ARIA replying automatically. Instagram DMs go through the Facebook Page your Instagram account is linked to, use the same Page Access Token as your Facebook connection (with the instagram_manage_messages permission added) and the same App Secret.</p>
-    <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="ig-access-token"/></div>
-    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="ig-app-secret"/></div>
+    <div class="form-group"><label>Page Access Token</label><input class="rb-input" type="password" id="ig-access-token" autocomplete="new-password"/></div>
+    <div class="form-group"><label>App Secret</label><input class="rb-input" type="password" id="ig-app-secret" autocomplete="new-password"/></div>
     <button class="btn btn-acc" style="width:100%" id="ig-submit" onclick="submitInstagramConnect()">Test &amp; Connect</button>
     <div id="ig-connect-result" style="margin-top:1rem;display:none"></div>
   `;
@@ -3674,7 +3674,7 @@ function openTelegramConnectModal(){
   document.getElementById('ci-title').textContent='Connect Telegram';
   document.getElementById('ci-body').innerHTML=`
     <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">Message <a href="https://t.me/BotFather" target="_blank" rel="noopener" style="color:var(--accent)">@BotFather</a> on Telegram, create a bot with <code>/newbot</code>, and paste the token it gives you below. We'll register the webhook automatically, no extra setup needed.</p>
-    <div class="form-group"><label>Bot Token</label><input class="rb-input" type="password" id="tg-bot-token" placeholder="123456789:AAExample-Token"/></div>
+    <div class="form-group"><label>Bot Token</label><input class="rb-input" type="password" id="tg-bot-token" autocomplete="new-password" placeholder="123456789:AAExample-Token"/></div>
     <button class="btn btn-acc" style="width:100%" id="tg-submit" onclick="submitTelegramConnect()">Test &amp; Connect</button>
   `;
   openModal('modal-connect-int');
@@ -3964,16 +3964,16 @@ function renderSettingsTab(t){
     </div>
     <div class="card">
       <div class="card-title">Profile Details</div>
-      <div class="form-group"><label>Full Name</label><input class="rb-input" id="set-name" value="${currentUser.name}"/></div>
-      <div class="form-group"><label>Title</label><input class="rb-input" id="set-title" value="${STATE.profile.title||''}" placeholder="e.g. Director"/></div>
+      <div class="form-group"><label>Full Name</label><input class="rb-input" id="set-name" autocomplete="off" value="${currentUser.name}"/></div>
+      <div class="form-group"><label>Title</label><input class="rb-input" id="set-title" autocomplete="off" value="${STATE.profile.title||''}" placeholder="e.g. Director"/></div>
       <div class="form-group"><label>Email</label><input class="rb-input" value="${currentUser.email}" disabled/></div>
       <button class="btn btn-acc" onclick="saveProfile()">Save Changes</button>
     </div>`;
   if(t==='security')return `
     <div class="card">
       <div class="card-title">Change Password</div>
-      <div class="form-group"><label>New Password</label><input class="rb-input" type="password" id="set-pwd-1" placeholder="Min. 8 characters"/></div>
-      <div class="form-group"><label>Confirm New Password</label><input class="rb-input" type="password" id="set-pwd-2" placeholder="Repeat password"/></div>
+      <div class="form-group"><label>New Password</label><input class="rb-input" type="password" id="set-pwd-1" autocomplete="new-password" placeholder="Min. 8 characters"/></div>
+      <div class="form-group"><label>Confirm New Password</label><input class="rb-input" type="password" id="set-pwd-2" autocomplete="new-password" placeholder="Repeat password"/></div>
       <button class="btn btn-acc" onclick="changePassword()">Update Password</button>
     </div>
     <div class="card">
@@ -3991,7 +3991,7 @@ function renderSettingsTab(t){
     </div>
     <div class="card">
       <div class="card-title">Company Name</div>
-      <div class="form-group"><input class="rb-input" id="set-company-name" value="${STATE.profile.companyName||''}"/></div>
+      <div class="form-group"><input class="rb-input" id="set-company-name" autocomplete="off" value="${STATE.profile.companyName||''}"/></div>
       <button class="btn btn-acc" onclick="saveCompany()">Save Changes</button>
     </div>
     <div class="card">
@@ -4027,7 +4027,7 @@ function renderSettingsTab(t){
       <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Shown as clickable suggestion chips on your public ARIA chat widget, so visitors can ask common questions with one click. Up to 6 are shown, in this order.</p>
       <div id="quick-questions-list">${quickQuestionsListHtml()}</div>
       <div style="display:flex;gap:.5rem;margin-top:${STATE.quickQuestions.length?'1rem':'0'}">
-        <input class="rb-input" id="qq-new-input" placeholder="e.g. What does Supanta cost?" onkeydown="if(event.key==='Enter')addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}/>
+        <input class="rb-input" id="qq-new-input" autocomplete="off" placeholder="e.g. What does Supanta cost?" onkeydown="if(event.key==='Enter')addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}/>
         <button class="btn btn-acc btn-sm" onclick="addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}>Add</button>
       </div>
       ${STATE.quickQuestions.length>=6?'<div style="font-size:.72rem;color:var(--text-3);margin-top:.5rem">Maximum of 6 reached, remove one to add another.</div>':''}
@@ -4180,7 +4180,7 @@ async function startMfaEnroll(){
       <div style="font-size:.82rem;color:var(--text-3);margin-bottom:.85rem">Scan this QR code with your authenticator app, then enter the 6-digit code it shows.</div>
       <div style="background:#fff;border-radius:10px;padding:1rem;width:fit-content;margin-bottom:1rem"><img src="${data.totp.qr_code}" width="160" height="160" alt="2FA QR code"/></div>
       <div style="font-size:.72rem;color:var(--text-3);margin-bottom:1rem">Can't scan? Enter this code manually: <code style="color:var(--text)">${data.totp.secret}</code></div>
-      <div class="form-group"><label>Verification code</label><input class="rb-input" id="mfa-verify-code" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;max-width:160px"/></div>
+      <div class="form-group"><label>Verification code</label><input class="rb-input" id="mfa-verify-code" autocomplete="off" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;max-width:160px"/></div>
       <div style="display:flex;gap:.6rem">
         <button class="btn btn-acc" onclick="confirmMfaEnroll()">Confirm & Enable</button>
         <button class="btn btn-ghost" onclick="cancelMfaEnroll()">Cancel</button>
@@ -4821,7 +4821,7 @@ function renderGroupChat(g){
         </div>`).join(''):'<div class="empty-state">No messages yet, say hi 👋</div>'}
     </div>
     <div class="aria-chat-input-row" style="background:transparent;border-top:1px solid var(--border)">
-      <input class="aria-chat-input" id="group-msg-input" placeholder="Message #${g.name}…" onkeydown="if(event.key==='Enter')sendGroupMsg(${g.id})"/>
+      <input class="aria-chat-input" id="group-msg-input" autocomplete="off" placeholder="Message #${g.name}…" onkeydown="if(event.key==='Enter')sendGroupMsg(${g.id})"/>
       <button class="aria-send-btn" onclick="sendGroupMsg(${g.id})">Send</button>
     </div>
   </div>`;

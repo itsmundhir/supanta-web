@@ -305,6 +305,12 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
 .pkg-feat li{list-style:none;padding:.3rem 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:.5rem}
 .pkg-feat li::before{content:'checkmark';color:var(--green);font-size:.75rem;flex-shrink:0;margin-top:.15rem;font-style:normal}
 .pkg-feat li:last-child{border-bottom:none}
+/* COOKIE CONSENT BANNER */
+.cookie-banner{position:fixed;left:1.5rem;bottom:1.5rem;z-index:9500;width:360px;max-width:calc(100vw - 3rem);background:var(--dark-2);border:1px solid var(--border-light);border-radius:14px;padding:1.25rem 1.4rem;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.cookie-banner p{font-size:.82rem;color:var(--grey-2);line-height:1.6;font-weight:300;margin-bottom:1rem}
+.cookie-banner p a{color:var(--accent);text-decoration:none}
+.cookie-banner-actions{display:flex;gap:.6rem;flex-wrap:wrap}
+@media(max-width:480px){.cookie-banner{left:.75rem;right:.75rem;width:auto;bottom:.75rem}}
 /* ARIA CHAT WIDGET */
 .aria-widget{position:fixed;bottom:2rem;right:2rem;z-index:9000;display:flex;flex-direction:column;align-items:flex-end;gap:.75rem;max-height:calc(100vh - 4rem)}
 .aria-chat-box{width:340px;max-height:calc(100vh - 7rem);background:var(--dark-2);border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.5);display:none;flex-direction:column}
@@ -1094,11 +1100,11 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <h2 style="font-family:var(--fd);font-size:1.35rem;font-weight:700;text-align:center;margin-bottom:.3rem">Welcome back</h2>
     <p style="font-size:.82rem;color:var(--grey);text-align:center;margin-bottom:2rem">Sign in to your Supanta account</p>
     <div id="login-step-1">
-      <div class="form-group"><label>Email address</label><input class="rb-input" type="email" id="login-email" placeholder="Email address"/></div>
+      <div class="form-group"><label>Email address</label><input class="rb-input" type="email" id="login-email" name="email" autocomplete="username" placeholder="Email address"/></div>
       <div class="form-group" id="login-pass-group">
         <label>Password</label>
         <div style="position:relative">
-          <input class="rb-input" type="password" id="login-pass" placeholder="Password" style="padding-right:2.6rem"/>
+          <input class="rb-input" type="password" id="login-pass" name="current-password" autocomplete="current-password" placeholder="Password" style="padding-right:2.6rem"/>
           <button type="button" onclick="toggleLoginPassVisibility()" aria-label="Show password" id="login-pass-eye" style="position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--grey);cursor:pointer;padding:.2rem;display:flex;align-items:center">
             <svg id="login-pass-eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
@@ -1109,7 +1115,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     </div>
     <div id="login-step-2fa" style="display:none">
       <p style="font-size:.82rem;color:var(--grey);text-align:center;margin-bottom:1.25rem">Enter the 6-digit code from your authenticator app.</p>
-      <div class="form-group"><label>Verification code</label><input class="rb-input" inputmode="numeric" maxlength="6" id="login-2fa-code" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:1.1rem"/></div>
+      <div class="form-group"><label>Verification code</label><input class="rb-input" inputmode="numeric" maxlength="6" id="login-2fa-code" autocomplete="one-time-code" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:1.1rem"/></div>
       <button class="btn-submit" id="login-2fa-btn" onclick="verifyLogin2fa()">Verify</button>
       <div style="text-align:center;margin-top:1rem"><button onclick="cancelLogin2fa()" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Back to sign in</button></div>
     </div>
@@ -1118,6 +1124,31 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
     <div style="text-align:center;margin-top:.5rem"><button onclick="goTo('home')" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Back to website</button></div>
   </div>
 </div>
+
+<!-- COOKIE CONSENT BANNER -->
+<div class="cookie-banner" id="cookie-banner" style="display:none">
+  <p>We use essential cookies to keep you signed in and keep the site secure. See our <a href="/cookies" onclick="spaNav(event,'cookies')">Cookie Information</a> for details.</p>
+  <div class="cookie-banner-actions">
+    <button class="btn-sm btn-sm-acc" onclick="acceptCookieConsent()">Accept</button>
+    <button onclick="spaNav(event,'cookies')" style="background:none;border:none;color:var(--grey);font-size:.78rem;cursor:pointer">Learn more</button>
+  </div>
+</div>
+<script>
+  function acceptCookieConsent(){
+    try{ localStorage.setItem('supanta_cookie_consent','accepted'); }catch(e){}
+    const b=document.getElementById('cookie-banner'); if(b)b.style.display='none';
+  }
+  (function(){
+    let consented=false;
+    try{ consented = localStorage.getItem('supanta_cookie_consent')==='accepted'; }catch(e){}
+    if(!consented){
+      document.addEventListener('DOMContentLoaded',()=>{
+        const b=document.getElementById('cookie-banner');
+        if(b)setTimeout(()=>{ b.style.display='block'; },600);
+      });
+    }
+  })();
+</script>
 
 <!-- ARIA CHAT WIDGET -->
 <div class="aria-widget" id="aria-widget" style="display:none">
@@ -1142,7 +1173,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       <div id="aria-lead-status" style="font-size:.72rem;margin-top:.5rem;display:none"></div>
     </div>
     <div class="aria-chat-input-row">
-      <input class="aria-chat-input" id="aria-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
+      <input class="aria-chat-input" id="aria-input" type="text" name="aria-message" autocomplete="off" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendAriaMsg()"/>
       <button class="aria-send-btn" onclick="sendAriaMsg()">Send</button>
     </div>
   </div>
