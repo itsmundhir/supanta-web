@@ -130,6 +130,13 @@ input,textarea,select{font-family:var(--fb);color:inherit}
 .btn-danger{background:rgba(255,77,109,.13);color:var(--danger);border:1px solid rgba(255,77,109,.3)}
 .btn-green{background:rgba(0,212,170,.13);color:var(--green);border:1px solid rgba(0,212,170,.3)}
 .btn-sm{padding:.35rem .75rem;font-size:.74rem;border-radius:6px}
+.cookie-banner{position:fixed;left:1.5rem;bottom:1.5rem;z-index:9500;width:440px;max-width:calc(100vw - 3rem);background:var(--bg-2);border:1px solid var(--border-light);border-radius:16px;padding:1.5rem 1.65rem;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.cookie-banner h3{font-family:var(--fd);font-size:1.05rem;font-weight:700;margin-bottom:.5rem;color:var(--text)}
+.cookie-banner p{font-size:.82rem;color:var(--text-2);line-height:1.65;margin-bottom:1.1rem}
+.cookie-banner p a{color:var(--accent);text-decoration:none}
+.cookie-banner-actions{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+.cookie-banner-link{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.78rem;font-weight:600;text-decoration:none}
+@media(max-width:560px){.cookie-banner{left:.75rem;right:.75rem;width:auto;bottom:.75rem}}
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:.65rem;font-weight:700;padding:3px 9px;border-radius:100px;letter-spacing:.03em;text-transform:uppercase}
 .badge-active{background:rgba(0,212,170,.13);color:var(--green)}
 .badge-archived{background:rgba(138,154,181,.15);color:var(--text-3)}
@@ -615,6 +622,17 @@ input:checked + .slider::before{transform:translateX(18px)}
 <!-- CHAT PANEL OVERFLOW MENU (chat panel header ⋯) -->
 <div class="ctx-menu" id="chat-overflow-menu"></div>
 
+<!-- COOKIE CONSENT BANNER -->
+<div class="cookie-banner" id="cookie-banner" style="display:none">
+  <h3>We use cookies</h3>
+  <p>We use essential cookies to keep you signed in and keep your account secure, plus optional cookies to understand how the dashboard is used. See our <a href="/cookies" target="_blank" rel="noopener">Cookie Information</a> for details.</p>
+  <div class="cookie-banner-actions">
+    <button class="btn btn-acc btn-sm" onclick="setAppCookieConsent('accepted')">Accept</button>
+    <button class="btn btn-ghost btn-sm" onclick="setAppCookieConsent('denied')">Deny</button>
+    <a href="/cookies" target="_blank" rel="noopener" class="cookie-banner-link">Cookie Information</a>
+  </div>
+</div>
+
 <!-- ARIA PANEL (docked right-hand side) -->
 <div class="aria-widget" id="aria-widget">
   <div class="aria-chat-hdr">
@@ -699,7 +717,8 @@ async function boot(){
     role:profile?.role||null,
     isStaff:['admin','super_admin'].includes(profile?.role),
     isBusinessAdmin:profile?.role==='client_admin',
-    links:profile?.links||{}
+    links:profile?.links||{},
+    cookieConsent:profile?.cookie_consent||null
   };
   if(currentUser.companyId){
     try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
@@ -729,6 +748,21 @@ async function boot(){
   subscribeRealtime();
   handleEmailConnectRedirect();
   handleIntegrationConnectRedirect();
+  maybeShowAppCookieBanner();
+}
+function maybeShowAppCookieBanner(){
+  if(currentUser.cookieConsent)return;
+  const b=document.getElementById('cookie-banner');
+  if(b)setTimeout(()=>{ b.style.display='block'; },600);
+}
+async function setAppCookieConsent(choice){
+  currentUser.cookieConsent=choice;
+  const b=document.getElementById('cookie-banner'); if(b)b.style.display='none';
+  try{ localStorage.setItem('supanta_cookie_consent',choice); }catch(e){}
+  if(!_sb||!currentUser.id)return;
+  try{
+    await _sb.from('user_profiles').update({cookie_consent:choice,cookie_consent_at:new Date().toISOString()}).eq('id',currentUser.id);
+  }catch(e){}
 }
 function handleEmailConnectRedirect(){
   const params=new URLSearchParams(window.location.search);
