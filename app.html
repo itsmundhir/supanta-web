@@ -3492,7 +3492,7 @@ let _settingsTab='profile';
 function renderSettings(){
   let tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
   if(!canSeeReports())tabs=tabs.filter(([k])=>k!=='company'&&k!=='invoices'&&k!=='kb');
-  if(currentUser.role==='super_admin')tabs.push(['access','Team Access']);
+  if(currentUser.role==='admin'||currentUser.role==='super_admin')tabs.push(['access','Team Access']);
   if(!tabs.some(([k])=>k===_settingsTab))_settingsTab='profile';
   return `
   <div class="settings-nav">${tabs.map(([k,l])=>`<button class="tab-btn ${k===_settingsTab?'active':''}" onclick="setSettingsTab('${k}')">${l}</button>`).join('')}</div>
@@ -3501,7 +3501,7 @@ function renderSettings(){
 function setSettingsTab(t){
   if((t==='company'||t==='invoices'||t==='kb')&&!canSeeReports())t='profile';
   _settingsTab=t;renderSection();
-  if(t==='access'&&currentUser.role==='super_admin'&&!_teamAccessLoaded){
+  if(t==='access'&&(currentUser.role==='admin'||currentUser.role==='super_admin')&&!_teamAccessLoaded){
     loadTeamAccessData().then(()=>{ if(_settingsTab==='access')renderSection(); });
   }
 }
@@ -3602,7 +3602,10 @@ function renderSettingsTab(t){
     </div>`;
   if(t==='access')return `
     <div class="card">
-      <div class="card-title">Team Access</div>
+      <div class="chart-card-hd">
+        <div class="card-title">Team Access</div>
+        <button class="btn btn-acc btn-sm" onclick="openInviteStaffModal()">+ Invite Staff</button>
+      </div>
       <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Control which client companies each Supanta staff member can view and manage from the sidebar switcher. Super Admins always see every company; Admins only see the ones assigned here.</p>
       <div id="team-access-body">${teamAccessBodyHtml()}</div>
     </div>`;
@@ -3660,6 +3663,66 @@ async function toggleEmployeeCompany(employeeId,clientId,grant){
       if(error)throw error;
       toast(grant?'Access granted':'Access removed','var(--green)');
     }catch(e){ toast('Could not update access','var(--danger)'); }
+  }
+}
+// ─── INVITE SUPANTA STAFF (admin/super_admin only) ──────────
+async function openInviteStaffModal(){
+  if(!_teamAccessLoaded)await loadTeamAccessData();
+  document.getElementById('ci-title').textContent='Invite Supanta Staff';
+  document.getElementById('ci-body').innerHTML=`
+    <div class="form-group"><label>Full name</label><input class="rb-input" id="is-name" autocomplete="off" placeholder="e.g. Thandiwe Nkosi"/></div>
+    <div class="form-group">
+      <label>Email</label>
+      <input class="rb-input" id="is-email" type="email" autocomplete="off" placeholder="name@supanta.com"/>
+      <div id="is-email-err" style="display:none;color:var(--danger);font-size:.74rem;margin-top:.35rem">Must be a @supanta.com address.</div>
+    </div>
+    <div class="form-group"><label>Job title <span style="color:var(--text-3);font-weight:400">(optional)</span></label><input class="rb-input" id="is-title" autocomplete="off" placeholder="e.g. Support Agent, Client Success Manager"/></div>
+    <div class="form-group">
+      <label>Assigned clients</label>
+      <div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:.6rem .75rem">
+        ${_teamAccessCompanies.length?_teamAccessCompanies.map(c=>`<label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;padding:.3rem 0;cursor:pointer"><input type="checkbox" value="${c.id}" class="is-client-cb"/> ${escapeHtml(c.company_name)}</label>`).join(''):'<div style="font-size:.78rem;color:var(--text-3)">No client companies yet.</div>'}
+      </div>
+    </div>
+    <button class="btn btn-acc" style="width:100%" id="is-submit" onclick="submitInviteStaff()">Send Invite</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitInviteStaff(){
+  const btn=document.getElementById('is-submit');
+  const full_name=document.getElementById('is-name').value.trim();
+  const email=document.getElementById('is-email').value.trim();
+  const job_title=document.getElementById('is-title').value.trim();
+  const assigned_clients=[...document.querySelectorAll('.is-client-cb:checked')].map(cb=>cb.value);
+  const emailErr=document.getElementById('is-email-err');
+  emailErr.style.display='none';
+  if(!full_name){toast('Full name is required','var(--danger)');return;}
+  if(!email){toast('Email is required','var(--danger)');return;}
+  if(!/^[^\s@]+@supanta\.com$/i.test(email)){emailErr.style.display='block';return;}
+  if(!_sb){toast('Connection unavailable right now','var(--danger)');return;}
+  btn.disabled=true;btn.textContent='Sending invite…';
+  try{
+    const {data,error}=await _sb.functions.invoke('admin-users',{body:{action:'invite',email,full_name,role:'admin',job_title:job_title||undefined,assigned_clients}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    _teamAccessLoaded=false;
+    await loadTeamAccessData();
+    const bodyEl=document.getElementById('team-access-body');
+    if(bodyEl)bodyEl.innerHTML=teamAccessBodyHtml();
+    logActivity('Invited Supanta staff',`${full_name} (${email})`);
+    document.getElementById('ci-title').textContent='Staff Account Created';
+    document.getElementById('ci-body').innerHTML=`
+      <p style="font-size:.85rem;line-height:1.65;margin-bottom:1rem">Account created for <strong>${escapeHtml(email)}</strong>. Share this temporary password with them securely, they should change it on first login.</p>
+      <div class="form-group"><label>Temporary password</label>
+        <div style="display:flex;gap:.5rem">
+          <input class="rb-input" id="is-temp-pwd" readonly value="${escapeHtml(data.temp_password)}" style="font-family:monospace"/>
+          <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard?.writeText('${escapeHtml(data.temp_password)}').then(()=>toast('Password copied','var(--green)')).catch(()=>toast('Could not copy, select and copy manually','var(--danger)'))">Copy</button>
+        </div>
+      </div>
+      <button class="btn btn-acc" style="width:100%" onclick="closeModal('modal-connect-int')">Done</button>
+    `;
+  }catch(e){
+    toast('Could not send invite: '+(e.message||e),'var(--danger)');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Send Invite';}
   }
 }
 function handlePicUpload(input,field){
