@@ -1255,6 +1255,16 @@ function loadState(){
   if(!STATE.ticketLists)STATE.ticketLists=defaultState().ticketLists;
   if(!STATE.ticketLabels)STATE.ticketLabels=[];
   if(!STATE.ticketCustomFields)STATE.ticketCustomFields=[];
+  // Retired channels (Telegram/Slack/Zoom/HubSpot/Google Calendar) and the
+  // Appointments feature may still be sitting in a returning user's cached
+  // state from before that removal — drop them, keeping any connected flag
+  // a user already set on a channel that's still offered.
+  {
+    const fresh=defaultState().integrations;
+    const old=STATE.integrations||[];
+    STATE.integrations=fresh.map(f=>{ const match=old.find(x=>x.key===f.key); return match?{...f,connected:match.connected}:f; });
+  }
+  delete STATE.appointments;
 }
 function saveState(){
   if(_viewingClientId&&_viewingClientId!==currentUser.companyId)return;
@@ -1686,7 +1696,7 @@ async function removeTeamMember(id){
 
 // ─── CHATS ───────────────────────────────────────────────
 let _chatTab='active', _activeChatId=null, _chatSearch='', _chatChannel='all';
-const CHAT_CHANNELS=['WhatsApp','Email','Instagram','X','Facebook','Phone','Telegram','SMS','Live Chat','TikTok'];
+const CHAT_CHANNELS=['WhatsApp','Email','Phone','SMS'];
 function chatFilteredList(){
   const q=_chatSearch.trim().toLowerCase();
   return STATE.chats.filter(c=>c.status===_chatTab
