@@ -2977,6 +2977,23 @@ const CHANNEL_CONNECTIONS={
   hubspot:{table:'client_hubspot_connections',get:()=>_hubspotConnection,set:v=>{_hubspotConnection=v;}},
   twilio:{table:'client_twilio_connections',get:()=>_twilioConnection,set:v=>{_twilioConnection=v;}},
 };
+// supabase-js's functions.invoke() leaves `data` null on any non-2xx
+// response, so `data.error` never fires for the credential-verification
+// failures these save-credentials/oauth-start functions return (400/403/500
+// with a {error:"..."} body) — only error.message does, and that's just
+// supabase-js's generic "Edge Function returned a non-2xx status code",
+// not the function's actual reason. The real body is on error.context (a
+// Response) per Supabase's own docs. This pulls it out so toasts show the
+// function's real message instead of a useless generic one.
+async function edgeFnErrorMessage(error){
+  if(error&&error.context&&typeof error.context.json==='function'){
+    try{
+      const body=await error.context.json();
+      if(body&&body.error)return body.error;
+    }catch(e){}
+  }
+  return (error&&error.message)||'Something went wrong';
+}
 async function disconnectChannel(key,confirmMsg,toastMsg){
   if(!confirm(confirmMsg))return;
   const cfg=CHANNEL_CONNECTIONS[key];
@@ -3088,7 +3105,8 @@ async function enableLivechat(){
   if(!_sb)return;
   try{
     const {data,error}=await _sb.functions.invoke('livechat-enable',{body:{}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(data?.error)throw new Error(data.error);
     await loadRemoteData();
     toast('Live Chat enabled','var(--green)');
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
@@ -3136,7 +3154,7 @@ async function submitTrelloConnect(){
   btn.disabled=true;btn.textContent='Verifying with Trello…';
   try{
     const {data,error}=await _sb.functions.invoke('trello-save-credentials',{body:{api_key,token}});
-    if(error)throw error;
+    if(error)throw new Error(await edgeFnErrorMessage(error));
     if(data&&data.error)throw new Error(data.error);
     toast('Trello connected','var(--green)');
     closeModal('modal-connect-int');
@@ -3154,7 +3172,8 @@ async function loadTrelloBoardsIntoSelect(){
   if(!sel||!_sb)return;
   try{
     const {data,error}=await _sb.functions.invoke('trello-list-boards',{body:{}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(data?.error)throw new Error(data.error);
     const current=_trelloConnection?.board_id;
     sel.innerHTML='<option value="">Select a board…</option>'+(data.boards||[]).map(b=>`<option value="${b.id}" data-name="${escapeHtml(b.name)}" ${b.id===current?'selected':''}>${escapeHtml(b.name)}</option>`).join('');
     if(current)onTrelloBoardChange(sel,true);
@@ -3170,7 +3189,8 @@ async function onTrelloBoardChange(sel,skipClear){
   listSel.innerHTML='<option value="">Loading lists…</option>';
   try{
     const {data,error}=await _sb.functions.invoke('trello-list-lists',{body:{board_id:opt.value}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(data?.error)throw new Error(data.error);
     const current=skipClear?_trelloConnection?.list_id:null;
     listSel.dataset.boardId=opt.value;
     listSel.dataset.boardName=opt.dataset.name;
@@ -3184,7 +3204,8 @@ async function setTrelloList(sel){
   if(!opt||!opt.value)return;
   try{
     const {data,error}=await _sb.functions.invoke('trello-set-list',{body:{board_id:sel.dataset.boardId,board_name:sel.dataset.boardName,list_id:opt.value,list_name:opt.dataset.name}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(data?.error)throw new Error(data.error);
     toast(`Now sending cards to ${sel.dataset.boardName} / ${opt.dataset.name}`,'var(--green)');
     await loadRemoteData();
     document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
@@ -3201,7 +3222,8 @@ async function sendConversationToTrello(conversationId){
   toast('Sending to Trello…','var(--accent)');
   try{
     const {data,error}=await _sb.functions.invoke('trello-create-card',{body:{conversation_id:conversationId}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(data?.error)throw new Error(data.error);
     toast(data.updated?'Trello card updated':'Trello card created','var(--green)');
   }catch(e){
     toast('Could not send to Trello: '+(e.message||e),'var(--danger)');
@@ -3224,7 +3246,8 @@ async function startHubspotConnect(){
   toast('Opening HubSpot…','var(--accent)');
   try{
     const {data,error}=await _sb.functions.invoke('hubspot-oauth-start',{body:{}});
-    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(!data?.url)throw new Error('No connect URL returned');
     window.location.href=data.url;
   }catch(e){
     toast('Could not start HubSpot connect: '+(e.message||e),'var(--danger)');
@@ -3238,7 +3261,8 @@ async function syncConversationToHubspot(conversationId){
   toast('Syncing to HubSpot…','var(--accent)');
   try{
     const {data,error}=await _sb.functions.invoke('hubspot-sync-conversation',{body:{conversation_id:conversationId}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(data?.error)throw new Error(data.error);
     toast('Synced to HubSpot','var(--green)');
   }catch(e){
     toast('Could not sync: '+(e.message||e),'var(--danger)');
@@ -3275,7 +3299,8 @@ async function startGmailConnect(){
   toast('Opening Google…','var(--accent)');
   try{
     const {data,error}=await _sb.functions.invoke('email-oauth-start',{body:{}});
-    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    if(error)throw new Error(await edgeFnErrorMessage(error));
+    if(!data?.url)throw new Error('No connect URL returned');
     window.location.href=data.url;
   }catch(e){
     toast('Could not start Google connect: '+(e.message||e),'var(--danger)');
@@ -3296,7 +3321,7 @@ async function submitImapConnect(){
   btn.disabled=true;btn.textContent='Testing connection…';
   try{
     const {data,error}=await _sb.functions.invoke('email-save-imap',{body:{email_address,imap_host,imap_port,imap_username,imap_password,smtp_host:smtp_host||undefined,smtp_port:smtp_port||undefined}});
-    if(error)throw error;
+    if(error)throw new Error(await edgeFnErrorMessage(error));
     if(data&&data.error)throw new Error(data.error);
     toast('Email connected','var(--green)');
     closeModal('modal-connect-int');
@@ -3334,7 +3359,7 @@ async function submitWhatsappConnect(){
   btn.disabled=true;btn.textContent='Verifying with Meta…';
   try{
     const {data,error}=await _sb.functions.invoke('whatsapp-save-credentials',{body:{phone_number_id,access_token,app_secret}});
-    if(error)throw error;
+    if(error)throw new Error(await edgeFnErrorMessage(error));
     if(data&&data.error)throw new Error(data.error);
     toast('WhatsApp connected','var(--green)');
     const resultEl=document.getElementById('wa-connect-result');
@@ -3384,7 +3409,7 @@ async function submitTwilioConnect(){
   btn.disabled=true;btn.textContent='Verifying with Twilio…';
   try{
     const {data,error}=await _sb.functions.invoke('twilio-save-credentials',{body:{account_sid,auth_token,phone_number,forwarding_number}});
-    if(error)throw error;
+    if(error)throw new Error(await edgeFnErrorMessage(error));
     if(data&&data.error)throw new Error(data.error);
     toast('Phone & SMS connected','var(--green)');
     const resultEl=document.getElementById('tw-connect-result');
@@ -3441,7 +3466,7 @@ async function submitFacebookConnect(){
   btn.disabled=true;btn.textContent='Verifying with Meta…';
   try{
     const {data,error}=await _sb.functions.invoke('facebook-save-credentials',{body:{page_access_token,app_secret}});
-    if(error)throw error;
+    if(error)throw new Error(await edgeFnErrorMessage(error));
     if(data&&data.error)throw new Error(data.error);
     toast('Facebook connected','var(--green)');
     const resultEl=document.getElementById('fb-connect-result');
@@ -3487,7 +3512,7 @@ async function submitInstagramConnect(){
   btn.disabled=true;btn.textContent='Verifying with Meta…';
   try{
     const {data,error}=await _sb.functions.invoke('instagram-save-credentials',{body:{page_access_token,app_secret}});
-    if(error)throw error;
+    if(error)throw new Error(await edgeFnErrorMessage(error));
     if(data&&data.error)throw new Error(data.error);
     toast('Instagram connected','var(--green)');
     const resultEl=document.getElementById('ig-connect-result');
