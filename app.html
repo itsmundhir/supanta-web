@@ -1118,6 +1118,14 @@ async function loadRemoteData(){
     _hubspotConnection=hsc||null;
   }catch(e){ _hubspotConnection=null; }
   try{
+    const {data:twc}=await _sb.from('client_twilio_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _twilioConnection=twc||null;
+  }catch(e){ _twilioConnection=null; }
+  try{
+    const {data:calls}=await _sb.from('twilio_calls').select('*').eq('client_id',activeClientId()).order('started_at',{ascending:false}).limit(100);
+    STATE.callLog=calls||[];
+  }catch(e){}
+  try{
     const {data:cl}=await _sb.from('clients').select('service_lines').eq('id',activeClientId()).single();
     _clientServiceLines=(cl&&cl.service_lines&&cl.service_lines.length)?cl.service_lines:['tech_support'];
   }catch(e){ _clientServiceLines=['tech_support']; }
@@ -1161,7 +1169,7 @@ async function loadRemoteData(){
 // role/channel/status here are the schema's real vocabulary (see the
 // webhook edge functions) — this is the one place that translates it into
 // what the Chats UI already speaks (who/channel display name/tab bucket).
-const CHANNEL_DB_TO_DISPLAY={whatsapp:'WhatsApp',email:'Email',facebook:'Facebook',instagram:'Instagram',telegram:'Telegram',chat:'Live Chat',voice:'Phone'};
+const CHANNEL_DB_TO_DISPLAY={whatsapp:'WhatsApp',email:'Email',facebook:'Facebook',instagram:'Instagram',telegram:'Telegram',chat:'Live Chat',voice:'Phone',sms:'SMS'};
 const STATUS_DB_TO_UI={open:'active',escalated:'active',resolved:'done',abandoned:'archived'};
 const STATUS_UI_TO_DB={active:'open',done:'resolved',archived:'abandoned'};
 function chatFromConversation(c,allMsgs){
@@ -1240,6 +1248,7 @@ let _instagramConnection=null;
 let _livechatConnection=null;
 let _trelloConnection=null;
 let _hubspotConnection=null;
+let _twilioConnection=null;
 let _clientServiceLines=['tech_support'];
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
@@ -1276,6 +1285,7 @@ function defaultState(){
     ],
     notifications:[],
     deliverables:[],
+    callLog:[],
     quickQuestions:[],
     kbDocs:[
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
@@ -1307,6 +1317,7 @@ function loadState(){
   if(!STATE.ticketLists)STATE.ticketLists=defaultState().ticketLists;
   if(!STATE.ticketLabels)STATE.ticketLabels=[];
   if(!STATE.ticketCustomFields)STATE.ticketCustomFields=[];
+  if(!STATE.callLog)STATE.callLog=[];
   // Retired channels (Telegram/Slack/Zoom/HubSpot/Google Calendar) and the
   // Appointments feature may still be sitting in a returning user's cached
   // state from before that removal — drop them, keeping any connected flag
@@ -1962,7 +1973,7 @@ function clearReplyImage(){
   document.getElementById('reply-img-input').value='';
   const wrap=document.getElementById('reply-img-preview-wrap'); if(wrap)wrap.innerHTML='';
 }
-const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send',Instagram:'instagram-send',Telegram:'telegram-send','Live Chat':'livechat-send'};
+const CHAT_SEND_FN={WhatsApp:'whatsapp-send',Email:'email-send',Facebook:'facebook-send',Instagram:'instagram-send',Telegram:'telegram-send','Live Chat':'livechat-send',SMS:'twilio-sms-send'};
 async function sendReply(chatId){
   const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
   const inp=document.getElementById('reply-input');
@@ -2956,7 +2967,7 @@ function renderIntegrations(){
 function intGridHtml(){
   const list=STATE.integrations;
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):(i.key==='phone'||i.key==='sms')?twilioIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -2998,6 +3009,27 @@ function whatsappIntegrationCardHtml(i){
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectWhatsapp()">Disconnect</button>`
       :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openWhatsappConnectModal()">Connect</button>`}
+  </div>`;
+}
+function twilioIntegrationCardHtml(i){
+  const conn=_twilioConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  const isPhone=i.key==='phone';
+  const detail=isConnected
+    ?(isPhone
+      ?(conn.forwarding_number?`Calls to <strong>${conn.phone_number}</strong> forward to ${conn.forwarding_number}.`:`Connected as <strong>${conn.phone_number}</strong>. Add a forwarding number below to route calls.`)
+      :`Connected as <strong>${conn.phone_number}</strong>.`)
+    :isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc;
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${detail}</div>
+    ${isConnected
+      ?`<div style="display:flex;gap:.5rem;flex-wrap:wrap">${isPhone?`<button class="btn btn-ghost btn-sm" onclick="openTwilioCallLogModal()">View call log</button>`:''}<button class="btn btn-ghost btn-sm" onclick="openTwilioConnectModal()">Edit</button><button class="btn btn-ghost btn-sm" onclick="disconnectTwilio()">Disconnect</button></div>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="openTwilioConnectModal()">Connect</button>`}
   </div>`;
 }
 function facebookIntegrationCardHtml(i){
@@ -3358,6 +3390,74 @@ async function disconnectWhatsapp(){
   _whatsappConnection=null;
   toast('WhatsApp disconnected','var(--accent)');
   renderSection();
+}
+function openTwilioConnectModal(){
+  const conn=_twilioConnection;
+  document.getElementById('ci-title').textContent='Connect Phone & SMS';
+  document.getElementById('ci-body').innerHTML=`
+    <p style="font-size:.82rem;color:var(--text-3);line-height:1.6;margin-bottom:1rem">One Twilio number powers both Phone and SMS. Inbound texts become conversations here with ARIA replying automatically. Inbound calls forward to the number you set below and get logged, no in-browser calling is set up. Find your Account SID and Auth Token on the Twilio Console dashboard.</p>
+    <div class="form-group"><label>Account SID</label><input class="rb-input" id="tw-account-sid" autocomplete="off" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" value="${conn?conn.account_sid:''}"/></div>
+    <div class="form-group"><label>Auth Token</label><input class="rb-input" type="password" id="tw-auth-token" autocomplete="new-password"/></div>
+    <div class="form-group"><label>Twilio Phone Number</label><input class="rb-input" id="tw-phone-number" autocomplete="off" placeholder="+15551234567" value="${conn?conn.phone_number:''}"/></div>
+    <div class="form-group"><label>Forward calls to (optional)</label><input class="rb-input" id="tw-forwarding-number" autocomplete="off" placeholder="+15557654321" value="${conn&&conn.forwarding_number?conn.forwarding_number:''}"/></div>
+    <button class="btn btn-acc" style="width:100%" id="tw-submit" onclick="submitTwilioConnect()">Test &amp; Connect</button>
+    <div id="tw-connect-result" style="margin-top:1rem;display:none"></div>
+  `;
+  openModal('modal-connect-int');
+}
+async function submitTwilioConnect(){
+  const btn=document.getElementById('tw-submit');
+  const account_sid=document.getElementById('tw-account-sid').value.trim();
+  const auth_token=document.getElementById('tw-auth-token').value.trim();
+  const phone_number=document.getElementById('tw-phone-number').value.trim();
+  const forwarding_number=document.getElementById('tw-forwarding-number').value.trim();
+  if(!account_sid||!auth_token||!phone_number){
+    toast('Fill in the Account SID, Auth Token and phone number','var(--danger)');return;
+  }
+  btn.disabled=true;btn.textContent='Verifying with Twilio…';
+  try{
+    const {data,error}=await _sb.functions.invoke('twilio-save-credentials',{body:{account_sid,auth_token,phone_number,forwarding_number}});
+    if(error)throw error;
+    if(data&&data.error)throw new Error(data.error);
+    toast('Phone & SMS connected','var(--green)');
+    const resultEl=document.getElementById('tw-connect-result');
+    resultEl.style.display='block';
+    resultEl.innerHTML=`
+      <div class="card" style="background:var(--bg-3);padding:.9rem 1rem">
+        <div style="font-size:.78rem;font-weight:600;margin-bottom:.5rem">Last step, set these in your Twilio phone number's Configuration:</div>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">A message comes in (SMS webhook, HTTP POST)</div>
+        <input class="rb-input" readonly value="${data.sms_webhook_url}" onclick="this.select()" style="font-size:.74rem;margin-bottom:.6rem"/>
+        <div style="font-size:.76rem;color:var(--text-3);margin-bottom:.3rem">A call comes in (Voice webhook, HTTP POST)</div>
+        <input class="rb-input" readonly value="${data.voice_webhook_url}" onclick="this.select()" style="font-size:.74rem"/>
+      </div>`;
+    await loadRemoteData();
+    document.getElementById('int-grid-wrap').innerHTML=intGridHtml();
+  }catch(e){
+    toast(e.message||'Could not connect Twilio','var(--danger)');
+  }finally{
+    btn.disabled=false;btn.textContent='Test & Connect';
+  }
+}
+async function disconnectTwilio(){
+  if(!confirm('Disconnect Phone & SMS? Inbound calls and texts will stop syncing until you reconnect.'))return;
+  if(_twilioConnection&&_sb){
+    try{ await _sb.from('client_twilio_connections').update({status:'disconnected'}).eq('id',_twilioConnection.id); }catch(e){}
+  }
+  _twilioConnection=null;
+  toast('Phone & SMS disconnected','var(--accent)');
+  renderSection();
+}
+function openTwilioCallLogModal(){
+  const calls=STATE.callLog||[];
+  document.getElementById('ci-title').textContent='Call Log';
+  document.getElementById('ci-body').innerHTML=calls.length
+    ?`<div style="display:flex;flex-direction:column;gap:.5rem;max-height:360px;overflow:auto">${calls.map(c=>`
+      <div class="card" style="background:var(--bg-3);padding:.7rem .9rem;font-size:.8rem">
+        <div style="display:flex;justify-content:space-between"><strong>${c.direction==='inbound'?c.from_number:c.to_number||'Unknown'}</strong><span class="badge ${c.status==='completed'?'badge-active':c.status==='no-answer'||c.status==='busy'||c.status==='failed'?'badge-high':'badge-archived'}">${c.status||'in progress'}</span></div>
+        <div style="color:var(--text-3);margin-top:.25rem">${c.direction==='inbound'?'Inbound':'Outbound'} · ${c.duration_seconds?Math.round(c.duration_seconds/60)+'m '+(c.duration_seconds%60)+'s':'—'} · ${c.started_at?new Date(c.started_at).toLocaleString():''}</div>
+      </div>`).join('')}</div>`
+    :`<p style="font-size:.85rem;color:var(--text-3)">No calls logged yet.</p>`;
+  openModal('modal-connect-int');
 }
 function openFacebookConnectModal(){
   document.getElementById('ci-title').textContent='Connect Facebook';
