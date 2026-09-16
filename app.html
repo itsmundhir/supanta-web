@@ -644,9 +644,14 @@ input:checked + .slider::before{transform:translateX(18px)}
       <button class="aria-chat-close" onclick="toggleAriaChat()" title="Close panel">✕</button>
     </div>
   </div>
+  <div style="display:flex;gap:.4rem;padding:.6rem .85rem 0">
+    <button class="tab-btn active" id="aria-tab-chat" onclick="setAriaTab('chat')" style="flex:1">Chat</button>
+    <button class="tab-btn" id="aria-tab-history" onclick="setAriaTab('history')" style="flex:1">History</button>
+  </div>
   <div class="aria-chat-msgs" id="aria-msgs">
     <div class="aria-msg aria-msg-bot">Hi, I'm ARIA. Ask me anything about your tickets, chats or account, or ask me to do things, like "create a ticket for BrandCo about a broken checkout" or "add this doc to the knowledge base".</div>
   </div>
+  <div id="aria-history-pane" style="display:none;flex:1;min-height:0;overflow-y:auto;padding:.75rem"></div>
   <div class="reply-img-preview" id="aria-attach-preview" style="display:none"></div>
   <div class="aria-chat-input-row">
     <button class="reply-icon-btn" style="width:36px;height:36px;flex-shrink:0" onclick="document.getElementById('aria-file-input').click()" id="aria-attach-btn" title="Attach a document or image">📎</button>
@@ -736,6 +741,8 @@ async function boot(){
   if(currentUser.companyName && (!STATE.profile.companyName || STATE.profile.companyName==='Your Company'))STATE.profile.companyName=currentUser.companyName;
   if(currentUser.isStaff)await loadStaffCompanies();
   renderShell();
+  loadAriaHistory();
+  archiveAriaSession();
   initAriaScope();
   if(window.innerWidth>900)toggleAriaChat();
   showSection('pulse');
@@ -3978,6 +3985,7 @@ function toastUndo(msg,color,undoFn){
 
 // ─── ARIA WIDGET (calls the client-assistant Supabase Edge Function) ─────
 function initAriaScope(){
+  if(document.getElementById('aria-tab-chat'))setAriaTab('chat');
   const statusEl=document.getElementById('aria-scope-status');
   const msgs=document.getElementById('aria-msgs');
   const inp=document.getElementById('aria-input');
@@ -4179,8 +4187,16 @@ function tryAriaAction(text,file){
 }
 
 // ─── ARIA CHAT HISTORY (persisted per user, survives reload) ─────
+// A "session" is one login's worth of conversation with ARIA: boot()
+// archives whatever's left in _ariaHistory from the previous login into
+// _ariaSessions before starting a fresh one, so each login gets a clean
+// chat and nothing is lost — it just moves to the History tab.
 let _ariaHistory=[];
+let _ariaSessions=[];
+let _ariaTab='chat';
+let _ariaViewingSessionId=null;
 function ariaHistoryKey(){ return 'supanta_aria_history_'+(currentUser?currentUser.id:''); }
+function ariaSessionsKey(){ return 'supanta_aria_sessions_'+(currentUser?currentUser.id:''); }
 function loadAriaHistory(){
   try{ const raw=localStorage.getItem(ariaHistoryKey()); _ariaHistory=raw?JSON.parse(raw):[]; }catch(e){ _ariaHistory=[]; }
 }
@@ -4188,11 +4204,72 @@ function saveAriaHistory(){
   _ariaHistory=_ariaHistory.slice(-40);
   try{ localStorage.setItem(ariaHistoryKey(),JSON.stringify(_ariaHistory)); }catch(e){}
 }
-function clearAriaConversation(){
-  if(!confirm('Clear this conversation with ARIA?'))return;
+function loadAriaSessions(){
+  try{ const raw=localStorage.getItem(ariaSessionsKey()); _ariaSessions=raw?JSON.parse(raw):[]; }catch(e){ _ariaSessions=[]; }
+}
+function saveAriaSessions(){
+  _ariaSessions=_ariaSessions.slice(0,25);
+  try{ localStorage.setItem(ariaSessionsKey(),JSON.stringify(_ariaSessions)); }catch(e){}
+}
+// Moves whatever's currently in _ariaHistory into _ariaSessions and clears
+// it, so a new conversation can start clean. Called once per login (from
+// boot) and whenever the user clears the chat by hand.
+function archiveAriaSession(){
+  loadAriaSessions();
+  if(_ariaHistory.length){
+    _ariaSessions.unshift({id:'s'+Date.now(),endedAt:new Date().toISOString(),messages:_ariaHistory});
+    saveAriaSessions();
+  }
   _ariaHistory=[];
   try{ localStorage.removeItem(ariaHistoryKey()); }catch(e){}
+}
+function clearAriaConversation(){
+  if(!_ariaHistory.length){ initAriaScope(); return; }
+  if(!confirm('Clear this conversation with ARIA? It will be saved to History.'))return;
+  archiveAriaSession();
   initAriaScope();
+}
+function ariaMsgPreview(session){
+  const firstUser=session.messages.find(m=>m.who==='user');
+  const raw=(firstUser||session.messages[0]).html.replace(/<[^>]+>/g,'').trim();
+  return raw.length>70?raw.slice(0,70)+'…':raw;
+}
+function setAriaTab(tab){
+  _ariaTab=tab;
+  const chatBtn=document.getElementById('aria-tab-chat'), histBtn=document.getElementById('aria-tab-history');
+  chatBtn.classList.toggle('active',tab==='chat');
+  histBtn.classList.toggle('active',tab==='history');
+  const msgs=document.getElementById('aria-msgs'), hist=document.getElementById('aria-history-pane'), row=document.querySelector('.aria-chat-input-row');
+  if(tab==='chat'){
+    msgs.style.display='flex'; hist.style.display='none'; if(row)row.style.display='flex';
+  }else{
+    msgs.style.display='none'; hist.style.display='block'; if(row)row.style.display='none';
+    _ariaViewingSessionId=null;
+    renderAriaHistoryPane();
+  }
+}
+function renderAriaHistoryPane(){
+  const hist=document.getElementById('aria-history-pane');
+  loadAriaSessions();
+  if(_ariaViewingSessionId){
+    const s=_ariaSessions.find(x=>x.id===_ariaViewingSessionId);
+    if(!s){ _ariaViewingSessionId=null; return renderAriaHistoryPane(); }
+    hist.innerHTML=`
+      <button class="btn btn-ghost btn-sm" style="margin-bottom:.75rem" onclick="_ariaViewingSessionId=null;renderAriaHistoryPane()">← Back to History</button>
+      <div style="display:flex;flex-direction:column;gap:.65rem">
+        ${s.messages.map(m=>`<div class="aria-msg aria-msg-${m.who}" style="max-width:100%">${m.html}</div>`).join('')}
+      </div>`;
+    return;
+  }
+  if(!_ariaSessions.length){
+    hist.innerHTML='<div class="empty-state">No past conversations yet. Each time you log in, your previous chat with ARIA is saved here.</div>';
+    return;
+  }
+  hist.innerHTML=_ariaSessions.map(s=>`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem;margin-bottom:.6rem;cursor:pointer" onclick="_ariaViewingSessionId='${s.id}';renderAriaHistoryPane()">
+      <div style="font-size:.78rem;font-weight:600;margin-bottom:.25rem">${new Date(s.endedAt).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+      <div style="font-size:.76rem;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(ariaMsgPreview(s))}</div>
+    </div>`).join('');
 }
 function ariaAppend(who,html){
   const msgs=document.getElementById('aria-msgs');
