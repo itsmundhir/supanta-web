@@ -1093,34 +1093,19 @@ async function loadRemoteData(){
       ic.forEach(row=>{ const i=STATE.integrations.find(x=>x.key===row.integration_key); if(i)i.connected=row.connected; });
     }
   }catch(e){}
-  try{
-    const {data:ec}=await _sb.from('client_email_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _emailConnection=ec||null;
-  }catch(e){ _emailConnection=null; }
-  try{
-    const {data:wc}=await _sb.from('client_whatsapp_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _whatsappConnection=wc||null;
-  }catch(e){ _whatsappConnection=null; }
-  try{
-    const {data:fc}=await _sb.from('client_facebook_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _facebookConnection=fc||null;
-  }catch(e){ _facebookConnection=null; }
-  try{
-    const {data:igc}=await _sb.from('client_instagram_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _instagramConnection=igc||null;
-  }catch(e){ _instagramConnection=null; }
-  try{
-    const {data:lcc}=await _sb.from('client_livechat_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _livechatConnection=lcc||null;
-  }catch(e){ _livechatConnection=null; }
-  try{
-    const {data:hsc}=await _sb.from('client_hubspot_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _hubspotConnection=hsc||null;
-  }catch(e){ _hubspotConnection=null; }
-  try{
-    const {data:twc}=await _sb.from('client_twilio_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
-    _twilioConnection=twc||null;
-  }catch(e){ _twilioConnection=null; }
+  // One fetch per channel's connection row, sharing the same table/setter
+  // registry disconnectChannel() uses below — including Trello, which
+  // previously had no boot-time fetch at all here (it only ever got set
+  // in-session right after connecting), so a returning user's already-
+  // connected Trello card wrongly showed "Not connected" until they
+  // reconnected.
+  for(const key of Object.keys(CHANNEL_CONNECTIONS)){
+    const cfg=CHANNEL_CONNECTIONS[key];
+    try{
+      const {data}=await _sb.from(cfg.table).select('*').eq('client_id',activeClientId()).maybeSingle();
+      cfg.set(data||null);
+    }catch(e){ cfg.set(null); }
+  }
   try{
     const {data:calls}=await _sb.from('twilio_calls').select('*').eq('client_id',activeClientId()).order('started_at',{ascending:false}).limit(100);
     STATE.callLog=calls||[];
@@ -2964,15 +2949,51 @@ const INT_ICONS=new Proxy({},{get:(_,key)=>channelIconSvg(key,20)});
 function renderIntegrations(){
   return `<div id="int-grid-wrap">${intGridHtml()}</div>`;
 }
+// Shared building blocks for the credential-based integration cards
+// (email/whatsapp/facebook/instagram/trello/hubspot/twilio) — every one of
+// them has the same icon+name+status-badge header, so it's factored out
+// once instead of six-plus copies of the same template literal.
+function intIconHtml(i){
+  return `<div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>`;
+}
+function connStatusBadge(isConnected,isError){
+  return `<span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span>`;
+}
+function intHeaderHtml(i,badgeHtml){
+  return `<div class="int-hd">${intIconHtml(i)}<div><div class="int-name">${i.name}</div>${badgeHtml}</div></div>`;
+}
+// Registry backing the generic disconnectChannel() below — each entry maps
+// a channel key to its connection-table name and the global var holding
+// its cached connection, so the confirm/update/clear/toast/re-render
+// sequence (identical across every credential-based channel) lives in one
+// place instead of one near-copy per channel.
+const CHANNEL_CONNECTIONS={
+  email:{table:'client_email_connections',get:()=>_emailConnection,set:v=>{_emailConnection=v;}},
+  whatsapp:{table:'client_whatsapp_connections',get:()=>_whatsappConnection,set:v=>{_whatsappConnection=v;}},
+  facebook:{table:'client_facebook_connections',get:()=>_facebookConnection,set:v=>{_facebookConnection=v;}},
+  instagram:{table:'client_instagram_connections',get:()=>_instagramConnection,set:v=>{_instagramConnection=v;}},
+  livechat:{table:'client_livechat_connections',get:()=>_livechatConnection,set:v=>{_livechatConnection=v;}},
+  trello:{table:'client_trello_connections',get:()=>_trelloConnection,set:v=>{_trelloConnection=v;}},
+  hubspot:{table:'client_hubspot_connections',get:()=>_hubspotConnection,set:v=>{_hubspotConnection=v;}},
+  twilio:{table:'client_twilio_connections',get:()=>_twilioConnection,set:v=>{_twilioConnection=v;}},
+};
+async function disconnectChannel(key,confirmMsg,toastMsg){
+  if(!confirm(confirmMsg))return;
+  const cfg=CHANNEL_CONNECTIONS[key];
+  const conn=cfg.get();
+  if(conn&&_sb){
+    try{ await _sb.from(cfg.table).update({status:'disconnected'}).eq('id',conn.id); }catch(e){}
+  }
+  cfg.set(null);
+  toast(toastMsg,'var(--accent)');
+  renderSection();
+}
 function intGridHtml(){
   const list=STATE.integrations;
   return `<div class="grid-3">
     ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):(i.key==='phone'||i.key==='sms')?twilioIntegrationCardHtml(i):`
       <div class="int-card">
-        <div class="int-hd">
-          <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
-          <div><div class="int-name">${i.name}</div>${i.comingSoon?'<span class="badge badge-med">Coming soon</span>':`<span class="badge ${i.connected?'badge-active':'badge-archived'}">${i.connected?'Connected':'Not connected'}</span>`}</div>
-        </div>
+        ${intHeaderHtml(i,i.comingSoon?'<span class="badge badge-med">Coming soon</span>':`<span class="badge ${i.connected?'badge-active':'badge-archived'}">${i.connected?'Connected':'Not connected'}</span>`)}
         <div class="int-desc">${i.desc}</div>
         <label class="switch" style="align-self:flex-start" ${i.comingSoon?'title="Not available yet"':''}>
           <input type="checkbox" ${i.connected?'checked':''} ${i.comingSoon?'disabled':''} onchange="toggleIntegration('${i.key}',this.checked)"/>
@@ -2986,10 +3007,7 @@ function emailIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const isError=conn&&conn.status==='error';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     <div class="int-desc">${isConnected?`Connected as <strong>${conn.email_address||'N/A'}</strong> via ${conn.method==='gmail_oauth'?'Google':'IMAP'}.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectEmail()">Disconnect</button>`
@@ -3001,10 +3019,7 @@ function whatsappIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const isError=conn&&conn.status==='error';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     <div class="int-desc">${isConnected?`Connected as <strong>${conn.display_phone_number||conn.phone_number_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectWhatsapp()">Disconnect</button>`
@@ -3022,10 +3037,7 @@ function twilioIntegrationCardHtml(i){
       :`Connected as <strong>${conn.phone_number}</strong>.`)
     :isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc;
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     <div class="int-desc">${detail}</div>
     ${isConnected
       ?`<div style="display:flex;gap:.5rem;flex-wrap:wrap">${isPhone?`<button class="btn btn-ghost btn-sm" onclick="openTwilioCallLogModal()">View call log</button>`:''}<button class="btn btn-ghost btn-sm" onclick="openTwilioConnectModal()">Edit</button><button class="btn btn-ghost btn-sm" onclick="disconnectTwilio()">Disconnect</button></div>`
@@ -3037,10 +3049,7 @@ function facebookIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const isError=conn&&conn.status==='error';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     <div class="int-desc">${isConnected?`Connected as <strong>${conn.page_name||conn.page_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectFacebook()">Disconnect</button>`
@@ -3052,10 +3061,7 @@ function instagramIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const isError=conn&&conn.status==='error';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     <div class="int-desc">${isConnected?`Connected as <strong>@${conn.ig_username||conn.ig_account_id}</strong>.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectInstagram()">Disconnect</button>`
@@ -3067,10 +3073,7 @@ function livechatIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const snippet=isConnected?`<script src="${SUPABASE_URL}/functions/v1/livechat-widget?key=${conn.widget_key}" async><\/script>`:'';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':'badge-archived'}">${isConnected?'Enabled':'Not enabled'}</span></div>
-    </div>
+    ${intHeaderHtml(i,`<span class="badge ${isConnected?'badge-active':'badge-archived'}">${isConnected?'Enabled':'Not enabled'}</span>`)}
     <div class="int-desc">${isConnected?'Paste this snippet before the closing &lt;/body&gt; tag on your website:':i.desc}</div>
     ${isConnected?`
       <textarea class="rb-input" readonly onclick="this.select()" style="font-family:monospace;font-size:.72rem;min-height:52px;resize:vertical">${snippet}</textarea>
@@ -3093,14 +3096,8 @@ async function enableLivechat(){
     toast('Could not enable Live Chat: '+(e.message||e),'var(--danger)');
   }
 }
-async function disableLivechat(){
-  if(!confirm('Disable Live Chat? The widget will stop working on your site until re-enabled.'))return;
-  if(_livechatConnection&&_sb){
-    try{ await _sb.from('client_livechat_connections').update({status:'disconnected'}).eq('id',_livechatConnection.id); }catch(e){}
-  }
-  _livechatConnection=null;
-  toast('Live Chat disabled','var(--accent)');
-  renderSection();
+function disableLivechat(){
+  return disconnectChannel('livechat','Disable Live Chat? The widget will stop working on your site until re-enabled.','Live Chat disabled');
 }
 function copyLivechatSnippet(){
   if(!_livechatConnection)return;
@@ -3112,10 +3109,7 @@ function trelloIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const isError=conn&&conn.status==='error';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     ${isConnected?`
       <div class="int-desc">${conn.list_name?`Sending cards to <strong>${escapeHtml(conn.board_name||'')} / ${escapeHtml(conn.list_name)}</strong>.`:'Pick a board, then a list, to send cards to:'}</div>
       <select class="rb-select" id="trello-board-select" onchange="onTrelloBoardChange(this)"><option value="">Loading boards…</option></select>
@@ -3199,14 +3193,8 @@ async function setTrelloList(sel){
     toast('Could not set list: '+(e.message||e),'var(--danger)');
   }
 }
-async function disconnectTrello(){
-  if(!confirm('Disconnect Trello?'))return;
-  if(_trelloConnection&&_sb){
-    try{ await _sb.from('client_trello_connections').update({status:'disconnected'}).eq('id',_trelloConnection.id); }catch(e){}
-  }
-  _trelloConnection=null;
-  toast('Trello disconnected','var(--accent)');
-  renderSection();
+function disconnectTrello(){
+  return disconnectChannel('trello','Disconnect Trello?','Trello disconnected');
 }
 async function sendConversationToTrello(conversationId){
   if(!_sb)return;
@@ -3224,10 +3212,7 @@ function hubspotIntegrationCardHtml(i){
   const isConnected=conn&&conn.status==='connected';
   const isError=conn&&conn.status==='error';
   return `<div class="int-card">
-    <div class="int-hd">
-      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
-      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
-    </div>
+    ${intHeaderHtml(i,connStatusBadge(isConnected,isError))}
     <div class="int-desc">${isConnected?`Connected to portal <strong>${conn.portal_id||'N/A'}</strong>. Sync a conversation to HubSpot from its chat panel.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
     ${isConnected
       ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectHubspot()">Disconnect</button>`
@@ -3245,14 +3230,8 @@ async function startHubspotConnect(){
     toast('Could not start HubSpot connect: '+(e.message||e),'var(--danger)');
   }
 }
-async function disconnectHubspot(){
-  if(!confirm('Disconnect HubSpot? Conversations will stop syncing until you reconnect.'))return;
-  if(_hubspotConnection&&_sb){
-    try{ await _sb.from('client_hubspot_connections').update({status:'disconnected'}).eq('id',_hubspotConnection.id); }catch(e){}
-  }
-  _hubspotConnection=null;
-  toast('HubSpot disconnected','var(--accent)');
-  renderSection();
+function disconnectHubspot(){
+  return disconnectChannel('hubspot','Disconnect HubSpot? Conversations will stop syncing until you reconnect.','HubSpot disconnected');
 }
 async function syncConversationToHubspot(conversationId){
   if(!_sb)return;
@@ -3329,14 +3308,8 @@ async function submitImapConnect(){
     btn.disabled=false;btn.textContent='Test & Connect';
   }
 }
-async function disconnectEmail(){
-  if(!confirm('Disconnect email? Inbound mail will stop syncing until you reconnect.'))return;
-  if(_emailConnection&&_sb){
-    try{ await _sb.from('client_email_connections').update({status:'disconnected'}).eq('id',_emailConnection.id); }catch(e){}
-  }
-  _emailConnection=null;
-  toast('Email disconnected','var(--accent)');
-  renderSection();
+function disconnectEmail(){
+  return disconnectChannel('email','Disconnect email? Inbound mail will stop syncing until you reconnect.','Email disconnected');
 }
 function openWhatsappConnectModal(){
   document.getElementById('ci-title').textContent='Connect WhatsApp';
@@ -3382,14 +3355,8 @@ async function submitWhatsappConnect(){
     btn.disabled=false;btn.textContent='Test & Connect';
   }
 }
-async function disconnectWhatsapp(){
-  if(!confirm('Disconnect WhatsApp? Inbound messages will stop syncing until you reconnect.'))return;
-  if(_whatsappConnection&&_sb){
-    try{ await _sb.from('client_whatsapp_connections').update({status:'disconnected'}).eq('id',_whatsappConnection.id); }catch(e){}
-  }
-  _whatsappConnection=null;
-  toast('WhatsApp disconnected','var(--accent)');
-  renderSection();
+function disconnectWhatsapp(){
+  return disconnectChannel('whatsapp','Disconnect WhatsApp? Inbound messages will stop syncing until you reconnect.','WhatsApp disconnected');
 }
 function openTwilioConnectModal(){
   const conn=_twilioConnection;
@@ -3438,14 +3405,8 @@ async function submitTwilioConnect(){
     btn.disabled=false;btn.textContent='Test & Connect';
   }
 }
-async function disconnectTwilio(){
-  if(!confirm('Disconnect Phone & SMS? Inbound calls and texts will stop syncing until you reconnect.'))return;
-  if(_twilioConnection&&_sb){
-    try{ await _sb.from('client_twilio_connections').update({status:'disconnected'}).eq('id',_twilioConnection.id); }catch(e){}
-  }
-  _twilioConnection=null;
-  toast('Phone & SMS disconnected','var(--accent)');
-  renderSection();
+function disconnectTwilio(){
+  return disconnectChannel('twilio','Disconnect Phone & SMS? Inbound calls and texts will stop syncing until you reconnect.','Phone & SMS disconnected');
 }
 function openTwilioCallLogModal(){
   const calls=STATE.callLog||[];
@@ -3502,14 +3463,8 @@ async function submitFacebookConnect(){
     btn.disabled=false;btn.textContent='Test & Connect';
   }
 }
-async function disconnectFacebook(){
-  if(!confirm('Disconnect Facebook? Inbound Messenger DMs will stop syncing until you reconnect.'))return;
-  if(_facebookConnection&&_sb){
-    try{ await _sb.from('client_facebook_connections').update({status:'disconnected'}).eq('id',_facebookConnection.id); }catch(e){}
-  }
-  _facebookConnection=null;
-  toast('Facebook disconnected','var(--accent)');
-  renderSection();
+function disconnectFacebook(){
+  return disconnectChannel('facebook','Disconnect Facebook? Inbound Messenger DMs will stop syncing until you reconnect.','Facebook disconnected');
 }
 function openInstagramConnectModal(){
   document.getElementById('ci-title').textContent='Connect Instagram';
@@ -3554,14 +3509,8 @@ async function submitInstagramConnect(){
     btn.disabled=false;btn.textContent='Test & Connect';
   }
 }
-async function disconnectInstagram(){
-  if(!confirm('Disconnect Instagram? Inbound DMs will stop syncing until you reconnect.'))return;
-  if(_instagramConnection&&_sb){
-    try{ await _sb.from('client_instagram_connections').update({status:'disconnected'}).eq('id',_instagramConnection.id); }catch(e){}
-  }
-  _instagramConnection=null;
-  toast('Instagram disconnected','var(--accent)');
-  renderSection();
+function disconnectInstagram(){
+  return disconnectChannel('instagram','Disconnect Instagram? Inbound DMs will stop syncing until you reconnect.','Instagram disconnected');
 }
 
 // ─── NOTIFICATIONS ───────────────────────────────────────
