@@ -478,6 +478,7 @@ input:checked + .slider::before{transform:translateX(18px)}
       <div class="nav-item" data-sec="chats" onclick="showSection('chats')"><span class="nav-ico">◈</span> <span class="lbl">Chats</span></div>
       <div class="nav-item" data-sec="tickets" onclick="showSection('tickets')"><span class="nav-ico">▤</span> <span class="lbl">Tickets</span></div>
       <div class="nav-item" id="nav-integrations" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
+      <div class="nav-item" id="nav-deliverables" data-sec="deliverables" onclick="showSection('deliverables')"><span class="nav-ico">▣</span> <span class="lbl">Deliverables</span></div>
       <div class="sb-bottom">
         <div class="nav-sec-lbl lbl">General</div>
         <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> <span class="lbl">Notifications</span> <span class="nav-badge lbl" id="notif-nav-badge" style="display:none"></span></div>
@@ -544,6 +545,26 @@ input:checked + .slider::before{transform:translateX(18px)}
     <div class="form-group"><label>Priority</label><select class="rb-select" id="nt-priority"><option value="high">High</option><option value="med" selected>Medium</option><option value="low">Low</option></select></div>
     <div class="form-group"><label>Due Date & Time (optional)</label><input class="rb-input" type="datetime-local" id="nt-due"/></div>
     <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="addTicket()">Create Ticket</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-deliverable">
+  <div class="modal-box">
+    <div class="modal-hdr"><div class="modal-title">New Deliverable</div><button class="modal-close" onclick="closeModal('modal-add-deliverable')">✕</button></div>
+    <div class="form-group"><label>Name</label><input class="rb-input" id="dv-name" autocomplete="off" placeholder="e.g. Q3 Power BI Dashboard"/></div>
+    <div class="form-group"><label>Type</label><select class="rb-select" id="dv-type">
+      <option value="report">Report</option>
+      <option value="dashboard">Dashboard</option>
+      <option value="data_cleanup">Data Cleanup</option>
+      <option value="crm_setup">CRM Setup</option>
+    </select></div>
+    <div class="form-group"><label>Status</label><select class="rb-select" id="dv-status">
+      <option value="in_progress">In Progress</option>
+      <option value="delivered">Delivered</option>
+    </select></div>
+    <div class="form-group"><label>Link <span style="color:var(--text-3);font-weight:400">(optional)</span></label><input class="rb-input" id="dv-link" autocomplete="off" placeholder="https://…"/></div>
+    <div class="form-group"><label>Delivered On <span style="color:var(--text-3);font-weight:400">(optional)</span></label><input class="rb-input" type="date" id="dv-delivered-at"/></div>
+    <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="addDeliverable()">Add Deliverable</button>
   </div>
 </div>
 
@@ -1003,6 +1024,10 @@ async function loadRemoteData(){
     }
   }catch(e){}
   try{
+    const {data:dvs}=await _sb.from('deliverables').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
+    STATE.deliverables=(dvs||[]).map(r=>({id:r.id,name:r.name,type:r.type,status:r.status,link:r.link,deliveredAt:r.delivered_at}));
+  }catch(e){}
+  try{
     const {data:lists}=await _sb.from('ticket_lists').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
     if(lists&&lists.length){
       STATE.ticketLists=lists.map(l=>({id:l.id,name:l.name,kind:l.kind,position:l.position}));
@@ -1018,6 +1043,14 @@ async function loadRemoteData(){
   try{
     const {data:labels}=await _sb.from('ticket_labels').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
     if(labels&&labels.length)STATE.ticketLabels=labels.map(l=>({id:l.id,name:l.name,color:l.color,position:l.position}));
+    // Backs the Tickets "Data & CRM" filter tab — seeded once per company (same
+    // own-company-only guard as the ticket_lists defaults above) so the tab has
+    // something to filter on without requiring a manual "+ New Label" first.
+    if(!STATE.ticketLabels.some(l=>l.name==='Data & CRM')&&activeClientId()===currentUser.companyId){
+      const dcLabel={id:'lb-datacrm-'+activeClientId(),name:'Data & CRM',color:'#00d4aa',position:STATE.ticketLabels.length};
+      STATE.ticketLabels=[...STATE.ticketLabels,dcLabel];
+      _sb.from('ticket_labels').insert({id:dcLabel.id,client_id:activeClientId(),name:dcLabel.name,color:dcLabel.color,position:dcLabel.position}).then(()=>{}).catch(()=>{});
+    }
   }catch(e){}
   try{
     const {data:fields}=await _sb.from('ticket_custom_fields').select('*').eq('client_id',activeClientId()).order('position',{ascending:true});
@@ -1080,6 +1113,14 @@ async function loadRemoteData(){
     const {data:lcc}=await _sb.from('client_livechat_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
     _livechatConnection=lcc||null;
   }catch(e){ _livechatConnection=null; }
+  try{
+    const {data:hsc}=await _sb.from('client_hubspot_connections').select('*').eq('client_id',activeClientId()).maybeSingle();
+    _hubspotConnection=hsc||null;
+  }catch(e){ _hubspotConnection=null; }
+  try{
+    const {data:cl}=await _sb.from('clients').select('service_lines').eq('id',activeClientId()).single();
+    _clientServiceLines=(cl&&cl.service_lines&&cl.service_lines.length)?cl.service_lines:['tech_support'];
+  }catch(e){ _clientServiceLines=['tech_support']; }
   try{
     const {data:grps}=await _sb.from('groups').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:true});
     if(grps&&grps.length){
@@ -1198,6 +1239,8 @@ let _facebookConnection=null;
 let _instagramConnection=null;
 let _livechatConnection=null;
 let _trelloConnection=null;
+let _hubspotConnection=null;
+let _clientServiceLines=['tech_support'];
 const MOCK_RECEIPT_IMG="data:image/svg+xml;utf8,"+encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='260' height='180'><rect width='260' height='180' fill='#ffffff' stroke='#d8dee8'/><text x='16' y='28' font-family='monospace' font-size='13' fill='#222'>BrandCo Statement</text><line x1='16' y1='38' x2='244' y2='38' stroke='#ccc'/><text x='16' y='62' font-family='monospace' font-size='11' fill='#444'>05/01 Subscription $49.00</text><text x='16' y='82' font-family='monospace' font-size='11' fill='#c0392b' font-weight='bold'>05/01 Subscription $49.00</text><text x='16' y='102' font-family='monospace' font-size='11' fill='#444'>04/01 Subscription $49.00</text><line x1='16' y1='115' x2='244' y2='115' stroke='#ccc'/><text x='16' y='140' font-family='monospace' font-size='11' fill='#222'>Total charged: $147.00</text></svg>`);
 function defaultState(){
   return {
@@ -1228,9 +1271,11 @@ function defaultState(){
       {key:'whatsapp',name:'WhatsApp',desc:'Route WhatsApp conversations into your shared inbox.',color:'#25D366',connected:true},
       {key:'email',name:'Email',desc:'Connect a support inbox to route email tickets automatically.',color:'#00c2ff',connected:true},
       {key:'phone',name:'Phone',desc:'Voice call routing for inbound and outbound support calls.',color:'#f5a623',connected:false},
-      {key:'sms',name:'SMS',desc:'Text-message support for order updates, OTPs and quick replies.',color:'var(--accent)',connected:false}
+      {key:'sms',name:'SMS',desc:'Text-message support for order updates, OTPs and quick replies.',color:'var(--accent)',connected:false},
+      {key:'hubspot',name:'HubSpot',desc:'Sync conversations and tickets directly into your HubSpot CRM.',color:'#FF7A59',connected:false}
     ],
     notifications:[],
+    deliverables:[],
     quickQuestions:[],
     kbDocs:[
       {id:1,name:'Returns & Refunds Policy.pdf',size:'212 KB',added:'2026-05-20'},
@@ -1244,7 +1289,7 @@ function defaultState(){
       {id:'INV-0611',date:'2026-06-01',dueDate:'2026-06-15',amount:'$2,500.00',status:'Due'}
     ],
     ticketLists:[
-      {id:'active',name:'Incoming Gigs',kind:'active',position:0},
+      {id:'active',name:'Incoming Tickets',kind:'active',position:0},
       {id:'archived',name:'Archived',kind:'archived',position:1},
       {id:'done',name:'Done',kind:'done',position:2}
     ],
@@ -1291,7 +1336,7 @@ function renderShell(){
   refreshNotifBadges();
   renderCompanySwitcher();
   const canSeeReports=currentUser.isBusinessAdmin||currentUser.isStaff;
-  ['nav-pulse','nav-integrations'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.display=canSeeReports?'':'none'; });
+  ['nav-pulse','nav-integrations','nav-deliverables'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.display=canSeeReports?'':'none'; });
 }
 // Statements, reports and integration setup are admin/owner territory —
 // regular agents only work Chats, Teams/Groups and Tickets.
@@ -1314,11 +1359,12 @@ const SECTION_META={
   chats:['Chats',''],
   tickets:['Tickets',''],
   integrations:['Integrations',''],
+  deliverables:['Deliverables',''],
   notifications:['Notifications',''],
   settings:['Settings','']
 };
 function showSection(key){
-  if((key==='pulse'||key==='integrations')&&!canSeeReports()){
+  if((key==='pulse'||key==='integrations'||key==='deliverables')&&!canSeeReports()){
     toast('Only business admins can access that','var(--danger)');
     key='chats';
   }
@@ -1334,7 +1380,7 @@ function showSection(key){
 function renderSection(){
   const m=document.getElementById('main-content');
   m.classList.toggle('content-tight',currentSection==='chats');
-  const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,integrations:renderIntegrations,notifications:renderNotifications,settings:renderSettings};
+  const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,integrations:renderIntegrations,deliverables:renderDeliverables,notifications:renderNotifications,settings:renderSettings};
   m.innerHTML=(fns[currentSection]||(()=>''))();
   if(currentSection==='chats')wireChatList();
   if(currentSection==='tickets')wireKanban();
@@ -2055,11 +2101,15 @@ function downloadChat(id){
 
 // ─── TICKETS ─────────────────────────────────────────────
 // Boards are Trello-style custom lists, not a fixed 3-column enum: any number
-// of lists, any names (e.g. "Incoming Gigs", "Vince - North"), each tagged
+// of lists, any names (e.g. "Incoming Tickets", "Vince - North"), each tagged
 // with a `kind` (active/done/archived) that drives overdue checks, the CSAT
 // prompt, and the Pulse ticket-status chart — those still only care about kind.
 let _ticketSearch='';
 let _selectedTickets=new Set();
+let _ticketServiceLine='all';
+function dataCrmLabelId(){ const l=(STATE.ticketLabels||[]).find(x=>x.name==='Data & CRM'); return l?l.id:null; }
+function ticketServiceLine(t){ const id=dataCrmLabelId(); return (id&&(t.labelIds||[]).includes(id))?'data_crm':'tech_support'; }
+function setTicketServiceLine(v){ _ticketServiceLine=v; renderSection(); }
 function ticketListsSorted(){ return (STATE.ticketLists||[]).slice().sort((a,b)=>a.position-b.position); }
 function listById(id){ return (STATE.ticketLists||[]).find(l=>l.id===id); }
 function listKind(statusId){ const l=listById(statusId); return l?l.kind:'active'; }
@@ -2067,6 +2117,11 @@ function listName(statusId){ const l=listById(statusId); return l?l.name:statusI
 function defaultListForKind(kind){ return ticketListsSorted().find(l=>l.kind===kind)||ticketListsSorted()[0]; }
 function renderTickets(){
   return `
+  <div class="tabs" style="margin-bottom:1rem;padding-bottom:0;border-bottom:none">
+    <button class="tab-btn ${_ticketServiceLine==='all'?'active':''}" onclick="setTicketServiceLine('all')">All</button>
+    <button class="tab-btn ${_ticketServiceLine==='tech_support'?'active':''}" onclick="setTicketServiceLine('tech_support')">Tech Support</button>
+    <button class="tab-btn ${_ticketServiceLine==='data_crm'?'active':''}" onclick="setTicketServiceLine('data_crm')">Data & CRM</button>
+  </div>
   <div class="toolbar-row">
     <div class="search-bar-wrap">${searchIcon()}<input class="search-bar" id="ticket-search" type="search" autocomplete="off" name="ticket-search-q" placeholder="Search tickets by subject, client, ID or owner…" value="${_ticketSearch}" oninput="filterTickets(this.value)"/></div>
     <button class="btn btn-acc" onclick="openAddTicket()">+ New Ticket</button>
@@ -2131,8 +2186,9 @@ function bulkReassignTickets(owner){
 }
 function ticketFilteredList(){
   const q=_ticketSearch.trim().toLowerCase();
-  if(!q)return STATE.tickets;
-  return STATE.tickets.filter(t=>t.subject.toLowerCase().includes(q)||t.client.toLowerCase().includes(q)||t.owner.toLowerCase().includes(q)||t.id.toLowerCase().includes(q));
+  return STATE.tickets.filter(t=>
+    (_ticketServiceLine==='all'||ticketServiceLine(t)===_ticketServiceLine)
+    && (!q||t.subject.toLowerCase().includes(q)||t.client.toLowerCase().includes(q)||t.owner.toLowerCase().includes(q)||t.id.toLowerCase().includes(q)));
 }
 function isOverdue(t){ return listKind(t.status)==='active'&&t.dueAt&&new Date(t.dueAt).getTime()<Date.now(); }
 function fmtDueDate(iso,withTime){
@@ -2200,7 +2256,7 @@ function toggleKanbanColMenu(e,listId){
 document.addEventListener('click',e=>{ if(!e.target.closest('.kanban-col-menu-wrap'))document.querySelectorAll('.kanban-col-menu.open').forEach(m=>m.classList.remove('open')); });
 let _tlId=100;
 function promptAddTicketList(){
-  const name=prompt('List name (e.g. "Incoming Gigs", "Vince - North"):'); if(!name)return;
+  const name=prompt('List name (e.g. "Incoming Tickets", "Vince - North"):'); if(!name)return;
   const kindInput=(prompt('What kind of list is this? Type "active" (open work), "done" (completed), or "archived":','active')||'').trim().toLowerCase();
   if(!['active','done','archived'].includes(kindInput)){toast('Kind must be active, done, or archived','var(--danger)');return;}
   const position=(STATE.ticketLists||[]).length;
@@ -2758,6 +2814,91 @@ function wireKanban(){
   });
 }
 
+// ─── DELIVERABLES (Data & CRM Operations tracking) ───────
+let _deliverableStatusFilter='all';
+const DELIVERABLE_TYPE_LABELS={report:'Report',dashboard:'Dashboard',data_cleanup:'Data Cleanup',crm_setup:'CRM Setup'};
+function deliverableFilteredList(){
+  return STATE.deliverables.filter(d=>_deliverableStatusFilter==='all'||d.status===_deliverableStatusFilter);
+}
+function setDeliverableStatusFilter(v){ _deliverableStatusFilter=v; renderSection(); }
+function renderDeliverables(){
+  const list=deliverableFilteredList();
+  const companyName=currentUser.companyName||STATE.profile.companyName||'Your Company';
+  return `
+  <div class="tabs" style="margin-bottom:1rem;padding-bottom:0;border-bottom:none">
+    <button class="tab-btn ${_deliverableStatusFilter==='all'?'active':''}" onclick="setDeliverableStatusFilter('all')">All</button>
+    <button class="tab-btn ${_deliverableStatusFilter==='in_progress'?'active':''}" onclick="setDeliverableStatusFilter('in_progress')">In Progress</button>
+    <button class="tab-btn ${_deliverableStatusFilter==='delivered'?'active':''}" onclick="setDeliverableStatusFilter('delivered')">Delivered</button>
+  </div>
+  <div class="toolbar-row">
+    <div style="font-size:.82rem;color:var(--text-3)">${list.length} deliverable${list.length===1?'':'s'}</div>
+    <button class="btn btn-acc" onclick="openAddDeliverableModal()">+ New Deliverable</button>
+  </div>
+  <div class="card" style="padding:0">
+    ${list.length?`<table class="rb-table">
+      <thead><tr><th>Client</th><th>Deliverable</th><th>Type</th><th>Status</th><th>Delivered</th><th>Link</th><th></th></tr></thead>
+      <tbody>
+        ${list.map(d=>`<tr>
+          <td>${escapeHtml(companyName)}</td>
+          <td>${escapeHtml(d.name)}</td>
+          <td>${DELIVERABLE_TYPE_LABELS[d.type]||d.type}</td>
+          <td><span class="badge ${d.status==='delivered'?'badge-active':'badge-med'}">${d.status==='delivered'?'Delivered':'In Progress'}</span></td>
+          <td>${d.deliveredAt?fmtDueDate(d.deliveredAt,false):'—'}</td>
+          <td>${d.link?`<a href="${escapeHtml(d.link)}" target="_blank" rel="noopener" style="color:var(--accent)">Open</a>`:'—'}</td>
+          <td style="text-align:right">
+            ${d.status!=='delivered'?`<button class="btn btn-ghost btn-sm" onclick="markDeliverableDelivered('${d.id}')">Mark Delivered</button>`:''}
+            <button class="btn btn-ghost btn-sm" onclick="deleteDeliverable('${d.id}')">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`:'<div class="empty-state">No deliverables yet. Add the first one for this client above.</div>'}
+  </div>`;
+}
+function openAddDeliverableModal(){
+  ['dv-name','dv-link','dv-delivered-at'].forEach(id=>{ document.getElementById(id).value=''; });
+  document.getElementById('dv-type').value='report';
+  document.getElementById('dv-status').value='in_progress';
+  openModal('modal-add-deliverable');
+}
+async function addDeliverable(){
+  const name=document.getElementById('dv-name').value.trim();
+  const type=document.getElementById('dv-type').value;
+  const status=document.getElementById('dv-status').value;
+  const link=document.getElementById('dv-link').value.trim();
+  const deliveredAtRaw=document.getElementById('dv-delivered-at').value;
+  if(!name){toast('Name is required','var(--danger)');return;}
+  if(!activeClientId()||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
+  const deliveredAt=deliveredAtRaw?new Date(deliveredAtRaw).toISOString():null;
+  try{
+    const {data,error}=await _sb.from('deliverables').insert({client_id:activeClientId(),name,type,status,link:link||null,delivered_at:deliveredAt,created_by:currentUser.id}).select().single();
+    if(error)throw error;
+    STATE.deliverables.unshift({id:data.id,name:data.name,type:data.type,status:data.status,link:data.link,deliveredAt:data.delivered_at});
+    closeModal('modal-add-deliverable');
+    renderSection();
+    toast('Deliverable added','var(--green)');
+    logActivity('Added deliverable',name);
+  }catch(e){
+    toast('Could not add deliverable: '+(e.message||e),'var(--danger)');
+  }
+}
+async function markDeliverableDelivered(id){
+  const d=STATE.deliverables.find(x=>x.id===id); if(!d)return;
+  const now=new Date().toISOString();
+  d.status='delivered'; d.deliveredAt=now;
+  renderSection();
+  if(_sb){
+    try{ await _sb.from('deliverables').update({status:'delivered',delivered_at:now}).eq('id',id); }catch(e){}
+  }
+}
+async function deleteDeliverable(id){
+  if(!confirm('Delete this deliverable?'))return;
+  STATE.deliverables=STATE.deliverables.filter(x=>x.id!==id);
+  renderSection();
+  if(_sb){
+    try{ await _sb.from('deliverables').delete().eq('id',id); }catch(e){}
+  }
+}
+
 // ─── INTEGRATIONS ────────────────────────────────────────
 // Official brand marks (single-path logomarks from Simple Icons, MIT licensed);
 // email/phone are generic outline glyphs since they aren't a single brand.
@@ -2815,7 +2956,7 @@ function renderIntegrations(){
 function intGridHtml(){
   const list=STATE.integrations;
   return `<div class="grid-3">
-    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):`
+    ${list.map(i=>i.key==='email'?emailIntegrationCardHtml(i):i.key==='whatsapp'?whatsappIntegrationCardHtml(i):i.key==='facebook'?facebookIntegrationCardHtml(i):i.key==='instagram'?instagramIntegrationCardHtml(i):i.key==='livechat'?livechatIntegrationCardHtml(i):i.key==='trello'?trelloIntegrationCardHtml(i):i.key==='hubspot'?hubspotIntegrationCardHtml(i):`
       <div class="int-card">
         <div class="int-hd">
           <div class="int-icon" style="background:${i.color}22;color:${i.color==='#ffffff'?'var(--text)':i.color}">${INT_ICONS[i.key]||'●'}</div>
@@ -3044,6 +3185,52 @@ async function sendConversationToTrello(conversationId){
     toast(data.updated?'Trello card updated':'Trello card created','var(--green)');
   }catch(e){
     toast('Could not send to Trello: '+(e.message||e),'var(--danger)');
+  }
+}
+function hubspotIntegrationCardHtml(i){
+  const conn=_hubspotConnection;
+  const isConnected=conn&&conn.status==='connected';
+  const isError=conn&&conn.status==='error';
+  return `<div class="int-card">
+    <div class="int-hd">
+      <div class="int-icon" style="background:${i.color}22;color:${i.color}">${INT_ICONS[i.key]||'●'}</div>
+      <div><div class="int-name">${i.name}</div><span class="badge ${isConnected?'badge-active':isError?'badge-high':'badge-archived'}">${isConnected?'Connected':isError?'Connection error':'Not connected'}</span></div>
+    </div>
+    <div class="int-desc">${isConnected?`Connected to portal <strong>${conn.portal_id||'N/A'}</strong>. Sync a conversation to HubSpot from its chat panel.`:isError?(conn.last_error||'Something went wrong, reconnect below.'):i.desc}</div>
+    ${isConnected
+      ?`<button class="btn btn-ghost btn-sm" style="align-self:flex-start" onclick="disconnectHubspot()">Disconnect</button>`
+      :`<button class="btn btn-acc btn-sm" style="align-self:flex-start" onclick="startHubspotConnect()">Connect with HubSpot</button>`}
+  </div>`;
+}
+async function startHubspotConnect(){
+  if(!_sb)return;
+  toast('Opening HubSpot…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('hubspot-oauth-start',{body:{}});
+    if(error||!data?.url)throw new Error((data&&data.error)||'No connect URL returned');
+    window.location.href=data.url;
+  }catch(e){
+    toast('Could not start HubSpot connect: '+(e.message||e),'var(--danger)');
+  }
+}
+async function disconnectHubspot(){
+  if(!confirm('Disconnect HubSpot? Conversations will stop syncing until you reconnect.'))return;
+  if(_hubspotConnection&&_sb){
+    try{ await _sb.from('client_hubspot_connections').update({status:'disconnected'}).eq('id',_hubspotConnection.id); }catch(e){}
+  }
+  _hubspotConnection=null;
+  toast('HubSpot disconnected','var(--accent)');
+  renderSection();
+}
+async function syncConversationToHubspot(conversationId){
+  if(!_sb)return;
+  toast('Syncing to HubSpot…','var(--accent)');
+  try{
+    const {data,error}=await _sb.functions.invoke('hubspot-sync-conversation',{body:{conversation_id:conversationId}});
+    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    toast('Synced to HubSpot','var(--green)');
+  }catch(e){
+    toast('Could not sync: '+(e.message||e),'var(--danger)');
   }
 }
 function toggleIntegration(key,checked,actor){
@@ -3564,6 +3751,13 @@ function renderSettingsTab(t){
       <button class="btn btn-acc" onclick="saveCompany()">Save Changes</button>
     </div>
     <div class="card">
+      <div class="card-title">Service Lines</div>
+      <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Which Supanta service lines your business is on. This drives what shows up for your account elsewhere in the dashboard.</p>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;margin-bottom:.6rem;cursor:pointer"><input type="checkbox" id="sl-tech-support" ${_clientServiceLines.includes('tech_support')?'checked':''}/> Tech Support</label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.85rem;margin-bottom:1rem;cursor:pointer"><input type="checkbox" id="sl-data-crm" ${_clientServiceLines.includes('data_crm')?'checked':''}/> Data & CRM Operations</label>
+      <button class="btn btn-acc" onclick="saveServiceLines()">Save Changes</button>
+    </div>
+    <div class="card">
       <div class="card-title">Export Your Data</div>
       <p style="font-size:.8rem;color:var(--text-3);margin-bottom:1rem;line-height:1.6">Download everything this dashboard has for your business: tickets, conversations, team, invoices, knowledge base and activity log, as a single JSON file.</p>
       <button class="btn btn-ghost" onclick="exportAllData()">Download All Data (JSON)</button>
@@ -3858,6 +4052,21 @@ async function disableMfa(factorId){
 function saveCompany(){
   STATE.profile.companyName=document.getElementById('set-company-name').value.trim();
   saveState();toast('Company info saved','var(--green)');
+}
+async function saveServiceLines(){
+  const lines=[];
+  if(document.getElementById('sl-tech-support').checked)lines.push('tech_support');
+  if(document.getElementById('sl-data-crm').checked)lines.push('data_crm');
+  if(!lines.length){toast('Pick at least one service line','var(--danger)');return;}
+  _clientServiceLines=lines;
+  if(!activeClientId()||!_sb){toast('Service lines saved locally, connect an account to sync','var(--accent)');return;}
+  try{
+    const {error}=await _sb.from('clients').update({service_lines:lines}).eq('id',activeClientId());
+    if(error)throw error;
+    toast('Service lines saved','var(--green)');
+  }catch(e){
+    toast('Could not save service lines: '+(e.message||e),'var(--danger)');
+  }
 }
 function exportAllData(){
   const payload={
@@ -4430,6 +4639,8 @@ function openChatOverflowMenu(e,chatId){
   const items=[];
   if(c.dbId&&_trelloConnection&&_trelloConnection.status==='connected'&&_trelloConnection.list_id)
     items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();sendConversationToTrello('${c.dbId}')">Send to Trello</div>`);
+  if(c.dbId&&_hubspotConnection&&_hubspotConnection.status==='connected')
+    items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();syncConversationToHubspot('${c.dbId}')">Sync to HubSpot</div>`);
   if(items.length)items.push('<div class="ctx-sep"></div>');
   items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();downloadChat('${chatId}')">Download Transcript</div>`);
   items.push(`<div class="ctx-item" onclick="closeAllCtxMenus();setChatStatus('${chatId}','archived')">Archive</div>`);
