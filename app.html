@@ -473,12 +473,17 @@ input:checked + .slider::before{transform:translateX(18px)}
     </div>
     <nav class="sb-nav">
       <div class="nav-sec-lbl lbl">Workspace</div>
+      <div class="nav-item" id="nav-inbox" data-sec="inbox" onclick="showSection('inbox')"><span class="nav-ico">✉</span> <span class="lbl">Inbox</span></div>
       <div class="nav-item" id="nav-pulse" data-sec="pulse" onclick="showSection('pulse')"><span class="nav-ico">◔</span> <span class="lbl">Pulse</span></div>
+      <div class="nav-item" id="nav-agent-perf" data-sec="agent-performance" onclick="showSection('agent-performance')"><span class="nav-ico">◑</span> <span class="lbl">Agent Performance</span></div>
       <div class="nav-item" data-sec="teams" onclick="showSection('teams')"><span class="nav-ico">◎</span> <span class="lbl">Teams</span></div>
       <div class="nav-item" data-sec="chats" onclick="showSection('chats')"><span class="nav-ico">◈</span> <span class="lbl">Chats</span></div>
       <div class="nav-item" data-sec="tickets" onclick="showSection('tickets')"><span class="nav-ico">▤</span> <span class="lbl">Tickets</span></div>
       <div class="nav-item" id="nav-integrations" data-sec="integrations" onclick="showSection('integrations')"><span class="nav-ico">⬡</span> <span class="lbl">Integrations</span></div>
       <div class="nav-item" id="nav-deliverables" data-sec="deliverables" onclick="showSection('deliverables')"><span class="nav-ico">▣</span> <span class="lbl">Deliverables</span></div>
+      <div class="nav-item" id="nav-invoice-mgr" data-sec="invoice-manager" onclick="showSection('invoice-manager')"><span class="nav-ico">$</span> <span class="lbl">Invoice Manager</span></div>
+      <div class="nav-item" id="nav-invoices" data-sec="invoices" onclick="showSection('invoices')"><span class="nav-ico">$</span> <span class="lbl">Invoices</span></div>
+      <div class="nav-item" id="nav-clients-admin" data-sec="clients-admin" onclick="showSection('clients-admin')"><span class="nav-ico">▥</span> <span class="lbl">Clients</span></div>
       <div class="sb-bottom">
         <div class="nav-sec-lbl lbl">General</div>
         <div class="nav-item" data-sec="notifications" onclick="showSection('notifications')"><span class="nav-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> <span class="lbl">Notifications</span> <span class="nav-badge lbl" id="notif-nav-badge" style="display:none"></span></div>
@@ -742,12 +747,23 @@ async function boot(){
     role:profile?.role||null,
     isStaff:['admin','super_admin'].includes(profile?.role),
     isBusinessAdmin:profile?.role==='client_admin',
+    accountType:'customer',
     links:profile?.links||{},
     cookieConsent:profile?.cookie_consent||null
   };
   if(currentUser.companyId){
-    try{ const {data:co}=await _sb.from('clients').select('company_name').eq('id',currentUser.companyId).single(); currentUser.companyName=co?.company_name||null; }catch(e){}
+    try{
+      const {data:co}=await _sb.from('clients').select('company_name,account_type').eq('id',currentUser.companyId).single();
+      currentUser.companyName=co?.company_name||null;
+      currentUser.accountType=co?.account_type||'customer';
+    }catch(e){}
   }
+  // "Internal" is a client-account property, not a role: a Supanta employee
+  // onboarded under the Supanta client row (account_type='internal') gets
+  // the same cross-client access as admin/super_admin staff, regardless of
+  // their user_profiles.role. Mirrors is_internal_user() server-side —
+  // that RLS function is the real boundary, this only drives the UI.
+  currentUser.isInternal=currentUser.isStaff||currentUser.accountType==='internal';
   // A brand-new self-serve signup (e.g. via "Continue with Google") gets an
   // auth user + a default user_profiles row (via the on_auth_user_created
   // trigger) but no business yet. Staff accounts are also companyId-less by
@@ -760,7 +776,7 @@ async function boot(){
   initTheme(profile?.links?.theme);
   loadState();
   if(currentUser.companyName && (!STATE.profile.companyName || STATE.profile.companyName==='Your Company'))STATE.profile.companyName=currentUser.companyName;
-  if(currentUser.isStaff)await loadStaffCompanies();
+  if(currentUser.isInternal)await loadStaffCompanies();
   renderShell();
   loadAriaHistory();
   archiveAriaSession();
@@ -847,7 +863,7 @@ async function loadStaffCompanies(){
   await refreshStaffNotifCounts();
 }
 async function refreshStaffNotifCounts(){
-  if(!currentUser.isStaff||!_sb)return;
+  if(!currentUser.isInternal||!_sb)return;
   try{
     const {data:notifs}=await _sb.from('notifications').select('client_id').eq('read',false);
     const counts={};
@@ -863,7 +879,7 @@ function switcherColor(id){
 function renderCompanySwitcher(){
   const wrap=document.getElementById('sb-switcher');
   if(!wrap)return;
-  if(!currentUser.isStaff){ wrap.style.display='none'; return; }
+  if(!currentUser.isInternal){ wrap.style.display='none'; return; }
   wrap.style.display='block';
   const viewingId=activeClientId();
   const current=_staffCompanies.find(c=>c.id===viewingId);
@@ -1062,9 +1078,13 @@ async function loadRemoteData(){
   }catch(e){}
   try{
     const {data:invs}=await _sb.from('invoices').select('*').eq('client_id',activeClientId()).order('issue_date',{ascending:false});
-    if(invs&&invs.length){
-      STATE.invoices=invs.map(r=>({id:r.display_id,dbId:r.id,date:r.issue_date,dueDate:r.due_date,amount:(r.currency==='USD'?'$':r.currency+' ')+Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}),status:r.status}));
-    }
+    STATE.invoices=(invs||[]).map(r=>({
+      id:r.display_id,dbId:r.id,clientId:r.client_id,
+      date:r.issue_date,dueDate:r.due_date,
+      amountRaw:Number(r.amount),currency:r.currency||'USD',
+      amount:(r.currency==='USD'?'$':r.currency+' ')+Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}),
+      status:r.status,paymentUrl:r.payment_url||null,pdfPath:r.pdf_path||null
+    }));
   }catch(e){}
   try{
     const {data:notifs}=await _sb.from('notifications').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
@@ -1333,6 +1353,10 @@ function renderShell(){
   renderCompanySwitcher();
   const canSeeReports=currentUser.isBusinessAdmin||currentUser.isStaff;
   ['nav-pulse','nav-integrations','nav-deliverables'].forEach(id=>{ const el=document.getElementById(id); if(el)el.style.display=canSeeReports?'':'none'; });
+  const showAgentPerf=currentUser.isBusinessAdmin||currentUser.isInternal;
+  const el=document.getElementById('nav-agent-perf'); if(el)el.style.display=showAgentPerf?'':'none';
+  ['nav-inbox','nav-invoice-mgr','nav-clients-admin'].forEach(id=>{ const e=document.getElementById(id); if(e)e.style.display=currentUser.isInternal?'':'none'; });
+  const invEl=document.getElementById('nav-invoices'); if(invEl)invEl.style.display=currentUser.isInternal?'none':'';
 }
 // Statements, reports and integration setup are admin/owner territory —
 // regular agents only work Chats, Teams/Groups and Tickets.
@@ -1357,12 +1381,28 @@ const SECTION_META={
   integrations:['Integrations',''],
   deliverables:['Deliverables',''],
   notifications:['Notifications',''],
-  settings:['Settings','']
+  settings:['Settings',''],
+  inbox:['Inbox','All clients, in one queue'],
+  'agent-performance':['Agent Performance',''],
+  'invoice-manager':['Invoice Manager',''],
+  invoices:['Invoices',''],
+  'clients-admin':['Clients','']
 };
 function showSection(key){
   if((key==='pulse'||key==='integrations'||key==='deliverables')&&!canSeeReports()){
     toast('Only business admins can access that','var(--danger)');
     key='chats';
+  }
+  if((key==='inbox'||key==='invoice-manager'||key==='clients-admin')&&!currentUser.isInternal){
+    toast('Only Supanta staff can access that','var(--danger)');
+    key='chats';
+  }
+  if(key==='agent-performance'&&!(currentUser.isBusinessAdmin||currentUser.isInternal)){
+    toast('Only business admins can access that','var(--danger)');
+    key='chats';
+  }
+  if(key==='invoices'&&currentUser.isInternal){
+    key='invoice-manager';
   }
   if(window.innerWidth<=900)toggleSidebar(false);
   currentSection=key;
@@ -1376,7 +1416,7 @@ function showSection(key){
 function renderSection(){
   const m=document.getElementById('main-content');
   m.classList.toggle('content-tight',currentSection==='chats');
-  const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,integrations:renderIntegrations,deliverables:renderDeliverables,notifications:renderNotifications,settings:renderSettings};
+  const fns={pulse:renderPulse,teams:renderTeams,chats:renderChats,tickets:renderTickets,integrations:renderIntegrations,deliverables:renderDeliverables,notifications:renderNotifications,settings:renderSettings,inbox:renderInbox,'agent-performance':renderAgentPerformance,'invoice-manager':renderInvoiceManager,invoices:renderInvoicesTab,'clients-admin':renderClientsAdmin};
   m.innerHTML=(fns[currentSection]||(()=>''))();
   if(currentSection==='chats')wireChatList();
   if(currentSection==='tickets')wireKanban();
@@ -2895,6 +2935,408 @@ async function deleteDeliverable(id){
   }
 }
 
+// ─── INBOX (internal — cross-client conversation queue) ──
+let _inboxClientFilter='all', _inboxRows=null, _inboxLoading=false;
+function renderInbox(){
+  if(_inboxRows===null&&!_inboxLoading){
+    _inboxLoading=true;
+    loadInboxRows().then(()=>{ _inboxLoading=false; if(currentSection==='inbox')renderSection(); });
+  }
+  const rows=(_inboxRows||[]).filter(r=>_inboxClientFilter==='all'||r.client_id===_inboxClientFilter);
+  return `
+  <div class="toolbar-row">
+    <select class="rb-select" style="max-width:260px" onchange="_inboxClientFilter=this.value;renderSection()">
+      <option value="all">All clients</option>
+      ${_staffCompanies.map(c=>`<option value="${c.id}" ${_inboxClientFilter===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+    </select>
+    <div style="font-size:.82rem;color:var(--text-3)">${_inboxRows===null?'Loading…':rows.length+' conversation'+(rows.length===1?'':'s')}</div>
+  </div>
+  <div class="card" style="padding:0">
+    ${rows.length?`<table class="rb-table">
+      <thead><tr><th>Client</th><th>Contact</th><th>Channel</th><th>Status</th><th>Owner</th><th>Last activity</th><th></th></tr></thead>
+      <tbody>
+        ${rows.map(r=>`<tr>
+          <td>${escapeHtml(r.clientName)}</td>
+          <td>${escapeHtml(r.contact_name||r.contact_email||r.contact_phone||'Unknown')}</td>
+          <td>${CHANNEL_DB_TO_DISPLAY[r.channel]||r.channel}</td>
+          <td><span class="badge ${r.status==='open'||r.status==='escalated'?'badge-active':r.status==='resolved'?'badge-med':'badge-archived'}">${r.status}</span></td>
+          <td>${r.ai_handled?'ARIA':(r.escalated_to?'Agent':'Unassigned')}</td>
+          <td>${r.last_message_at?new Date(r.last_message_at).toLocaleString():new Date(r.created_at).toLocaleString()}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="openInboxConversation('${r.client_id}')">Open</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`:_inboxRows===null?'<div class="empty-state">Loading…</div>':'<div class="empty-state">No conversations found.</div>'}
+  </div>`;
+}
+async function loadInboxRows(){
+  if(!_sb)return;
+  try{
+    const {data}=await _sb.from('conversations').select('*').order('last_message_at',{ascending:false,nullsFirst:false}).limit(200);
+    const nameById={}; _staffCompanies.forEach(c=>{ nameById[c.id]=c.name; });
+    _inboxRows=(data||[]).map(r=>({...r,clientName:nameById[r.client_id]||'Unknown client'}));
+  }catch(e){ _inboxRows=[]; }
+}
+async function openInboxConversation(clientId){
+  if(clientId!==activeClientId())await switchViewingCompany(clientId);
+  showSection('chats');
+}
+
+// ─── AGENT PERFORMANCE ────────────────────────────────────
+let _apRangeDays=30, _apRows=null, _apLoading=false, _apClientFilter='all';
+function setAgentPerfRange(days){ _apRangeDays=days; _apRows=null; renderSection(); }
+function renderAgentPerformance(){
+  if(_apRows===null&&!_apLoading){
+    _apLoading=true;
+    loadAgentPerformance().then(()=>{ _apLoading=false; if(currentSection==='agent-performance')renderSection(); });
+  }
+  const rangeBtns=[[7,'7d'],[30,'30d'],[90,'90d']];
+  return `
+  <div class="toolbar-row">
+    <div class="tabs" style="margin-bottom:0;padding-bottom:0;border-bottom:none">
+      ${rangeBtns.map(([d,l])=>`<button class="tab-btn ${_apRangeDays===d?'active':''}" onclick="setAgentPerfRange(${d})">${l}</button>`).join('')}
+    </div>
+    ${currentUser.isInternal?`<select class="rb-select" style="max-width:260px" onchange="_apClientFilter=this.value;_apRows=null;renderSection()">
+      <option value="all">All clients</option>
+      ${_staffCompanies.map(c=>`<option value="${c.id}" ${_apClientFilter===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+    </select>`:''}
+  </div>
+  <p style="font-size:.76rem;color:var(--text-3);margin:.25rem 0 1rem">Reopen rate isn't shown — ticket and conversation status changes aren't kept as a history, so how often something bounces back open can't be computed from what's stored today.</p>
+  <div class="card" style="padding:0">
+    ${_apRows===null?'<div class="empty-state">Loading…</div>':_apRows.length?`<table class="rb-table">
+      <thead><tr><th>Agent</th><th>Tickets handled</th><th>Avg first response</th><th>Avg resolution</th><th>CSAT</th><th>Escalations claimed</th></tr></thead>
+      <tbody>
+        ${_apRows.map(a=>`<tr>
+          <td>${escapeHtml(a.name)}</td>
+          <td>${a.ticketsHandled}</td>
+          <td>${a.avgFirstResponse!=null?fmtDuration(a.avgFirstResponse):'—'}</td>
+          <td>${a.avgResolution!=null?fmtDuration(a.avgResolution):'—'}</td>
+          <td>${a.csat!=null?a.csat.toFixed(1)+'%':'—'}</td>
+          <td>${a.escalationsClaimed}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`:'<div class="empty-state">No agents to show for this range.</div>'}
+  </div>`;
+}
+function fmtDuration(seconds){
+  if(seconds<60)return Math.round(seconds)+'s';
+  if(seconds<3600)return Math.round(seconds/60)+'m';
+  return (seconds/3600).toFixed(1)+'h';
+}
+async function loadAgentPerformance(){
+  if(!_sb){ _apRows=[]; return; }
+  try{
+    const since=new Date(Date.now()-_apRangeDays*86400000).toISOString();
+    const clientId=currentUser.isInternal?(_apClientFilter==='all'?null:_apClientFilter):activeClientId();
+
+    // Agent roster: internal "all agents" = every staff member; a customer
+    // (or internal filtered to one client) sees only agents actually
+    // assigned to that client — same team-assignment rule client-assistant
+    // already uses (super_admin covers every account, admin needs to be
+    // explicitly assigned).
+    const {data:staff}=await _sb.from('user_profiles').select('id,full_name,role,assigned_clients').in('role',['admin','super_admin']);
+    const agents=(staff||[]).filter(s=>!clientId||s.role==='super_admin'||(s.assigned_clients||[]).includes(clientId));
+
+    let convQ=_sb.from('conversations').select('id,client_id,escalated_to,created_at,resolved_at,csat_score').gte('created_at',since);
+    if(clientId)convQ=convQ.eq('client_id',clientId);
+    const {data:convs}=await convQ.limit(2000);
+
+    let ticketQ=_sb.from('tickets').select('id,client_id,owner_id,created_at').gte('created_at',since);
+    if(clientId)ticketQ=ticketQ.eq('client_id',clientId);
+    const {data:tickets}=await ticketQ.limit(2000);
+
+    let escQ=_sb.from('escalations').select('id,client_id,assigned_to,created_at').gte('created_at',since);
+    if(clientId)escQ=escQ.eq('client_id',clientId);
+    const {data:escs}=await escQ.limit(2000);
+
+    const convIds=(convs||[]).map(c=>c.id);
+    let firstAgentMsgByConv={};
+    if(convIds.length){
+      const {data:msgs}=await _sb.from('messages').select('conversation_id,agent_id,role,created_at').in('conversation_id',convIds).eq('role','agent').order('created_at',{ascending:true});
+      (msgs||[]).forEach(m=>{ if(!firstAgentMsgByConv[m.conversation_id])firstAgentMsgByConv[m.conversation_id]=m; });
+    }
+
+    _apRows=agents.map(ag=>{
+      const myConvs=(convs||[]).filter(c=>c.escalated_to===ag.id);
+      const firstResponses=myConvs.map(c=>{
+        const fm=firstAgentMsgByConv[c.id];
+        if(!fm||fm.agent_id!==ag.id)return null;
+        return (new Date(fm.created_at)-new Date(c.created_at))/1000;
+      }).filter(v=>v!=null&&v>=0);
+      const resolutions=myConvs.filter(c=>c.resolved_at).map(c=>(new Date(c.resolved_at)-new Date(c.created_at))/1000).filter(v=>v>=0);
+      const csats=myConvs.map(c=>c.csat_score).filter(v=>v!=null);
+      return {
+        id:ag.id,
+        name:ag.full_name||'Unnamed',
+        ticketsHandled:(tickets||[]).filter(t=>t.owner_id===ag.id).length,
+        avgFirstResponse:firstResponses.length?firstResponses.reduce((a,b)=>a+b,0)/firstResponses.length:null,
+        avgResolution:resolutions.length?resolutions.reduce((a,b)=>a+b,0)/resolutions.length:null,
+        csat:csats.length?csats.reduce((a,b)=>a+b,0)/csats.length:null,
+        escalationsClaimed:(escs||[]).filter(e=>e.assigned_to===ag.id).length
+      };
+    });
+  }catch(e){ _apRows=[]; }
+}
+
+// ─── INVOICES (customer, read-only) ───────────────────────
+function invoiceDisplayStatus(inv){
+  if(inv.status==='Void')return 'Void';
+  if(inv.status==='Paid')return 'Paid';
+  return new Date(inv.dueDate)<new Date(new Date().toDateString())?'Overdue':'Due';
+}
+function invoiceBadgeClass(displayStatus){
+  return displayStatus==='Paid'?'badge-active':displayStatus==='Overdue'?'badge-high':displayStatus==='Void'?'badge-archived':'badge-med';
+}
+function renderInvoicesTab(){
+  const list=STATE.invoices||[];
+  return `
+  <div class="card" style="padding:0">
+    ${list.length?`<table class="rb-table">
+      <thead><tr><th>Invoice</th><th>Issued</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        ${list.map(i=>{ const ds=invoiceDisplayStatus(i); return `<tr>
+          <td style="color:var(--accent)">${escapeHtml(i.id)}</td>
+          <td>${i.date}</td>
+          <td>${i.dueDate}</td>
+          <td>${i.amount}</td>
+          <td><span class="badge ${invoiceBadgeClass(ds)}">${ds}</span></td>
+          <td style="display:flex;gap:.4rem">
+            ${ds!=='Paid'&&ds!=='Void'&&i.paymentUrl?`<button class="btn btn-acc btn-sm" onclick="window.open('${escapeHtml(i.paymentUrl)}','_blank')">Pay</button>`:''}
+            ${i.pdfPath?`<button class="btn btn-ghost btn-sm" onclick="downloadInvoice('${i.dbId}')">Download</button>`:''}
+          </td>
+        </tr>`; }).join('')}
+      </tbody>
+    </table>`:'<div class="empty-state">No invoices yet.</div>'}
+  </div>`;
+}
+async function downloadInvoice(dbId){
+  const inv=(STATE.invoices||[]).find(i=>i.dbId===dbId); if(!inv||!inv.pdfPath||!_sb)return;
+  try{
+    const {data,error}=await _sb.storage.from('invoices').createSignedUrl(inv.pdfPath,60);
+    if(error||!data?.signedUrl)throw error||new Error('Could not get a download link');
+    window.open(data.signedUrl,'_blank');
+  }catch(e){
+    toast('Could not download that invoice: '+(e.message||e),'var(--danger)');
+  }
+}
+
+// ─── INVOICE MANAGER (internal) ───────────────────────────
+let _imClientId=null, _imAllInvoices=null, _imExtracted=null, _imPdfFile=null;
+function renderInvoiceManager(){
+  if(_imAllInvoices===null)loadAllInvoices().then(()=>{ if(currentSection==='invoice-manager')renderSection(); });
+  const customers=_staffCompanies; // account_type filtering happens server-side in loadAllInvoices' client list
+  const list=(_imAllInvoices||[]).filter(i=>!_imClientId||i.client_id===_imClientId);
+  return `
+  <div class="card">
+    <div class="card-title">New Invoice</div>
+    <div class="form-group"><label>Client</label>
+      <select class="rb-select" id="im-client">${customers.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select>
+    </div>
+    <div class="form-group"><label>Invoice PDF</label><input class="rb-input" type="file" id="im-pdf" accept="application/pdf" onchange="handleInvoicePdfChange(this)"/></div>
+    <div id="im-extract-wrap" style="display:none;margin-bottom:1rem">
+      <button class="btn btn-ghost btn-sm" id="im-extract-btn" onclick="extractInvoicePdf()">Extract fields from PDF with Claude</button>
+    </div>
+    <div class="form-group"><label>Invoice Number</label><input class="rb-input" id="im-number" autocomplete="off"/></div>
+    <div class="form-group"><label>Amount</label><input class="rb-input" id="im-amount" type="number" step="0.01" autocomplete="off"/></div>
+    <div class="form-group"><label>Currency</label><input class="rb-input" id="im-currency" value="USD" autocomplete="off"/></div>
+    <div class="form-group"><label>Issue Date</label><input class="rb-input" id="im-issue-date" type="date" value="${new Date().toISOString().slice(0,10)}"/></div>
+    <div class="form-group"><label>Due Date</label><input class="rb-input" id="im-due-date" type="date"/></div>
+    <div class="form-group"><label>Wise Payment Link</label><input class="rb-input" id="im-payment-url" autocomplete="off" placeholder="https://wise.com/pay/..."/></div>
+    <button class="btn btn-acc" id="im-submit" onclick="createInvoice()">Create &amp; Email Client</button>
+  </div>
+  <div class="toolbar-row" style="margin-top:1.5rem">
+    <select class="rb-select" style="max-width:260px" onchange="_imClientId=this.value||null;renderSection()">
+      <option value="">All clients</option>
+      ${customers.map(c=>`<option value="${c.id}" ${_imClientId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}
+    </select>
+    <div style="font-size:.82rem;color:var(--text-3)">${_imAllInvoices===null?'Loading…':list.length+' invoice'+(list.length===1?'':'s')}</div>
+  </div>
+  <div class="card" style="padding:0">
+    ${list.length?`<table class="rb-table">
+      <thead><tr><th>Client</th><th>Invoice</th><th>Issued</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        ${list.map(i=>{ const ds=i.status==='Void'?'Void':i.status==='Paid'?'Paid':(new Date(i.due_date)<new Date(new Date().toDateString())?'Overdue':'Due'); return `<tr>
+          <td>${escapeHtml(i.clientName)}</td>
+          <td style="color:var(--accent)">${escapeHtml(i.display_id)}</td>
+          <td>${i.issue_date}</td>
+          <td>${i.due_date}</td>
+          <td>${(i.currency==='USD'?'$':i.currency+' ')+Number(i.amount).toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+          <td><span class="badge ${invoiceBadgeClass(ds)}">${ds}</span></td>
+          <td style="display:flex;gap:.4rem">
+            ${i.status==='Due'?`<button class="btn btn-ghost btn-sm" onclick="markInvoicePaid('${i.id}')">Mark Paid</button><button class="btn btn-ghost btn-sm" onclick="voidInvoice('${i.id}')">Void</button>`:''}
+          </td>
+        </tr>`; }).join('')}
+      </tbody>
+    </table>`:'<div class="empty-state">No invoices yet.</div>'}
+  </div>`;
+}
+async function loadAllInvoices(){
+  if(!_sb){ _imAllInvoices=[]; return; }
+  try{
+    const {data}=await _sb.from('invoices').select('*').order('issue_date',{ascending:false}).limit(500);
+    const nameById={}; _staffCompanies.forEach(c=>{ nameById[c.id]=c.name; });
+    _imAllInvoices=(data||[]).map(r=>({...r,clientName:nameById[r.client_id]||'Unknown client'}));
+  }catch(e){ _imAllInvoices=[]; }
+}
+function handleInvoicePdfChange(input){
+  _imPdfFile=input.files&&input.files[0]?input.files[0]:null;
+  _imExtracted=null;
+  document.getElementById('im-extract-wrap').style.display=_imPdfFile?'block':'none';
+}
+function fileToBase64Raw(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result).split(',')[1]||'');
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function extractInvoicePdf(){
+  if(!_imPdfFile||!_sb)return;
+  const btn=document.getElementById('im-extract-btn');
+  btn.disabled=true; btn.textContent='Reading PDF…';
+  try{
+    const base64=await fileToBase64Raw(_imPdfFile);
+    const {data,error}=await _sb.functions.invoke('invoice-extract-pdf',{body:{pdf_base64:base64}});
+    if(error)throw error;
+    if(data?.error)throw new Error(data.error);
+    const f=data.fields||{};
+    if(f.invoice_number)document.getElementById('im-number').value=f.invoice_number;
+    if(f.amount!=null)document.getElementById('im-amount').value=f.amount;
+    if(f.currency)document.getElementById('im-currency').value=f.currency;
+    if(f.issue_date)document.getElementById('im-issue-date').value=f.issue_date;
+    if(f.due_date)document.getElementById('im-due-date').value=f.due_date;
+    toast('Extracted — please double check before creating the invoice','var(--green)');
+  }catch(e){
+    toast('Could not extract fields: '+(e.message||e),'var(--danger)');
+  }finally{
+    btn.disabled=false; btn.textContent='Extract fields from PDF with Claude';
+  }
+}
+async function createInvoice(){
+  const clientId=document.getElementById('im-client').value;
+  const number=document.getElementById('im-number').value.trim();
+  const amount=parseFloat(document.getElementById('im-amount').value);
+  const currency=document.getElementById('im-currency').value.trim().toUpperCase()||'USD';
+  const issueDate=document.getElementById('im-issue-date').value;
+  const dueDate=document.getElementById('im-due-date').value;
+  const paymentUrl=document.getElementById('im-payment-url').value.trim();
+  if(!clientId||!number||!amount||!issueDate||!dueDate){ toast('Fill in client, number, amount, issue date and due date','var(--danger)'); return; }
+  if(!_sb)return;
+  const btn=document.getElementById('im-submit');
+  btn.disabled=true; btn.textContent='Creating…';
+  try{
+    const newId=crypto.randomUUID();
+    let pdfPath=null;
+    if(_imPdfFile){
+      pdfPath=`${clientId}/${newId}.pdf`;
+      const {error:upErr}=await _sb.storage.from('invoices').upload(pdfPath,_imPdfFile,{contentType:'application/pdf',upsert:true});
+      if(upErr)throw upErr;
+    }
+    const {error:insErr}=await _sb.from('invoices').insert({
+      id:newId,client_id:clientId,display_id:number,amount,currency,
+      issue_date:issueDate,due_date:dueDate,payment_url:paymentUrl||null,pdf_path:pdfPath,
+      status:'Due',created_by:currentUser.id
+    });
+    if(insErr)throw insErr;
+    const {error:notifyErr}=await _sb.functions.invoke('invoice-notify',{body:{invoice_id:newId}});
+    if(notifyErr)toast('Invoice created, but the email to the client failed: '+notifyErr.message,'var(--danger)');
+    else toast('Invoice created and client notified','var(--green)');
+    _imAllInvoices=null; _imPdfFile=null; _imExtracted=null;
+    document.getElementById('im-pdf').value='';
+    ['im-number','im-payment-url'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('im-amount').value='';
+    renderSection();
+  }catch(e){
+    toast('Could not create invoice: '+(e.message||e),'var(--danger)');
+  }finally{
+    btn.disabled=false; btn.textContent='Create & Email Client';
+  }
+}
+async function markInvoicePaid(id){
+  if(!_sb)return;
+  try{
+    const {error}=await _sb.from('invoices').update({status:'Paid',paid_at:new Date().toISOString()}).eq('id',id);
+    if(error)throw error;
+    _imAllInvoices=null; renderSection(); toast('Marked paid','var(--green)');
+  }catch(e){ toast('Could not update invoice: '+(e.message||e),'var(--danger)'); }
+}
+async function voidInvoice(id){
+  const reason=prompt('Reason for voiding this invoice (optional):')||null;
+  if(!confirm('Void this invoice? This cannot be undone.'))return;
+  if(!_sb)return;
+  try{
+    const {error}=await _sb.from('invoices').update({status:'Void',voided_at:new Date().toISOString(),void_reason:reason}).eq('id',id);
+    if(error)throw error;
+    _imAllInvoices=null; renderSection(); toast('Invoice voided','var(--accent)');
+  }catch(e){ toast('Could not void invoice: '+(e.message||e),'var(--danger)'); }
+}
+
+// ─── CLIENTS (internal) ────────────────────────────────────
+let _clientsAdminList=null;
+function renderClientsAdmin(){
+  if(_clientsAdminList===null)loadClientsAdminList().then(()=>{ if(currentSection==='clients-admin')renderSection(); });
+  const list=_clientsAdminList||[];
+  return `
+  <div class="card" style="padding:0">
+    ${list.length?`<table class="rb-table">
+      <thead><tr><th>Company</th><th>Account Type</th><th>Plan</th><th>Status</th><th>Health</th><th>Monthly Value</th><th></th></tr></thead>
+      <tbody>
+        ${list.map(c=>`<tr>
+          <td>${escapeHtml(c.company_name)}</td>
+          <td><span class="badge ${c.account_type==='internal'?'badge-med':'badge-active'}">${c.account_type}</span></td>
+          <td>${escapeHtml(c.plan||'—')}</td>
+          <td>${escapeHtml(c.status||'—')}</td>
+          <td>${escapeHtml(c.health||'—')}</td>
+          <td>${c.monthly_value?(c.currency==='USD'?'$':c.currency+' ')+Number(c.monthly_value).toLocaleString():'—'}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="openEditClientModal('${c.id}')">Edit</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`:_clientsAdminList===null?'<div class="empty-state">Loading…</div>':'<div class="empty-state">No clients found.</div>'}
+  </div>`;
+}
+async function loadClientsAdminList(){
+  if(!_sb){ _clientsAdminList=[]; return; }
+  try{
+    const {data}=await _sb.from('clients').select('id,company_name,account_type,plan,status,health,monthly_value,currency,billing_emails').order('company_name',{ascending:true});
+    _clientsAdminList=data||[];
+  }catch(e){ _clientsAdminList=[]; }
+}
+function openEditClientModal(id){
+  const c=(_clientsAdminList||[]).find(x=>x.id===id); if(!c)return;
+  document.getElementById('ci-title').textContent='Edit '+c.company_name;
+  document.getElementById('ci-body').innerHTML=`
+    <div class="form-group"><label>Account Type</label>
+      <select class="rb-select" id="ec-account-type">
+        <option value="customer" ${c.account_type==='customer'?'selected':''}>Customer</option>
+        <option value="internal" ${c.account_type==='internal'?'selected':''}>Internal (Supanta)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Plan</label><input class="rb-input" id="ec-plan" value="${escapeHtml(c.plan||'')}"/></div>
+    <div class="form-group"><label>Status</label><input class="rb-input" id="ec-status" value="${escapeHtml(c.status||'')}"/></div>
+    <div class="form-group"><label>Health</label><input class="rb-input" id="ec-health" value="${escapeHtml(c.health||'')}"/></div>
+    <div class="form-group"><label>Monthly Value</label><input class="rb-input" id="ec-monthly-value" type="number" value="${c.monthly_value||''}"/></div>
+    <div class="form-group"><label>Billing Emails <span style="color:var(--text-3);font-weight:400">(comma separated)</span></label><input class="rb-input" id="ec-billing-emails" value="${escapeHtml((c.billing_emails||[]).join(', '))}"/></div>
+    <button class="btn btn-acc" style="width:100%" onclick="saveClientEdit('${c.id}')">Save</button>
+  `;
+  openModal('modal-connect-int');
+}
+async function saveClientEdit(id){
+  if(!_sb)return;
+  const account_type=document.getElementById('ec-account-type').value;
+  const plan=document.getElementById('ec-plan').value.trim();
+  const status=document.getElementById('ec-status').value.trim();
+  const health=document.getElementById('ec-health').value.trim();
+  const monthly_value=document.getElementById('ec-monthly-value').value;
+  const billing_emails=document.getElementById('ec-billing-emails').value.split(',').map(s=>s.trim()).filter(Boolean);
+  try{
+    const {error}=await _sb.from('clients').update({account_type,plan,status,health,monthly_value:monthly_value?Number(monthly_value):null,billing_emails}).eq('id',id);
+    if(error)throw error;
+    closeModal('modal-connect-int');
+    _clientsAdminList=null; renderSection();
+    toast('Client updated','var(--green)');
+  }catch(e){ toast('Could not save: '+(e.message||e),'var(--danger)'); }
+}
+
 // ─── INTEGRATIONS ────────────────────────────────────────
 // Official brand marks (single-path logomarks from Simple Icons, MIT licensed);
 // email/phone are generic outline glyphs since they aren't a single brand.
@@ -3733,7 +4175,7 @@ function runGlobalSearch(v){
   const kb=!canSeeReports()?[]:(STATE.kbDocs||[]).filter(d=>d.name.toLowerCase().includes(q)).slice(0,5)
     .map(d=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoKb()"><div class="notif-dot" style="background:var(--accent-2)"></div><div><div>${d.name}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">${d.size} · Added ${d.added}</div></div></div>`);
 
-  const iv=!canSeeReports()?[]:(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
+  const iv=(STATE.invoices||[]).filter(i=>i.id.toLowerCase().includes(q)||i.status.toLowerCase().includes(q)).slice(0,5)
     .map(i=>`<div class="notif-item" style="cursor:pointer" onclick="gsGoInvoices()"><div class="notif-dot" style="background:var(--green)"></div><div><div>${i.id} · ${i.amount}</div><div style="color:var(--text-3);font-size:.7rem;margin-top:.2rem">Due ${i.dueDate} · ${i.status}</div></div></div>`);
 
   const ig=!canSeeReports()?[]:STATE.integrations.filter(i=>i.name.toLowerCase().includes(q)||i.desc.toLowerCase().includes(q)).slice(0,5)
@@ -3744,7 +4186,7 @@ function runGlobalSearch(v){
 }
 function gsGoNotifications(){ closeGlobalSearch(); showSection('notifications'); }
 function gsGoKb(){ closeGlobalSearch(); showSection('settings'); _settingsTab='kb'; renderSection(); }
-function gsGoInvoices(){ closeGlobalSearch(); showSection('settings'); _settingsTab='invoices'; renderSection(); }
+function gsGoInvoices(){ closeGlobalSearch(); showSection(currentUser.isInternal?'invoice-manager':'invoices'); }
 function gsGoIntegration(key){
   closeGlobalSearch();
   const i=STATE.integrations.find(x=>x.key===key); if(!i)return;
@@ -3768,8 +4210,8 @@ function gsGoTeam(){ closeGlobalSearch(); showSection('teams'); }
 // ─── SETTINGS ────────────────────────────────────────────
 let _settingsTab='profile';
 function renderSettings(){
-  let tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base'],['invoices','Invoices']];
-  if(!canSeeReports())tabs=tabs.filter(([k])=>k!=='company'&&k!=='invoices'&&k!=='kb');
+  let tabs=[['profile','Profile'],['company','Company'],['security','Security'],['display','Display'],['kb','ARIA Knowledge Base']];
+  if(!canSeeReports())tabs=tabs.filter(([k])=>k!=='company'&&k!=='kb');
   if(currentUser.role==='admin'||currentUser.role==='super_admin')tabs.push(['access','Team Access']);
   if(!tabs.some(([k])=>k===_settingsTab))_settingsTab='profile';
   return `
@@ -3777,7 +4219,7 @@ function renderSettings(){
   <div id="settings-body">${renderSettingsTab(_settingsTab)}</div>`;
 }
 function setSettingsTab(t){
-  if((t==='company'||t==='invoices'||t==='kb')&&!canSeeReports())t='profile';
+  if((t==='company'||t==='kb')&&!canSeeReports())t='profile';
   _settingsTab=t;renderSection();
   if(t==='access'&&(currentUser.role==='admin'||currentUser.role==='super_admin')&&!_teamAccessLoaded){
     loadTeamAccessData().then(()=>{ if(_settingsTab==='access')renderSection(); });
@@ -3868,22 +4310,6 @@ function renderSettingsTab(t){
         <button class="btn btn-acc btn-sm" onclick="addQuickQuestion()" ${STATE.quickQuestions.length>=6?'disabled':''}>Add</button>
       </div>
       ${STATE.quickQuestions.length>=6?'<div style="font-size:.72rem;color:var(--text-3);margin-top:.5rem">Maximum of 6 reached, remove one to add another.</div>':''}
-    </div>`;
-  if(t==='invoices')return `
-    <div class="card">
-      <div class="card-title">Pay via Wise</div>
-      <p style="font-size:.82rem;color:var(--text-3);line-height:1.7;margin-bottom:1rem">Invoices are settled by bank transfer through <strong>Wise</strong>, no card or subscription on file. Send payment to the details below, using the invoice number as your reference.</p>
-      <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:10px;padding:.25rem 1.1rem">
-        <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--text-3)">Payee name</span><span style="font-weight:600">${STATE.wisePayee.name}</span></div>
-        <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span style="color:var(--text-3)">Wise email</span><span style="font-weight:600">${STATE.wisePayee.email}</span></div>
-        <div style="display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;font-size:.82rem"><span style="color:var(--text-3)">Reference</span><span style="font-weight:600;text-align:right">${STATE.wisePayee.reference}</span></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Invoices</div>
-      <table class="rb-table"><thead><tr><th>Invoice</th><th>Issued</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
-        ${STATE.invoices.map(i=>`<tr><td style="color:var(--accent)">${i.id}</td><td>${i.date}</td><td>${i.dueDate}</td><td>${i.amount}</td><td><span class="badge ${i.status==='Paid'?'badge-active':i.status==='Overdue'?'badge-high':'badge-med'}">${i.status}</span></td><td style="display:flex;gap:.4rem">${i.status!=='Paid'?`<button class="btn btn-acc btn-sm" onclick="toast('Opening Wise to pay ${i.id}…','var(--accent)')">Pay with Wise</button>`:''}<button class="btn btn-ghost btn-sm" onclick="toast('Downloading ${i.id}...','var(--accent)')">Download</button></td></tr>`).join('')}
-      </tbody></table>
     </div>`;
   if(t==='access')return `
     <div class="card">
