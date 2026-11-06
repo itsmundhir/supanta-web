@@ -1441,7 +1441,12 @@ function goTo(page,opts){
 document.getElementById('hamburger').addEventListener('click',()=>{document.getElementById('mobile-menu').classList.toggle('open');});
 function closeMob(){document.getElementById('mobile-menu').classList.remove('open');}
 
-// ─── AUTH — Supabase ───────────────────────────────────────
+// ─── AUTH — minimal Postgres-backed replacement, while Supabase is paused ──
+// Supabase itself is paused (unpaid invoice). AUTH_API is a small Express +
+// Postgres service built against a real pg_dumpall restore of the project,
+// covering login + TOTP MFA only — see server/README.md in the repo for
+// what is and isn't covered by this.
+const AUTH_API='https://auth.supanta.com';
 let _mfaFactorId=null;
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
@@ -1449,30 +1454,23 @@ async function doLogin(){
   const err=document.getElementById('login-err');
   const btn=document.getElementById('login-submit-btn');
   err.style.display='none';
-  if(!window._sb){
-    err.textContent='Connection unavailable. Open the site over http(s), not as a local file.';err.style.display='block';return;
-  }
   btn.textContent='Signing in...';btn.disabled=true;
   try {
-    const {data,error}=await window._sb.auth.signInWithPassword({email,password:pass});
-    if(error){err.textContent='Invalid email or password.';err.style.display='block';btn.textContent='Sign In';btn.disabled=false;return;}
-    // Password auth only ever reaches AAL1. If this account has a verified TOTP
-    // factor enrolled, Supabase requires an AAL2 challenge before the session
-    // is fully trusted — so we stop here and ask for the 6-digit code instead
-    // of redirecting straight into the dashboard.
-    const {data:aal}=await window._sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    if(aal && aal.nextLevel==='aal2' && aal.nextLevel!==aal.currentLevel){
-      const {data:factors}=await window._sb.auth.mfa.listFactors();
-      const totp=factors?.totp?.find(f=>f.status==='verified');
-      if(totp){
-        _mfaFactorId=totp.id;
-        document.getElementById('login-step-1').style.display='none';
-        document.getElementById('login-step-2fa').style.display='block';
-        document.getElementById('login-2fa-code').focus();
-        btn.textContent='Sign In';btn.disabled=false;
-        return;
-      }
+    const res=await fetch(`${AUTH_API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){err.textContent='Invalid email or password.';err.style.display='block';btn.textContent='Sign In';btn.disabled=false;return;}
+    // Password auth alone isn't enough if this account has a verified TOTP
+    // factor enrolled — stop here and ask for the 6-digit code instead of
+    // redirecting straight into the dashboard.
+    if(data.mfa_required){
+      _mfaFactorId=data.factor_id;
+      document.getElementById('login-step-1').style.display='none';
+      document.getElementById('login-step-2fa').style.display='block';
+      document.getElementById('login-2fa-code').focus();
+      btn.textContent='Sign In';btn.disabled=false;
+      return;
     }
+    localStorage.setItem('supanta_session_token',data.token);
     window.location.href='/app';
   } catch(e){
     err.textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.';err.style.display='block';
@@ -1487,10 +1485,10 @@ async function verifyLogin2fa(){
   if(!code||code.length<6){err.textContent='Enter the 6-digit code.';err.style.display='block';return;}
   btn.textContent='Verifying...';btn.disabled=true;
   try{
-    const {data:challenge,error:chErr}=await window._sb.auth.mfa.challenge({factorId:_mfaFactorId});
-    if(chErr)throw chErr;
-    const {error:vErr}=await window._sb.auth.mfa.verify({factorId:_mfaFactorId,challengeId:challenge.id,code});
-    if(vErr){err.textContent='Incorrect code, try again.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;return;}
+    const res=await fetch(`${AUTH_API}/auth/mfa/verify`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({factor_id:_mfaFactorId,code})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){err.textContent='Incorrect code, try again.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;return;}
+    localStorage.setItem('supanta_session_token',data.token);
     window.location.href='/app';
   }catch(e){
     err.textContent='Could not verify code right now.';err.style.display='block';btn.textContent='Verify';btn.disabled=false;

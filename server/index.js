@@ -38,7 +38,11 @@ function issueSession(authUser, profile) {
 
 async function getProfile(userId) {
   const { rows } = await pool.query(
-    'select id, full_name, email, role, client_id, job_title, links, cookie_consent from public.user_profiles where id = $1',
+    `select p.id, p.full_name, p.email, p.role, p.client_id, p.job_title, p.links, p.cookie_consent,
+            c.company_name, c.account_type
+     from public.user_profiles p
+     left join public.clients c on c.id = p.client_id
+     where p.id = $1`,
     [userId]
   );
   return rows[0] || null;
