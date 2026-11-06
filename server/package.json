@@ -1,0 +1,19 @@
+{
+  "name": "supanta-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal replacement API for Supabase, built against a real pg_dumpall restore. Scope for now: login + MFA only.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "otplib": "^12.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}
