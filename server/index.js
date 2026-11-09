@@ -28,7 +28,13 @@ function issueSession(authUser, profile) {
   const payload = {
     sub: authUser.id,
     email: authUser.email,
-    role: profile ? profile.role : null,
+    // Literally the Postgres role PostgREST should switch into for this
+    // request (it reads the JWT's "role" claim for that) — NOT the app-level
+    // role (admin/super_admin/etc). That lives in user_profiles and is what
+    // RLS policies like is_admin()/has_client_access() look up via auth.uid(),
+    // and is what /auth/session returns separately for the UI to use.
+    role: 'authenticated',
+    app_role: profile ? profile.role : null,
     client_id: profile ? profile.client_id : null,
     full_name: profile ? profile.full_name : null,
   };
