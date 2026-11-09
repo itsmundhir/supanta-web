@@ -1338,9 +1338,17 @@ async function doForgotPassword(){
 }
 </script>
 <script>
-// ─── SUPABASE ──────────────────────────────────────────────
+// ─── SUPABASE (dead project, paused — only its /functions/v1/* Edge Function
+// URLs below still reference it; those aren't migrated yet) ────────────────
 const SUPABASE_URL = 'https://qzpairbwdmozntmsaryq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cGFpcmJ3ZG1vem50bXNhcnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NjYyMTAsImV4cCI6MjA5NDE0MjIxMH0.UZv426_LewcfGP0k3uYJyW1hsruODnV-t0-jpDxxzg4';
+// AUTH_API: our own Postgres-backed replacement for Supabase Auth + REST.
+// /auth/* is our custom login/MFA API; /rest/v1/* is PostgREST sitting in
+// front of the restored database, enforcing the same RLS the original
+// Supabase project had. The supabase-js client below points here, with
+// accessToken wired to our own JWT instead of supabase-js's own session
+// handling, so window._sb.from(...) calls elsewhere work unmodified again.
+const AUTH_API='https://auth.supanta.com';
 
 let _appInited=false;
 // Tracks whether the visitor has navigated at all — the async init paths below
@@ -1351,7 +1359,7 @@ const _sbScript = document.createElement('script');
 _sbScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
 _sbScript.onload = () => {
   try {
-    window._sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window._sb = window.supabase.createClient(AUTH_API, SUPABASE_ANON_KEY, {accessToken: async () => localStorage.getItem('supanta_session_token')});
     initApp();
   } catch(e){ console.warn('Supabase init failed:',e); renderPublicFallback(); }
 };
@@ -1441,12 +1449,6 @@ function goTo(page,opts){
 document.getElementById('hamburger').addEventListener('click',()=>{document.getElementById('mobile-menu').classList.toggle('open');});
 function closeMob(){document.getElementById('mobile-menu').classList.remove('open');}
 
-// ─── AUTH — minimal Postgres-backed replacement, while Supabase is paused ──
-// Supabase itself is paused (unpaid invoice). AUTH_API is a small Express +
-// Postgres service built against a real pg_dumpall restore of the project,
-// covering login + TOTP MFA only — see server/README.md in the repo for
-// what is and isn't covered by this.
-const AUTH_API='https://auth.supanta.com';
 let _mfaFactorId=null;
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();

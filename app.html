@@ -690,9 +690,18 @@ input:checked + .slider::before{transform:translateX(18px)}
 </div>
 
 <script>
-// ─── SUPABASE (shared project with public site) ────────────
+// ─── SUPABASE (dead project, paused — kept only for the /functions/v1/*
+// Edge Function URLs still built from it below; those aren't migrated yet) ──
 const SUPABASE_URL = 'https://qzpairbwdmozntmsaryq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6cGFpcmJ3ZG1vem50bXNhcnlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NjYyMTAsImV4cCI6MjA5NDE0MjIxMH0.UZv426_LewcfGP0k3uYJyW1hsruODnV-t0-jpDxxzg4';
+// AUTH_API: our own Postgres-backed replacement for Supabase Auth + REST.
+// /auth/* is our custom login/MFA API; /rest/v1/* is PostgREST sitting in
+// front of the restored database, enforcing the same RLS policies the
+// original Supabase project had. The supabase-js client below is pointed
+// here instead of at Supabase itself, with accessToken wired to our own JWT
+// instead of supabase-js's own session handling — so _sb.from(...) calls
+// elsewhere in this file work unmodified against real, live data again.
+const AUTH_API='https://auth.supanta.com';
 let _sb=null, sbUser=null;
 
 const _sbScript=document.createElement('script');
@@ -717,19 +726,11 @@ function wrapFunctionsInvoke(sb){
   };
   return sb;
 }
-_sbScript.onload=()=>{ try{ _sb=wrapFunctionsInvoke(window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY)); boot(); }catch(e){ authFail(); } };
+_sbScript.onload=()=>{ try{ _sb=wrapFunctionsInvoke(window.supabase.createClient(AUTH_API,SUPABASE_ANON_KEY,{accessToken:async()=>localStorage.getItem('supanta_session_token')})); boot(); }catch(e){ authFail(); } };
 _sbScript.onerror=()=>authFail();
 document.head.appendChild(_sbScript);
 function authFail(){ document.getElementById('auth-gate-text').textContent='Cannot reach the server from here. Once deployed on supanta.com this will work.'; }
 
-// AUTH_API: the minimal Postgres-backed replacement for Supabase Auth,
-// built while Supabase itself is paused (unpaid invoice, no live project).
-// Covers login + session only — everything _sb.from(...)/.functions.invoke(...)
-// does below is still pointed at the dead Supabase project and will fail
-// silently (each call is already wrapped in try/catch), leaving the rest of
-// the dashboard showing empty/default state until that larger migration
-// continues. This is an intentional, agreed scope cut, not an oversight.
-const AUTH_API='https://auth.supanta.com';
 async function boot(){
   const token=localStorage.getItem('supanta_session_token');
   if(!token){ window.location.href='/home'; return; }
