@@ -852,17 +852,7 @@ async function submitOnboarding(){
   if(!company){err.textContent='Please enter your company name.';err.style.display='block';return;}
   btn.textContent='Setting up...';btn.disabled=true;
   try{
-    // complete-onboarding is still a Supabase Edge Function — not migrated
-    // yet (separate from the PostgREST/auth work done so far), so this call
-    // will fail until that happens. Pulling the token from our own session
-    // instead of the dead _sb.auth.getSession() at least avoids a guaranteed
-    // crash in the meantime.
-    const token=localStorage.getItem('supanta_session_token');
-    const {data,error}=await _sb.functions.invoke('complete-onboarding',{
-      body:{company_name:company,service,notes},
-      headers:{Authorization:`Bearer ${token}`}
-    });
-    if(error||data?.error)throw error||new Error(data.error);
+    await authFetch('/onboarding/complete',{method:'POST',body:JSON.stringify({company_name:company,service,notes})});
     window.location.reload();
   }catch(e){
     err.textContent=(e&&e.message)||'Could not finish setup, please try again.';err.style.display='block';
@@ -3208,14 +3198,12 @@ function fileToBase64Raw(file){
   });
 }
 async function extractInvoicePdf(){
-  if(!_imPdfFile||!_sb)return;
+  if(!_imPdfFile)return;
   const btn=document.getElementById('im-extract-btn');
   btn.disabled=true; btn.textContent='Reading PDF…';
   try{
     const base64=await fileToBase64Raw(_imPdfFile);
-    const {data,error}=await _sb.functions.invoke('invoice-extract-pdf',{body:{pdf_base64:base64}});
-    if(error)throw error;
-    if(data?.error)throw new Error(data.error);
+    const data=await authFetch('/invoices/extract-pdf',{method:'POST',body:JSON.stringify({pdf_base64:base64})});
     const f=data.fields||{};
     if(f.invoice_number)document.getElementById('im-number').value=f.invoice_number;
     if(f.amount!=null)document.getElementById('im-amount').value=f.amount;
@@ -3260,9 +3248,12 @@ async function createInvoice(){
       status:'Due',created_by:currentUser.id
     });
     if(insErr)throw insErr;
-    const {error:notifyErr}=await _sb.functions.invoke('invoice-notify',{body:{invoice_id:newId}});
-    if(notifyErr)toast('Invoice created, but the email to the client failed: '+notifyErr.message,'var(--danger)');
-    else toast('Invoice created and client notified','var(--green)');
+    try{
+      await authFetch('/invoices/notify',{method:'POST',body:JSON.stringify({invoice_id:newId})});
+      toast('Invoice created and client notified','var(--green)');
+    }catch(notifyErr){
+      toast('Invoice created, but the email to the client failed: '+notifyErr.message,'var(--danger)');
+    }
     _imAllInvoices=null; _imPdfFile=null; _imExtracted=null;
     document.getElementById('im-pdf').value='';
     ['im-number','im-payment-url'].forEach(id=>document.getElementById(id).value='');

@@ -1213,7 +1213,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       if(_ariaQuickQuestionsRequested)return;
       _ariaQuickQuestionsRequested=true;
       try{
-        const res=await fetch(SUPABASE_URL+'/functions/v1/public-aria-quick-questions?client_id='+encodeURIComponent(ARIA_SUPANTA_CLIENT_ID));
+        const res=await fetch(AUTH_API+'/public/aria-quick-questions?client_id='+encodeURIComponent(ARIA_SUPANTA_CLIENT_ID));
         if(!res.ok)return;
         const data=await res.json();
         const qs=(data&&data.questions)||[];
@@ -1243,7 +1243,7 @@ label{font-size:.78rem;font-weight:500;color:var(--grey-2)}
       const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.textContent='...';
       msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
       try{
-        const res=await fetch(SUPABASE_URL+'/functions/v1/public-aria-query',{
+        const res=await fetch(AUTH_API+'/public/aria-query',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({session_id:ARIA_SESSION_ID,client_id:ARIA_SUPANTA_CLIENT_ID,message:msg})
