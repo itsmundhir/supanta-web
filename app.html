@@ -702,6 +702,15 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // instead of supabase-js's own session handling — so _sb.from(...) calls
 // elsewhere in this file work unmodified against real, live data again.
 const AUTH_API='https://auth.supanta.com';
+async function authFetch(path,opts){
+  opts=opts||{};
+  const token=localStorage.getItem('supanta_session_token');
+  const headers=Object.assign({'Content-Type':'application/json'},opts.headers||{},{Authorization:'Bearer '+token});
+  const res=await fetch(`${AUTH_API}${path}`,Object.assign({},opts,{headers}));
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(data.error||'Request failed');
+  return data;
+}
 let _sb=null, sbUser=null;
 
 const _sbScript=document.createElement('script');
@@ -843,10 +852,15 @@ async function submitOnboarding(){
   if(!company){err.textContent='Please enter your company name.';err.style.display='block';return;}
   btn.textContent='Setting up...';btn.disabled=true;
   try{
-    const {data:{session}}=await _sb.auth.getSession();
+    // complete-onboarding is still a Supabase Edge Function — not migrated
+    // yet (separate from the PostgREST/auth work done so far), so this call
+    // will fail until that happens. Pulling the token from our own session
+    // instead of the dead _sb.auth.getSession() at least avoids a guaranteed
+    // crash in the meantime.
+    const token=localStorage.getItem('supanta_session_token');
     const {data,error}=await _sb.functions.invoke('complete-onboarding',{
       body:{company_name:company,service,notes},
-      headers:{Authorization:`Bearer ${session.access_token}`}
+      headers:{Authorization:`Bearer ${token}`}
     });
     if(error||data?.error)throw error||new Error(data.error);
     window.location.reload();
@@ -4471,10 +4485,8 @@ async function changePassword(){
   const p2=document.getElementById('set-pwd-2').value;
   if(!p1||p1.length<8){toast('Password must be at least 8 characters','var(--danger)');return;}
   if(p1!==p2){toast('Passwords do not match','var(--danger)');return;}
-  if(!_sb){toast('Connection unavailable right now','var(--danger)');return;}
   try{
-    const {error}=await _sb.auth.updateUser({password:p1});
-    if(error)throw error;
+    await authFetch('/auth/change-password',{method:'POST',body:JSON.stringify({password:p1})});
     document.getElementById('set-pwd-1').value='';document.getElementById('set-pwd-2').value='';
     toast('Password updated','var(--green)');
   }catch(e){
@@ -4485,10 +4497,9 @@ async function changePassword(){
 // ─── TWO-FACTOR AUTHENTICATION (Supabase Auth TOTP) ──────
 let _mfaEnrollFactorId=null;
 async function refreshMfaStatus(){
-  const wrap=document.getElementById('mfa-status-wrap'); if(!wrap||!_sb)return;
+  const wrap=document.getElementById('mfa-status-wrap'); if(!wrap)return;
   try{
-    const {data,error}=await _sb.auth.mfa.listFactors();
-    if(error)throw error;
+    const data=await authFetch('/auth/mfa/factors');
     const verified=(data?.totp||[]).find(f=>f.status==='verified');
     if(verified){
       wrap.innerHTML=`
@@ -4504,11 +4515,10 @@ async function refreshMfaStatus(){
   }
 }
 async function startMfaEnroll(){
-  const wrap=document.getElementById('mfa-status-wrap'); if(!wrap||!_sb)return;
+  const wrap=document.getElementById('mfa-status-wrap'); if(!wrap)return;
   wrap.innerHTML='<div class="empty-state">Generating QR code…</div>';
   try{
-    const {data,error}=await _sb.auth.mfa.enroll({factorType:'totp'});
-    if(error)throw error;
+    const data=await authFetch('/auth/mfa/enroll',{method:'POST'});
     _mfaEnrollFactorId=data.id;
     wrap.innerHTML=`
       <div style="font-size:.82rem;color:var(--text-3);margin-bottom:.85rem">Scan this QR code with your authenticator app, then enter the 6-digit code it shows.</div>
@@ -4527,10 +4537,8 @@ async function confirmMfaEnroll(){
   const code=document.getElementById('mfa-verify-code').value.trim();
   if(!code||code.length<6){toast('Enter the 6-digit code','var(--danger)');return;}
   try{
-    const {data:challenge,error:chErr}=await _sb.auth.mfa.challenge({factorId:_mfaEnrollFactorId});
-    if(chErr)throw chErr;
-    const {error:vErr}=await _sb.auth.mfa.verify({factorId:_mfaEnrollFactorId,challengeId:challenge.id,code});
-    if(vErr)throw vErr;
+    await authFetch('/auth/mfa/challenge',{method:'POST',body:JSON.stringify({factor_id:_mfaEnrollFactorId})});
+    await authFetch('/auth/mfa/enroll/verify',{method:'POST',body:JSON.stringify({factor_id:_mfaEnrollFactorId,code})});
     toast('Two-factor authentication enabled','var(--green)');
     _mfaEnrollFactorId=null;
     refreshMfaStatus();
@@ -4540,15 +4548,14 @@ async function confirmMfaEnroll(){
   }
 }
 async function cancelMfaEnroll(){
-  if(_mfaEnrollFactorId&&_sb){ try{ await _sb.auth.mfa.unenroll({factorId:_mfaEnrollFactorId}); }catch(e){} }
+  if(_mfaEnrollFactorId){ try{ await authFetch('/auth/mfa/unenroll',{method:'POST',body:JSON.stringify({factor_id:_mfaEnrollFactorId})}); }catch(e){} }
   _mfaEnrollFactorId=null;
   refreshMfaStatus();
 }
 async function disableMfa(factorId){
   if(!confirm('Turn off two-factor authentication for your account?'))return;
   try{
-    const {error}=await _sb.auth.mfa.unenroll({factorId});
-    if(error)throw error;
+    await authFetch('/auth/mfa/unenroll',{method:'POST',body:JSON.stringify({factor_id:factorId})});
     toast('Two-factor authentication turned off','var(--accent)');
     refreshMfaStatus();
     logActivity('Disabled two-factor authentication',currentUser.name);
@@ -4729,9 +4736,9 @@ function initAriaScope(){
 // re-checks (and re-shows if still unresolved) on every session boot
 // rather than being asked once and forgotten.
 async function maybeSuggestMfa(){
-  if(!_sb||!activeClientId())return;
+  if(!activeClientId())return;
   try{
-    const {data}=await _sb.auth.mfa.listFactors();
+    const data=await authFetch('/auth/mfa/factors');
     const has2fa=(data?.totp||[]).some(f=>f.status==='verified');
     if(!has2fa){
       const msgs=document.getElementById('aria-msgs'); if(!msgs)return;

@@ -12,8 +12,10 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
+const QRCode = require('qrcode');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { pool } = require('./db');
 
 const app = express();
@@ -143,6 +145,75 @@ function requireAuth(req, res, next) {
 app.get('/auth/session', requireAuth, async (req, res) => {
   const profile = await getProfile(req.auth.sub);
   return res.json({ user: { id: req.auth.sub, email: req.auth.email, ...profile } });
+});
+
+// Mirrors _sb.auth.updateUser({password}) from the account settings page.
+app.post('/auth/change-password', requireAuth, async (req, res) => {
+  const password = String(req.body.password || '');
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const hash = await bcrypt.hash(password, 10);
+  await pool.query('update auth.users set encrypted_password = $1, updated_at = now() where id = $2', [hash, req.auth.sub]);
+  res.json({ ok: true });
+});
+
+// ─── MFA MANAGEMENT (settings page — enroll/verify/unenroll a TOTP factor) ──
+// Mirrors _sb.auth.mfa.listFactors()/.enroll()/.challenge()/.verify()/.unenroll().
+// Separate from /auth/mfa/verify above, which is the pre-login step during
+// sign-in itself and doesn't require a Bearer token (the user isn't signed
+// in yet at that point).
+app.get('/auth/mfa/factors', requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    "select id, status from auth.mfa_factors where user_id = $1 and factor_type = 'totp'",
+    [req.auth.sub]
+  );
+  res.json({ totp: rows });
+});
+
+app.post('/auth/mfa/enroll', requireAuth, async (req, res) => {
+  const secret = authenticator.generateSecret();
+  const factorId = crypto.randomUUID();
+  await pool.query(
+    `insert into auth.mfa_factors (id, user_id, factor_type, status, secret, friendly_name, created_at, updated_at)
+     values ($1, $2, 'totp', 'unverified', $3, 'Authenticator app', now(), now())`,
+    [factorId, req.auth.sub, secret]
+  );
+  const otpauth = authenticator.keyuri(req.auth.email, 'Supanta', secret);
+  const qrCode = await QRCode.toDataURL(otpauth);
+  res.json({ id: factorId, totp: { qr_code: qrCode, secret } });
+});
+
+app.post('/auth/mfa/challenge', requireAuth, async (req, res) => {
+  const factorId = String(req.body.factor_id || '');
+  const { rows } = await pool.query(
+    "select id from auth.mfa_factors where id = $1 and user_id = $2 and factor_type = 'totp'",
+    [factorId, req.auth.sub]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Unknown factor' });
+  // No separate challenge/response round-trip for TOTP (unlike push/SMS
+  // factors) — the code itself is the proof, checked in /auth/mfa/enroll/verify.
+  // This just mirrors supabase-js's two-call shape so app.html didn't need
+  // to change at that call site.
+  res.json({ id: factorId });
+});
+
+app.post('/auth/mfa/enroll/verify', requireAuth, async (req, res) => {
+  const factorId = String(req.body.factor_id || '');
+  const code = String(req.body.code || '').trim();
+  const { rows } = await pool.query(
+    "select secret from auth.mfa_factors where id = $1 and user_id = $2 and factor_type = 'totp'",
+    [factorId, req.auth.sub]
+  );
+  const factor = rows[0];
+  if (!factor) return res.status(404).json({ error: 'Unknown factor' });
+  if (!authenticator.check(code, factor.secret)) return res.status(401).json({ error: 'Incorrect code' });
+  await pool.query("update auth.mfa_factors set status = 'verified', updated_at = now() where id = $1", [factorId]);
+  res.json({ ok: true });
+});
+
+app.post('/auth/mfa/unenroll', requireAuth, async (req, res) => {
+  const factorId = String(req.body.factor_id || '');
+  await pool.query('delete from auth.mfa_factors where id = $1 and user_id = $2', [factorId, req.auth.sub]);
+  res.json({ ok: true });
 });
 
 // ─── INVOICE PDF STORAGE ────────────────────────────────────────────────
