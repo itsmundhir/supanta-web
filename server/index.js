@@ -12,6 +12,8 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
+const fs = require('fs');
+const path = require('path');
 const { pool } = require('./db');
 
 const app = express();
@@ -23,6 +25,7 @@ if (!JWT_SECRET) {
   console.error('JWT_SECRET is not set — refusing to start.');
   process.exit(1);
 }
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'https://auth.supanta.com';
 
 function issueSession(authUser, profile) {
   const payload = {
@@ -140,6 +143,74 @@ function requireAuth(req, res, next) {
 app.get('/auth/session', requireAuth, async (req, res) => {
   const profile = await getProfile(req.auth.sub);
   return res.json({ user: { id: req.auth.sub, email: req.auth.email, ...profile } });
+});
+
+// ─── INVOICE PDF STORAGE ────────────────────────────────────────────────
+// Replaces Supabase Storage's `invoices` bucket. Not a general file-storage
+// API — just the two things app.html's Invoice Manager actually does:
+// upload a PDF when creating an invoice, and hand back a short-lived
+// download link later. Files live on disk under uploads/invoices/, laid
+// out the same way the old bucket was: "<client_id>/<invoice_id>.pdf".
+const UPLOADS_DIR = path.join(__dirname, 'uploads', 'invoices');
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+function safeInvoicePath(raw) {
+  const normalized = path.normalize(String(raw || '')).replace(/^(\.\.(\/|\\|$))+/, '');
+  if (!normalized || normalized.includes('..') || path.isAbsolute(normalized)) return null;
+  return normalized;
+}
+
+// Invoices belong to one client; the path's first segment is always that
+// client's id (see createInvoice() in app.html), so this is enough to check
+// without a DB round-trip — same access shape as the invoices RLS policies.
+function canAccessInvoicePath(auth, invoicePath) {
+  if (auth.app_role === 'admin' || auth.app_role === 'super_admin') return true;
+  const clientSegment = invoicePath.split('/')[0];
+  return !!auth.client_id && clientSegment === auth.client_id;
+}
+
+app.post('/storage/invoices', requireAuth, express.raw({ type: 'application/pdf', limit: '20mb' }), (req, res) => {
+  if (req.auth.app_role !== 'admin' && req.auth.app_role !== 'super_admin') {
+    return res.status(403).json({ error: 'Not allowed' });
+  }
+  const invoicePath = safeInvoicePath(req.query.path);
+  if (!invoicePath) return res.status(400).json({ error: 'Invalid path' });
+  const fullPath = path.join(UPLOADS_DIR, invoicePath);
+  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  fs.writeFileSync(fullPath, req.body);
+  res.json({ path: invoicePath });
+});
+
+// Mirrors _sb.storage.from('invoices').createSignedUrl(path, 60): a link
+// good for 60 seconds, usable without an Authorization header (it gets
+// opened directly via window.open), because the token itself is the proof.
+app.get('/storage/invoices/sign', requireAuth, (req, res) => {
+  const invoicePath = safeInvoicePath(req.query.path);
+  if (!invoicePath) return res.status(400).json({ error: 'Invalid path' });
+  if (!canAccessInvoicePath(req.auth, invoicePath)) return res.status(403).json({ error: 'Not allowed' });
+  const fullPath = path.join(UPLOADS_DIR, invoicePath);
+  if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
+  const token = jwt.sign({ path: invoicePath, purpose: 'invoice-download' }, JWT_SECRET, { expiresIn: 60 });
+  res.json({ signedUrl: `${PUBLIC_BASE_URL}/storage/invoices/download?path=${encodeURIComponent(invoicePath)}&token=${token}` });
+});
+
+app.get('/storage/invoices/download', (req, res) => {
+  const invoicePath = safeInvoicePath(req.query.path);
+  const token = String(req.query.token || '');
+  if (!invoicePath || !token) return res.status(400).json({ error: 'Missing path or token' });
+  let payload;
+  try {
+    payload = jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid or expired link' });
+  }
+  if (payload.purpose !== 'invoice-download' || payload.path !== invoicePath) {
+    return res.status(403).json({ error: 'Token does not match this file' });
+  }
+  const fullPath = path.join(UPLOADS_DIR, invoicePath);
+  if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.sendFile(fullPath);
 });
 
 const port = process.env.PORT || 8001;

@@ -3110,10 +3110,12 @@ function renderInvoicesTab(){
   </div>`;
 }
 async function downloadInvoice(dbId){
-  const inv=(STATE.invoices||[]).find(i=>i.dbId===dbId); if(!inv||!inv.pdfPath||!_sb)return;
+  const inv=(STATE.invoices||[]).find(i=>i.dbId===dbId); if(!inv||!inv.pdfPath)return;
   try{
-    const {data,error}=await _sb.storage.from('invoices').createSignedUrl(inv.pdfPath,60);
-    if(error||!data?.signedUrl)throw error||new Error('Could not get a download link');
+    const token=localStorage.getItem('supanta_session_token');
+    const res=await fetch(`${AUTH_API}/storage/invoices/sign?path=${encodeURIComponent(inv.pdfPath)}`,{headers:{Authorization:'Bearer '+token}});
+    const data=await res.json();
+    if(!res.ok||!data.signedUrl)throw new Error(data.error||'Could not get a download link');
     window.open(data.signedUrl,'_blank');
   }catch(e){
     toast('Could not download that invoice: '+(e.message||e),'var(--danger)');
@@ -3230,8 +3232,13 @@ async function createInvoice(){
     let pdfPath=null;
     if(_imPdfFile){
       pdfPath=`${clientId}/${newId}.pdf`;
-      const {error:upErr}=await _sb.storage.from('invoices').upload(pdfPath,_imPdfFile,{contentType:'application/pdf',upsert:true});
-      if(upErr)throw upErr;
+      const token=localStorage.getItem('supanta_session_token');
+      const upRes=await fetch(`${AUTH_API}/storage/invoices?path=${encodeURIComponent(pdfPath)}`,{
+        method:'POST',
+        headers:{'Content-Type':'application/pdf',Authorization:'Bearer '+token},
+        body:_imPdfFile
+      });
+      if(!upRes.ok){ const upData=await upRes.json().catch(()=>({})); throw new Error(upData.error||'Could not upload the PDF'); }
     }
     const {error:insErr}=await _sb.from('invoices').insert({
       id:newId,client_id:clientId,display_id:number,amount,currency,
