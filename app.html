@@ -213,6 +213,7 @@ label{font-size:.76rem;font-weight:500;color:var(--text-2)}
 .chat-panel-hd-actions{display:flex;gap:.5rem;align-items:center;flex-shrink:0}
 .chat-overflow-btn{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--border-light);color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:1.1rem;line-height:1}
 .chat-overflow-btn:hover{border-color:var(--border);background:var(--bg-3);color:var(--text)}
+.assign-menu-search{width:100%;margin-bottom:.35rem;padding:.4rem .6rem;font-size:.8rem}
 .assign-menu-item{display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border-radius:6px;cursor:pointer;font-size:.8rem;color:var(--text-2)}
 .assign-menu-item:hover{background:var(--bg-3);color:var(--text)}
 .assign-menu-item.active{color:var(--accent)}
@@ -5108,21 +5109,29 @@ function positionCtxMenu(menu,e){
   const x=Math.min(e.clientX,window.innerWidth-220), y=Math.min(e.clientY,window.innerHeight-260);
   menu.style.left=x+'px'; menu.style.top=y+'px';
 }
+function renderAssignMenuList(chatId,query){
+  const c=STATE.chats.find(x=>x.id===chatId); if(!c)return'';
+  const q=(query||'').trim().toLowerCase();
+  const humans=STATE.team.filter(t=>t.type!=='agent');
+  const candidates=[{name:'ARIA',dbId:null,color:'#6b5bff'},...humans];
+  const matches=q?candidates.filter(m=>m.name.toLowerCase().includes(q)):candidates;
+  const rows=matches.map(m=>`<div class="assign-menu-item ${c.owner===m.name?'active':''}" onclick="assignConversation('${chatId}','${m.dbId||''}','${escapeHtml(m.name).replace(/'/g,"\\'")}')">${avatarHtml(m.name,m.color,20)} ${escapeHtml(m.name)}</div>`);
+  if(!matches.length)rows.push('<div class="assign-menu-item" style="cursor:default;color:var(--text-3)">No match</div>');
+  if(!q){
+    rows.push(`<div class="ctx-sep"></div>`);
+    rows.push(`<div class="assign-menu-item ${c.owner==='Unassigned'?'active':''}" onclick="assignConversation('${chatId}',null,'Unassigned')">Unassign</div>`);
+  }
+  return rows.join('');
+}
 function openAssignMenu(e,chatId){
   e.stopPropagation();
   const c=STATE.chats.find(x=>x.id===chatId); if(!c)return;
   const menu=document.getElementById('chat-assign-menu');
-  const humans=STATE.team.filter(t=>t.type!=='agent');
-  const rows=[
-    `<div class="assign-menu-item ${c.owner==='ARIA'?'active':''}" onclick="assignConversation('${chatId}',null,'ARIA')">${avatarHtml('ARIA','#6b5bff',20)} ARIA</div>`,
-    ...humans.map(m=>`<div class="assign-menu-item ${c.owner===m.name?'active':''}" onclick="assignConversation('${chatId}','${m.dbId||''}','${escapeHtml(m.name).replace(/'/g,"\\'")}')">${avatarHtml(m.name,m.color,20)} ${escapeHtml(m.name)}</div>`),
-    `<div class="ctx-sep"></div>`,
-    `<div class="assign-menu-item ${c.owner==='Unassigned'?'active':''}" onclick="assignConversation('${chatId}',null,'Unassigned')">Unassign</div>`
-  ];
-  menu.innerHTML=rows.join('');
+  menu.innerHTML=`<input class="rb-input assign-menu-search" placeholder="Search people…" autocomplete="off" oninput="document.getElementById('assign-menu-list').innerHTML=renderAssignMenuList('${chatId}',this.value)"/><div id="assign-menu-list">${renderAssignMenuList(chatId,'')}</div>`;
   positionCtxMenu(menu,e);
   document.querySelectorAll('.ctx-menu.open').forEach(m=>m.classList.remove('open'));
   menu.classList.add('open');
+  menu.querySelector('.assign-menu-search').focus();
 }
 async function assignConversation(chatId,teamDbId,displayName){
   const c=STATE.chats.find(x=>x.id===chatId);
