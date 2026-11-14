@@ -4783,112 +4783,24 @@ function tryAriaAction(text,file){
     return `Done: I've added <strong>${file.name}</strong> to ${currentUser.companyName||'your'} knowledge base. I can reference it in future answers.`;
   }
 
-  let m=low.match(/^(?:please\s+)?(?:create|open|raise|log)\s+(?:a\s+|new\s+)?ticket\b(.*)$/);
+  // Ticket/deliverable/group creation, ticket assignment, and ticket status
+  // moves used to be matched here by regex — removed now that
+  // POST /assistant/chat's real tool use covers all of them with actual
+  // understanding instead of exact phrasing. Team add/remove stays removed
+  // too: it was always local-only (STATE.team.push, never persisted) or
+  // calling an already-dead Edge Function, so routing it to the real
+  // assistant (which now says plainly that it's not wired up yet) is more
+  // honest than pretending it worked. Chat/conversation status-marking stays
+  // here since no tool covers conversations yet.
+  let m=low.match(/^mark\s+chat\s+([\w-]+)\s+as\s+(done|archived|active)$/);
   if(m){
-    let rest=t.slice(t.toLowerCase().indexOf(m[0].toLowerCase())+m[0].length-m[1].length).trim();
-    let client='N/A', priority='med';
-    const forMatch=rest.match(/\bfor\s+([A-Za-z0-9&' ]+?)(?:\s+about\b|\s+regarding\b|:|$)/i);
-    let subject=rest;
-    if(forMatch){
-      client=forMatch[1].trim();
-      subject=rest.slice(forMatch.index+forMatch[0].length).trim();
-    }
-    subject=subject.replace(/^(about|regarding|:)\s*/i,'').trim();
-    if(/\burgent\b|\bhigh priority\b/i.test(subject)){priority='high';subject=subject.replace(/,?\s*(urgent|high priority)\.?$/i,'').trim();}
-    if(!subject)subject='New ticket from ARIA';
-    const newTk=createTicket({subject,client,priority,actor:'ARIA'});
-    if(currentSection==='tickets')renderSection();
-    return `Done: I've opened <strong>${newTk.id}</strong>${client!=='N/A'?` for ${client}`:''}: "${subject}". It's unassigned in Tickets → Unassigned, ready to be picked up.`;
-  }
-
-  m=low.match(/^(?:please\s+)?add\s+(.+?)\s+to\s+(?:the\s+)?team\b(.*)$/);
-  if(m){
-    const name=t.match(/add\s+(.+?)\s+to\s+(?:the\s+)?team/i)[1].trim();
-    const roleMatch=t.match(/\bas\s+(?:an?\s+)?([A-Za-z ]+)$/i);
-    const role=roleMatch?roleMatch[1].trim():'Team Member';
-    const colors=['#00c2ff','#6b5bff','#00d4aa','#f5a623','#ff4d6d'];
-    STATE.team.push({id:++_teamId,name,email:'N/A',role,type:'human',color:colors[STATE.team.length%colors.length]});
-    saveState(); if(currentSection==='teams')renderSection();
-    return `Done: I've added <strong>${name}</strong> to the team as ${role}.`;
-  }
-
-  m=low.match(/^(?:please\s+)?(?:add|create|new)\s+(?:a\s+|new\s+)?deliverable\s*(?:called|named)?\s*(.+)$/);
-  if(m&&activeClientId()&&_sb){
-    const name=t.match(/deliverable\s*(?:called|named)?\s*(.+)$/i)[1].trim().replace(/["'.]+$/,'');
-    if(!name)return "What should I call this deliverable?";
-    _sb.from('deliverables').insert({client_id:activeClientId(),name,type:'report',status:'in_progress',created_by:currentUser.id}).select().single()
-      .then(({data,error})=>{
-        if(error||!data)return;
-        STATE.deliverables.unshift({id:data.id,name:data.name,type:data.type,status:data.status,link:data.link,deliveredAt:data.delivered_at});
-        saveState(); if(currentSection==='deliverables')renderSection();
-        logActivity('Added deliverable',name,'ARIA');
-      }).catch(()=>{});
-    return `Done: I've added <strong>${name}</strong> as a new deliverable (in progress). You can find it in Deliverables.`;
-  }
-
-  m=low.match(/^(?:please\s+)?(?:create|start|make)\s+(?:a\s+)?group\s+(?:called|named)\s+(.+)$/);
-  if(m){
-    const name=t.match(/(?:called|named)\s+(.+)$/i)[1].trim().replace(/["'.]+$/,'');
-    if(!STATE.groups)STATE.groups=[];
-    const g={id:++_grpId,name,members:['ARIA'],messages:[]};
-    STATE.groups.push(g);
-    saveState(); if(currentSection==='teams')renderSection();
-    if(activeClientId()&&_sb){
-      _sb.from('groups').insert({client_id:activeClientId(),name,created_by:currentUser.id}).select().single()
-        .then(({data,error})=>{
-          if(error||!data)return;
-          g.dbId=data.id;
-          _sb.from('group_members').insert({group_id:data.id,member_name:'ARIA',is_agent:true}).then(()=>{}).catch(()=>{});
-        }).catch(()=>{});
-    }
-    logActivity('Created group',name,'ARIA');
-    return `Done: I've created the <strong>#${name}</strong> group. Add teammates to it from Teams → Groups.`;
-  }
-
-  m=low.match(/^mark\s+(ticket|chat)\s+([\w-]+)\s+as\s+(done|archived|active)$/);
-  if(m){
-    const [, kind, idRaw, status]=m;
+    const [, idRaw, status]=m;
     const id=idRaw.toUpperCase();
-    if(kind==='ticket'){
-      const tk=STATE.tickets.find(x=>x.id.toUpperCase()===id);
-      if(!tk)return `I couldn't find a ticket with ID ${id}.`;
-      const list=defaultListForKind(status);
-      moveTicket(tk.id,list.id,'ARIA');
-      return `Done: ${tk.id} is now in ${list.name}.`;
-    }else{
-      const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
-      if(!ch)return `I couldn't find a chat with ID ${id}.`;
-      ch.status=status; saveState(); if(currentSection==='chats')renderSection();
-      logActivity(`Marked chat ${status}`,`${ch.customer} (${ch.id})`,'ARIA');
-      return `Done: the conversation with ${ch.customer} is now marked ${status}.`;
-    }
-  }
-
-  m=low.match(/^(?:please\s+)?remove\s+(.+?)\s+from\s+(?:the\s+)?team$/);
-  if(m){
-    const name=t.match(/remove\s+(.+?)\s+from\s+(?:the\s+)?team/i)[1].trim();
-    const member=STATE.team.find(x=>x.name.toLowerCase()===name.toLowerCase());
-    if(!member)return `I couldn't find "${name}" on the team.`;
-    if(member.id===1)return `ARIA can't remove itself from the team.`;
-    const dbId=member.dbId;
-    STATE.team=STATE.team.filter(x=>x.id!==member.id);
-    saveState(); if(currentSection==='teams')renderSection();
-    if(dbId&&activeClientId()&&_sb){
-      _sb.functions.invoke('remove-team-member',{body:{user_id:dbId}}).catch(()=>{});
-    }
-    logActivity('Removed team member',member.name,'ARIA');
-    return `Done: I've removed ${member.name} from the team.`;
-  }
-
-  m=low.match(/^(?:please\s+)?(?:reassign|assign)\s+(?:ticket\s+)?([\w-]+)\s+to\s+(.+)$/);
-  if(m){
-    const idRaw=m[1];
-    const owner=t.match(/to\s+(.+)$/i)[1].trim().replace(/[.!]+$/,'');
-    const tk=STATE.tickets.find(x=>x.id.toLowerCase()===idRaw.toLowerCase());
-    if(!tk)return `I couldn't find a ticket with ID ${idRaw.toUpperCase()}.`;
-    reassignTicket(tk.id,owner,'ARIA');
-    if(currentSection==='tickets')renderSection();
-    return `Done: ${tk.id} is now assigned to ${owner}.`;
+    const ch=STATE.chats.find(x=>x.id.toUpperCase()===id);
+    if(!ch)return `I couldn't find a chat with ID ${id}.`;
+    ch.status=status; saveState(); if(currentSection==='chats')renderSection();
+    logActivity(`Marked chat ${status}`,`${ch.customer} (${ch.id})`,'ARIA');
+    return `Done: the conversation with ${ch.customer} is now marked ${status}.`;
   }
 
   m=low.match(/^(?:please\s+)?(connect|disconnect|enable|disable|turn on|turn off)\s+(?:the\s+)?([a-z ]+?)(?:\s+integration)?[.!]?$/);
