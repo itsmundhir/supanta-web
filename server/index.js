@@ -574,9 +574,9 @@ async function hasClientAccess(auth, targetClientId) {
   return auth.client_id === targetClientId;
 }
 
-const ASSISTANT_SYSTEM_PROMPT = `You are ARIA, the staff-facing assistant inside the Supanta dashboard. You help staff manage tickets, deliverables, knowledge base entries, and groups for the business they're currently viewing.
+const ASSISTANT_SYSTEM_PROMPT = `You are ARIA, the staff-facing assistant inside the Supanta dashboard. You help staff manage tickets, deliverables, knowledge base entries, and groups for the business they're currently viewing, and answer questions about the current state of their account.
 
-Use the available tools to actually take the action requested — don't just describe what you would do. If a request is ambiguous (e.g. which ticket, which list), ask a short clarifying question instead of guessing. If someone asks for something no tool supports (inviting a new staff member, for example, isn't wired up yet), say so plainly rather than pretending to do it.
+Use the available tools to actually take the action requested — don't just describe what you would do. For questions ("how many tickets are overdue", "what's in the KB about refunds", "who owns ticket SUP-1234"), use search_tickets/search_knowledge_base/get_client_summary rather than guessing or saying you don't have access — you do. If a request is ambiguous (e.g. which ticket, which list), ask a short clarifying question instead of guessing. If someone asks for something no tool supports (inviting a new staff member, for example, isn't wired up yet), say so plainly rather than pretending to do it.
 
 Keep replies short and direct. No em dashes, no exclamation points.`;
 
@@ -653,6 +653,37 @@ const ASSISTANT_TOOLS = [
       required: ['name'],
     },
   },
+  {
+    name: 'search_tickets',
+    description: 'Look up existing tickets for this client to answer questions about them — counts, who owns what, overdue items, etc. Does not modify anything.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        keyword: { type: 'string', description: 'Match against the ticket subject, if given' },
+        owner_name: { type: 'string', description: "Filter by assigned owner. Pass the literal string 'unassigned' to find tickets with no owner." },
+        overdue_only: { type: 'boolean', description: 'Only tickets past their due date that are still open' },
+        lane_kind: { type: 'string', enum: ['active', 'archived', 'done'], description: 'Filter by lane kind, if given' },
+        limit: { type: 'integer', description: 'Max results, default 10, capped at 25' },
+      },
+    },
+  },
+  {
+    name: 'search_knowledge_base',
+    description: "Search this client's approved knowledge base entries by keyword. Does not modify anything.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Keyword(s) to search for in entry titles and content' },
+        limit: { type: 'integer', description: 'Max results, default 5, capped at 15' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'get_client_summary',
+    description: 'Get aggregate counts for this client — open/overdue/unassigned ticket counts, pending deliverables, knowledge base size. Use this instead of search_tickets when the question is just "how many".',
+    input_schema: { type: 'object', properties: {} },
+  },
 ];
 
 async function executeAssistantTool(toolName, input, clientId, auth) {
@@ -714,6 +745,51 @@ async function executeAssistantTool(toolName, input, clientId, auth) {
       );
       await pool.query("insert into public.group_members (group_id, member_name, is_agent) values ($1, 'ARIA', true)", [rows[0].id]);
       return { success: true, group_id: rows[0].id };
+    }
+    if (toolName === 'search_tickets') {
+      const conditions = ['t.client_id = $1'];
+      const params = [clientId];
+      if (input.keyword) { params.push(`%${input.keyword}%`); conditions.push(`t.subject ilike $${params.length}`); }
+      if (input.owner_name) {
+        if (input.owner_name.toLowerCase() === 'unassigned') conditions.push('t.owner_name is null');
+        else { params.push(`%${input.owner_name}%`); conditions.push(`t.owner_name ilike $${params.length}`); }
+      }
+      if (input.lane_kind) { params.push(input.lane_kind); conditions.push(`l.kind = $${params.length}`); }
+      if (input.overdue_only) conditions.push("t.due_at is not null and t.due_at < now() and l.kind = 'active'");
+      const limit = Math.min(Math.max(parseInt(input.limit) || 10, 1), 25);
+      const { rows } = await pool.query(
+        `select t.display_id, t.subject, t.owner_name, t.priority, t.due_at, l.name as lane_name, l.kind as lane_kind
+         from public.tickets t join public.ticket_lists l on l.id = t.status
+         where ${conditions.join(' and ')}
+         order by t.updated_at desc limit ${limit}`,
+        params
+      );
+      return { tickets: rows };
+    }
+    if (toolName === 'search_knowledge_base') {
+      const limit = Math.min(Math.max(parseInt(input.limit) || 5, 1), 15);
+      const { rows } = await pool.query(
+        `select title, content, category from public.knowledge_base
+         where client_id = $1 and is_active = true and approval_status = 'approved'
+         and (title ilike $2 or content ilike $2) limit ${limit}`,
+        [clientId, `%${input.query}%`]
+      );
+      return { entries: rows };
+    }
+    if (toolName === 'get_client_summary') {
+      const { rows } = await pool.query(
+        `select
+           count(*) filter (where l.kind = 'active') as open_tickets,
+           count(*) filter (where l.kind = 'active' and t.owner_name is null) as unassigned_tickets,
+           count(*) filter (where l.kind = 'active' and t.due_at is not null and t.due_at < now()) as overdue_tickets,
+           count(*) filter (where l.kind = 'done') as done_tickets
+         from public.tickets t join public.ticket_lists l on l.id = t.status
+         where t.client_id = $1`,
+        [clientId]
+      );
+      const { rows: dv } = await pool.query("select count(*) as pending_deliverables from public.deliverables where client_id = $1 and status != 'delivered'", [clientId]);
+      const { rows: kb } = await pool.query("select count(*) as kb_entries from public.knowledge_base where client_id = $1 and is_active = true and approval_status = 'approved'", [clientId]);
+      return { ...rows[0], ...dv[0], ...kb[0] };
     }
     return { error: 'Unknown tool' };
   } catch (e) {
