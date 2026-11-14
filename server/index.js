@@ -561,5 +561,220 @@ app.get('/storage/invoices/download', (req, res) => {
   res.sendFile(fullPath);
 });
 
+// ─── AGENTIC IN-DASHBOARD ASSISTANT ──────────────────────────────────────
+// Replaces the dead client-assistant Edge Function and app.html's regex-based
+// tryAriaAction(): Claude decides which action(s) to take via real tool use
+// instead of matching a handful of exact phrases. Phase 1 — tools mirror what
+// the dashboard's UI already supports; no speculative new write capabilities.
+// Phase 2 (planned): read-only tools (search_tickets, search_knowledge_base,
+// get_client_summary) so it can answer questions, not just take actions.
+
+async function hasClientAccess(auth, targetClientId) {
+  if (auth.app_role === 'admin' || auth.app_role === 'super_admin') return true;
+  return auth.client_id === targetClientId;
+}
+
+const ASSISTANT_SYSTEM_PROMPT = `You are ARIA, the staff-facing assistant inside the Supanta dashboard. You help staff manage tickets, deliverables, knowledge base entries, and groups for the business they're currently viewing.
+
+Use the available tools to actually take the action requested — don't just describe what you would do. If a request is ambiguous (e.g. which ticket, which list), ask a short clarifying question instead of guessing. If someone asks for something no tool supports (inviting a new staff member, for example, isn't wired up yet), say so plainly rather than pretending to do it.
+
+Keep replies short and direct. No em dashes, no exclamation points.`;
+
+const ASSISTANT_TOOLS = [
+  {
+    name: 'create_ticket',
+    description: 'Open a new support ticket, landing in the Unassigned/triage lane.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        subject: { type: 'string', description: 'What the ticket is about' },
+        client_name: { type: 'string', description: 'Customer/company name this ticket is for, if mentioned' },
+        priority: { type: 'string', enum: ['low', 'med', 'high'], description: 'Defaults to med if not stated' },
+      },
+      required: ['subject'],
+    },
+  },
+  {
+    name: 'assign_ticket',
+    description: 'Assign an existing ticket (by its display ID, e.g. SUP-1234) to a team member.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ticket_display_id: { type: 'string' },
+        owner_name: { type: 'string' },
+      },
+      required: ['ticket_display_id', 'owner_name'],
+    },
+  },
+  {
+    name: 'mark_ticket_status',
+    description: 'Move a ticket to a different lane by kind.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        ticket_display_id: { type: 'string' },
+        status: { type: 'string', enum: ['active', 'archived', 'done'], description: "'active' means back into the open/working lane" },
+      },
+      required: ['ticket_display_id', 'status'],
+    },
+  },
+  {
+    name: 'create_deliverable',
+    description: 'Add a new deliverable for this client.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        type: { type: 'string', description: "Defaults to 'report' if not stated" },
+        link: { type: 'string', description: 'URL to the deliverable, if given' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'add_knowledge_base_entry',
+    description: 'Add a new approved knowledge base entry for this client. Admin-only.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        content: { type: 'string' },
+        category: { type: 'string' },
+      },
+      required: ['title', 'content'],
+    },
+  },
+  {
+    name: 'create_group',
+    description: 'Create a new internal team group/channel for this client.',
+    input_schema: {
+      type: 'object',
+      properties: { name: { type: 'string' } },
+      required: ['name'],
+    },
+  },
+];
+
+async function executeAssistantTool(toolName, input, clientId, auth) {
+  try {
+    if (toolName === 'create_ticket') {
+      const { rows } = await pool.query(
+        "select id from public.ticket_lists where client_id = $1 and kind = 'active' order by position asc limit 1",
+        [clientId]
+      );
+      if (!rows[0]) return { error: 'No active ticket list exists for this business yet' };
+      const displayId = 'SUP-' + Math.floor(1000 + Math.random() * 9000);
+      await pool.query(
+        `insert into public.tickets (client_id, display_id, subject, customer_name, owner_name, status, priority, created_by)
+         values ($1, $2, $3, $4, null, $5, $6, $7)`,
+        [clientId, displayId, input.subject, input.client_name || null, rows[0].id, input.priority || 'med', auth.sub]
+      );
+      return { success: true, ticket_id: displayId };
+    }
+    if (toolName === 'assign_ticket') {
+      const { rows } = await pool.query('select id from public.tickets where client_id = $1 and display_id = $2', [clientId, input.ticket_display_id]);
+      if (!rows[0]) return { error: 'Ticket not found' };
+      await pool.query('update public.tickets set owner_name = $1, updated_at = now() where id = $2', [input.owner_name, rows[0].id]);
+      return { success: true };
+    }
+    if (toolName === 'mark_ticket_status') {
+      const { rows: tk } = await pool.query('select id from public.tickets where client_id = $1 and display_id = $2', [clientId, input.ticket_display_id]);
+      if (!tk[0]) return { error: 'Ticket not found' };
+      const { rows: lists } = await pool.query(
+        'select id from public.ticket_lists where client_id = $1 and kind = $2 order by position asc limit 1',
+        [clientId, input.status]
+      );
+      if (!lists[0]) return { error: `No list of kind "${input.status}" exists for this business` };
+      await pool.query('update public.tickets set status = $1, updated_at = now() where id = $2', [lists[0].id, tk[0].id]);
+      return { success: true };
+    }
+    if (toolName === 'create_deliverable') {
+      const { rows } = await pool.query(
+        `insert into public.deliverables (client_id, name, type, status, link, created_by)
+         values ($1, $2, $3, 'in_progress', $4, $5) returning id`,
+        [clientId, input.name, input.type || 'report', input.link || null, auth.sub]
+      );
+      return { success: true, deliverable_id: rows[0].id };
+    }
+    if (toolName === 'add_knowledge_base_entry') {
+      if (auth.app_role !== 'admin' && auth.app_role !== 'super_admin') {
+        return { error: 'Only admins can add knowledge base entries' };
+      }
+      const { rows } = await pool.query(
+        `insert into public.knowledge_base (client_id, title, content, source_type, is_active, approval_status, category, created_by)
+         values ($1, $2, $3, 'manual', true, 'approved', $4, $5) returning id`,
+        [clientId, input.title, input.content, input.category || 'General', auth.sub]
+      );
+      return { success: true, entry_id: rows[0].id };
+    }
+    if (toolName === 'create_group') {
+      const { rows } = await pool.query(
+        'insert into public.groups (client_id, name, created_by) values ($1, $2, $3) returning id',
+        [clientId, input.name, auth.sub]
+      );
+      await pool.query("insert into public.group_members (group_id, member_name, is_agent) values ($1, 'ARIA', true)", [rows[0].id]);
+      return { success: true, group_id: rows[0].id };
+    }
+    return { error: 'Unknown tool' };
+  } catch (e) {
+    return { error: e.message };
+  }
+}
+
+app.post('/assistant/chat', requireAuth, async (req, res) => {
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return res.status(500).json({ error: 'Assistant is not configured yet — missing ANTHROPIC_API_KEY.' });
+
+  const clientId = String(req.body.client_id || '');
+  if (!clientId) return res.status(400).json({ error: 'Missing client_id' });
+  if (!(await hasClientAccess(req.auth, clientId))) return res.status(403).json({ error: 'Not allowed' });
+
+  const message = String(req.body.message || '').slice(0, 2000);
+  const history = Array.isArray(req.body.history)
+    ? req.body.history.slice(-8).filter((h) => h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string').map((h) => ({ role: h.role, content: String(h.content).slice(0, 2000) }))
+    : [];
+
+  const messages = [...history, { role: 'user', content: message }];
+
+  try {
+    let finalText = null;
+    for (let i = 0; i < 5 && finalText === null; i++) {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-5',
+          max_tokens: 800,
+          system: ASSISTANT_SYSTEM_PROMPT,
+          tools: ASSISTANT_TOOLS,
+          messages,
+        }),
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        return res.status(500).json({ error: `Claude error: ${resp.status} ${t.slice(0, 200)}` });
+      }
+      const data = await resp.json();
+      const content = data.content || [];
+      const toolUses = content.filter((b) => b.type === 'tool_use');
+      if (!toolUses.length) {
+        const textBlock = content.find((b) => b.type === 'text');
+        finalText = textBlock ? textBlock.text : '';
+        break;
+      }
+      messages.push({ role: 'assistant', content });
+      const toolResults = [];
+      for (const tu of toolUses) {
+        const result = await executeAssistantTool(tu.name, tu.input, clientId, req.auth);
+        toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) });
+      }
+      messages.push({ role: 'user', content: toolResults });
+    }
+    res.json({ reply: finalText || "Sorry, I couldn't come up with a response just now." });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 const port = process.env.PORT || 8001;
 app.listen(port, () => console.log(`supanta-api listening on :${port}`));

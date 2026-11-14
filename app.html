@@ -5016,18 +5016,6 @@ function ariaPlainHistory(){
     content:m.html.replace(/<[^>]+>/g,'').trim()
   })).filter(m=>m.content);
 }
-// supabase-js gives a generic "Edge Function returned a non-2xx status code"
-// for any failed function call — the real {error:"..."} body the function
-// actually sent back is only reachable via error.context, the raw Response.
-async function realFunctionError(error){
-  try{
-    if(error&&error.context&&typeof error.context.json==='function'){
-      const body=await error.context.clone().json();
-      if(body&&body.error)return new Error(body.error);
-    }
-  }catch(_e){}
-  return error instanceof Error?error:new Error((error&&error.message)||String(error));
-}
 async function sendAriaMsg(){
   if(!activeClientId()||!_sb)return;
   const inp=document.getElementById('aria-input');
@@ -5051,55 +5039,22 @@ async function sendAriaMsg(){
   const typing=document.createElement('div');typing.className='aria-msg aria-msg-bot';typing.id='aria-typing';typing.innerHTML=typingDotsHtml();
   msgs.appendChild(typing);msgs.scrollTop=msgs.scrollHeight;
 
-  const body={
-    message: msg || (file?'What can you tell me about this?':''),
-    history: historyBeforeThisMsg,
-    client_id: activeClientId(),
-  };
-
-  if(file && file.type && file.type.startsWith('image/')){
-    if(!['image/png','image/jpeg','image/webp','image/gif'].includes(file.type)){
-      document.getElementById('aria-typing')?.remove();
-      ariaAppend('bot',`I can only read PNG, JPEG, WEBP or GIF images right now, <strong>${file.name}</strong> isn't one of those.`);
-      return;
-    }
-    const dataUrl=await fileToBase64(file);
-    body.image={media_type:file.type,data:dataUrl.slice(dataUrl.indexOf(',')+1)};
-  }else if(file && (file.type==='application/pdf'||file.type==='text/plain')){
-    const dataUrl=await fileToBase64(file);
-    body.document={media_type:file.type,data:dataUrl.slice(dataUrl.indexOf(',')+1),name:file.name};
-  }else if(file){
+  if(file){
     document.getElementById('aria-typing')?.remove();
-    ariaAppend('bot',`I can only read images, PDFs, or plain text files right now, <strong>${file.name}</strong> isn't one of those. Say the word if you'd like me to add it to your knowledge base instead.`);
+    ariaAppend('bot',`I can't analyze attached files yet, <strong>${file.name}</strong> included. Say the word if you'd like me to add it to your knowledge base instead.`);
     return;
   }
 
   try{
-    const {data,error}=await _sb.functions.invoke('client-assistant',{body});
-    if(error)throw await realFunctionError(error);
-    if(data&&data.error)throw new Error(data.error);
+    const data=await authFetch('/assistant/chat',{method:'POST',body:JSON.stringify({message:msg,history:historyBeforeThisMsg,client_id:activeClientId()})});
     document.getElementById('aria-typing')?.remove();
     ariaAppend('bot',data.reply||"Sorry, I couldn't come up with a response just now.");
-    if(data.download){
-      const a=document.createElement('a');
-      a.href='data:'+data.download.mime+';base64,'+data.download.base64;
-      a.download=data.download.filename;a.click();
-    }
   }catch(e){
     document.getElementById('aria-typing')?.remove();
     const detail=(e&&e.message)?String(e.message):'';
     ariaAppend('bot',`Sorry, something went wrong on my end${detail?': '+escapeHtml(detail):''}. Try again in a moment.`);
   }
 }
-function fileToBase64(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=()=>resolve(reader.result);
-    reader.onerror=reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 // ─── CHAT CONTEXT MENU (right-click a chat row) ──────────
 let _ctxChatId=null;
 function openChatCtxMenu(e,chatId){
