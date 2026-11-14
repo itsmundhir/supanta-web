@@ -662,7 +662,9 @@ const ASSISTANT_TOOLS = [
         keyword: { type: 'string', description: 'Match against the ticket subject, if given' },
         owner_name: { type: 'string', description: "Filter by assigned owner. Pass the literal string 'unassigned' to find tickets with no owner." },
         overdue_only: { type: 'boolean', description: 'Only tickets past their due date that are still open' },
-        lane_kind: { type: 'string', enum: ['active', 'archived', 'done'], description: 'Filter by lane kind, if given' },
+        lane_kind: { type: 'string', enum: ['active', 'archived', 'done'], description: "Filter by lane kind. For questions like 'resolved this week', pass 'done' plus updated_from/updated_to." },
+        updated_from: { type: 'string', description: 'ISO date (YYYY-MM-DD). Only tickets last updated on or after this date — compute this from the current date given in the system prompt for relative ranges like "this week"' },
+        updated_to: { type: 'string', description: 'ISO date (YYYY-MM-DD). Only tickets last updated on or before this date' },
         limit: { type: 'integer', description: 'Max results, default 10, capped at 25' },
       },
     },
@@ -756,9 +758,11 @@ async function executeAssistantTool(toolName, input, clientId, auth) {
       }
       if (input.lane_kind) { params.push(input.lane_kind); conditions.push(`l.kind = $${params.length}`); }
       if (input.overdue_only) conditions.push("t.due_at is not null and t.due_at < now() and l.kind = 'active'");
+      if (input.updated_from) { params.push(input.updated_from); conditions.push(`t.updated_at >= $${params.length}::date`); }
+      if (input.updated_to) { params.push(input.updated_to); conditions.push(`t.updated_at < ($${params.length}::date + interval '1 day')`); }
       const limit = Math.min(Math.max(parseInt(input.limit) || 10, 1), 25);
       const { rows } = await pool.query(
-        `select t.display_id, t.subject, t.owner_name, t.priority, t.due_at, l.name as lane_name, l.kind as lane_kind
+        `select t.display_id, t.subject, t.owner_name, t.priority, t.due_at, t.updated_at, l.name as lane_name, l.kind as lane_kind
          from public.tickets t join public.ticket_lists l on l.id = t.status
          where ${conditions.join(' and ')}
          order by t.updated_at desc limit ${limit}`,
@@ -821,7 +825,7 @@ app.post('/assistant/chat', requireAuth, async (req, res) => {
         body: JSON.stringify({
           model: 'claude-sonnet-5',
           max_tokens: 800,
-          system: ASSISTANT_SYSTEM_PROMPT,
+          system: `Today's date is ${new Date().toISOString().slice(0, 10)} (UTC).\n\n${ASSISTANT_SYSTEM_PROMPT}`,
           tools: ASSISTANT_TOOLS,
           messages,
         }),
