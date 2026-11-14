@@ -944,22 +944,58 @@ async function switchViewingCompany(clientId){
   refreshStaffNotifCounts().then(renderCompanySwitcher);
 }
 // Live sync: without this, a teammate's ticket move or a new notification only
-// shows up for everyone else on their next full reload. Subscribes to Postgres
-// changes on this business's own rows only (client_id filter mirrors the RLS
-// scoping already enforced server-side) and patches STATE in place.
-let _realtimeChannel=null;
+// shows up for everyone else on their next full reload. This used to be a
+// Supabase Realtime websocket subscription, but that's a Supabase-specific
+// feature our PostgREST replacement doesn't implement — it was silently
+// doing nothing since the migration. Polling is simpler and good enough for
+// now; swap to a real push mechanism (WebSocket/SSE on our own API) later if
+// the ~8s delay becomes a real problem.
+let _pollTimer=null, _lastTicketPollAt=null, _lastNotifPollAt=null;
 function subscribeRealtime(){
-  if(_realtimeChannel){ try{ _sb.removeChannel(_realtimeChannel); }catch(e){} _realtimeChannel=null; }
+  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer=null; }
   const cid=activeClientId();
-  if(!cid||!_sb||typeof _sb.channel!=='function')return;
+  if(!cid||!_sb)return;
+  _lastTicketPollAt=new Date().toISOString();
+  _lastNotifPollAt=new Date().toISOString();
+  requestNotificationPermission();
+  _pollTimer=setInterval(pollForUpdates,8000);
+}
+function requestNotificationPermission(){
+  if(typeof Notification==='undefined'||Notification.permission!=='default')return;
+  try{ Notification.requestPermission(); }catch(e){}
+}
+function notifyBrowser(title,body){
+  if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
+  try{ new Notification(title,{body}); }catch(e){}
+}
+async function pollForUpdates(){
+  const cid=activeClientId();
+  if(!cid||!_sb)return;
   try{
-    const filter=`client_id=eq.${cid}`;
-    _realtimeChannel=_sb.channel('client-'+cid)
-      .on('postgres_changes',{event:'*',schema:'public',table:'tickets',filter},handleTicketRealtime)
-      .on('postgres_changes',{event:'*',schema:'public',table:'notifications',filter},handleNotificationRealtime)
-      .on('postgres_changes',{event:'*',schema:'public',table:'messages',filter},handleMessageRealtime)
-      .on('postgres_changes',{event:'*',schema:'public',table:'conversations',filter},handleConversationRealtime)
-      .subscribe();
+    const {data:rows}=await _sb.from('tickets').select('*').eq('client_id',cid).gt('updated_at',_lastTicketPollAt).order('updated_at',{ascending:true});
+    (rows||[]).forEach(r=>{
+      const isNew=!STATE.tickets.some(t=>t.dbId===r.id);
+      let t=STATE.tickets.find(x=>x.dbId===r.id);
+      if(t){
+        t.subject=r.subject;t.client=r.customer_name||'N/A';t.owner=r.owner_name||'Unassigned';
+        t.status=r.status;t.priority=r.priority;t.csat=r.csat||null;t.dueAt=r.due_at||null;
+      }else{
+        STATE.tickets.unshift({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'N/A',owner:r.owner_name||'Unassigned',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null});
+      }
+      if(isNew&&!r.owner_name)notifyBrowser('New ticket: '+r.subject,r.customer_name?`For ${r.customer_name} — unassigned`:'Unassigned, ready to pick up');
+      if(r.updated_at>_lastTicketPollAt)_lastTicketPollAt=r.updated_at;
+    });
+    if(rows&&rows.length){ saveState(); if(currentSection==='tickets')refreshTicketsBoard(); if(currentSection==='pulse')renderSection(); }
+  }catch(e){}
+  try{
+    const {data:rows}=await _sb.from('notifications').select('*').eq('client_id',cid).gt('created_at',_lastNotifPollAt).order('created_at',{ascending:true});
+    (rows||[]).forEach(r=>{
+      if(STATE.notifications.some(n=>n.dbId===r.id))return;
+      STATE.notifications.unshift({id:++_notifId,dbId:r.id,text:r.text,time:new Date(r.created_at).toLocaleString(),read:r.read});
+      notifyBrowser('Supanta',r.text);
+      if(r.created_at>_lastNotifPollAt)_lastNotifPollAt=r.created_at;
+    });
+    if(rows&&rows.length){ saveState(); renderShell(); if(currentSection==='notifications')renderSection(); }
   }catch(e){}
 }
 // Patches just the kanban board + bulk bar rather than the whole Tickets section —
@@ -971,67 +1007,6 @@ function refreshTicketsBoard(){
   const bar=document.getElementById('bulk-bar-wrap');
   if(bar)bar.innerHTML=bulkBarHtml();
 }
-function handleTicketRealtime(payload){
-  if(payload.eventType==='DELETE'){
-    const before=STATE.tickets.length;
-    STATE.tickets=STATE.tickets.filter(t=>t.dbId!==payload.old.id);
-    if(STATE.tickets.length!==before){
-      saveState();
-      if(currentSection==='tickets')refreshTicketsBoard();
-      if(currentSection==='pulse')renderSection();
-    }
-    return;
-  }
-  const r=payload.new;
-  let t=STATE.tickets.find(x=>x.dbId===r.id);
-  if(t){
-    t.subject=r.subject;t.client=r.customer_name||'N/A';t.owner=r.owner_name||'N/A';
-    t.status=r.status;t.priority=r.priority;t.csat=r.csat||null;t.dueAt=r.due_at||null;
-  }else{
-    STATE.tickets.unshift({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'N/A',owner:r.owner_name||'N/A',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null});
-  }
-  saveState();
-  if(currentSection==='tickets')refreshTicketsBoard();
-  if(currentSection==='pulse')renderSection();
-}
-function handleNotificationRealtime(payload){
-  if(payload.eventType!=='INSERT')return;
-  const r=payload.new;
-  if(STATE.notifications.some(n=>n.dbId===r.id))return;
-  STATE.notifications.unshift({id:++_notifId,dbId:r.id,text:r.text,time:new Date(r.created_at).toLocaleString(),read:r.read});
-  saveState();
-  renderShell();
-  if(currentSection==='notifications')renderSection();
-}
-// A teammate's reply, a new inbound customer message, or an ARIA auto-reply
-// all land here — re-fetch that one conversation's messages rather than
-// trying to patch the event in by hand (simplest way to stay consistent
-// with whatever else changed at the same time).
-function handleMessageRealtime(payload){
-  const r=payload.new||payload.old;
-  if(!r)return;
-  const c=STATE.chats.find(x=>x.dbId===r.conversation_id);
-  if(!c)return; // conversation not loaded locally yet — its own INSERT event (below) will pull it in
-  refreshChatMessages(c);
-}
-function handleConversationRealtime(payload){
-  if(payload.eventType==='DELETE'){
-    const before=STATE.chats.length;
-    STATE.chats=STATE.chats.filter(x=>x.dbId!==payload.old.id);
-    if(STATE.chats.length!==before&&currentSection==='chats')renderSection();
-    return;
-  }
-  const r=payload.new;
-  const existing=STATE.chats.find(x=>x.dbId===r.id);
-  if(existing){
-    existing.status=STATUS_DB_TO_UI[r.status]||existing.status;
-    existing.channel=CHANNEL_DB_TO_DISPLAY[r.channel]||existing.channel;
-    existing.customer=r.contact_name||r.contact_email||r.contact_phone||existing.customer;
-  }else{
-    STATE.chats.unshift(chatFromConversation(r,[]));
-  }
-  if(currentSection==='chats')renderSection();
-}
 // Tickets and Notifications are now backed by real Supabase tables (see
 // server-side migrations), scoped to this business via client_id/RLS — so
 // teammates on the same account now actually see the same board. If this
@@ -1042,7 +1017,7 @@ async function loadRemoteData(){
   try{
     const {data:tks}=await _sb.from('tickets').select('*').eq('client_id',activeClientId()).order('created_at',{ascending:false});
     if(tks&&tks.length){
-      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'N/A',owner:r.owner_name||'N/A',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null,labelIds:r.label_ids||[],customFields:r.custom_fields||{}}));
+      STATE.tickets=tks.map(r=>({id:r.display_id,dbId:r.id,subject:r.subject,client:r.customer_name||'N/A',owner:r.owner_name||'Unassigned',status:r.status,priority:r.priority,csat:r.csat||null,dueAt:r.due_at||null,labelIds:r.label_ids||[],customFields:r.custom_fields||{}}));
     }
   }catch(e){}
   try{
@@ -1310,9 +1285,10 @@ function defaultState(){
       {id:'INV-0611',date:'2026-06-01',dueDate:'2026-06-15',amount:'$2,500.00',status:'Due'}
     ],
     ticketLists:[
-      {id:'active',name:'Incoming Tickets',kind:'active',position:0},
-      {id:'archived',name:'Archived',kind:'archived',position:1},
-      {id:'done',name:'Done',kind:'done',position:2}
+      {id:'unassigned',name:'Unassigned',kind:'active',position:0},
+      {id:'active',name:'Incoming Tickets',kind:'active',position:1},
+      {id:'archived',name:'Archived',kind:'archived',position:2},
+      {id:'done',name:'Done',kind:'done',position:3}
     ],
     ticketLabels:[],
     ticketCustomFields:[],
@@ -1890,8 +1866,8 @@ function messageHtml(m,c){
   </div>`;
 }
 // Customer messages and ARIA drafts are real inbound content now (see
-// handleMessageRealtime/loadRemoteData) — a customer can put HTML in a
-// message, so anywhere it's interpolated into a template string has to be
+// loadRemoteData) — a customer can put HTML in a message, so anywhere
+// it's interpolated into a template string has to be
 // escaped, unlike the old hardcoded demo data this code was written against.
 function escapeHtml(s){
   return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2269,6 +2245,7 @@ function kanbanHtml(){
               <div class="tk-foot">
                 <div class="tk-owner">${avatarHtml(t.owner,'#1a2d47',20)} <span>${t.client}</span></div>
                 <select class="owner-select" onchange="reassignTicket('${t.id}',this.value)">
+                  <option value="Unassigned" ${t.owner==='Unassigned'?'selected':''}>Unassigned</option>
                   ${STATE.team.map(m=>`<option value="${m.name}" ${m.name===t.owner?'selected':''}>${m.name}</option>`).join('')}
                 </select>
               </div>
@@ -2341,7 +2318,7 @@ function filterTickets(v){
 }
 function openAddTicket(){
   const sel=document.getElementById('nt-owner');
-  sel.innerHTML=STATE.team.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
+  sel.innerHTML='<option value="">Unassigned</option>'+STATE.team.map(m=>`<option value="${m.name}">${m.name}</option>`).join('');
   openModal('modal-add-ticket');
 }
 let _tkSeq=1043;
@@ -2355,7 +2332,7 @@ function persistNewTicket(t){
     display_id:t.id,
     subject:t.subject,
     customer_name:t.client,
-    owner_name:t.owner,
+    owner_name:t.owner==='Unassigned'?null:t.owner,
     status:t.status,
     priority:t.priority,
     due_at:t.dueAt||null,
@@ -2363,7 +2340,7 @@ function persistNewTicket(t){
   }).select().single().then(({data,error})=>{ if(!error&&data)t.dbId=data.id; }).catch(()=>{});
 }
 function createTicket({subject,client,owner,priority,actor,dueAt}){
-  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'N/A',owner,status:defaultListForKind('active').id,priority,dueAt:dueAt||null};
+  const t={id:'SUP-'+(++_tkSeq),subject,client:client||'N/A',owner:owner||'Unassigned',status:defaultListForKind('active').id,priority,dueAt:dueAt||null};
   STATE.tickets.unshift(t);
   saveState();
   persistNewTicket(t);
@@ -2391,9 +2368,18 @@ function addTicket(){
 }
 function reassignTicket(id,owner,actor){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
-  t.owner=owner;saveState();toast(`Reassigned to ${owner}`,'var(--accent)');
-  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({owner_name:owner,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
-  logActivity('Reassigned ticket',`${id} → ${owner}`,actor);
+  t.owner=owner||'Unassigned';
+  // The Unassigned lane is where tickets land to be triaged — once someone
+  // real picks one up, move it into the next active lane automatically
+  // instead of leaving assigned tickets sitting in the triage column.
+  if(t.status==='unassigned'&&t.owner!=='Unassigned'){
+    const next=ticketListsSorted().find(l=>l.kind==='active'&&l.id!=='unassigned');
+    if(next)t.status=next.id;
+  }
+  saveState();refreshTicketsBoard();
+  toast(`Reassigned to ${t.owner}`,'var(--accent)');
+  if(t.dbId&&_sb){ try{ _sb.from('tickets').update({owner_name:t.owner==='Unassigned'?null:t.owner,status:t.status,updated_at:new Date().toISOString()}).eq('id',t.dbId); }catch(e){} }
+  logActivity('Reassigned ticket',`${id} → ${t.owner}`,actor);
 }
 function moveTicket(id,status,actor,skipUndoToast){
   const t=STATE.tickets.find(x=>x.id===id); if(!t)return;
@@ -4793,9 +4779,9 @@ function tryAriaAction(text,file){
     subject=subject.replace(/^(about|regarding|:)\s*/i,'').trim();
     if(/\burgent\b|\bhigh priority\b/i.test(subject)){priority='high';subject=subject.replace(/,?\s*(urgent|high priority)\.?$/i,'').trim();}
     if(!subject)subject='New ticket from ARIA';
-    const newTk=createTicket({subject,client,owner:currentUser.name,priority,actor:'ARIA'});
+    const newTk=createTicket({subject,client,priority,actor:'ARIA'});
     if(currentSection==='tickets')renderSection();
-    return `Done: I've opened <strong>${newTk.id}</strong>${client!=='N/A'?` for ${client}`:''}: "${subject}". You can find it in Tickets → Active.`;
+    return `Done: I've opened <strong>${newTk.id}</strong>${client!=='N/A'?` for ${client}`:''}: "${subject}". It's unassigned in Tickets → Unassigned, ready to be picked up.`;
   }
 
   m=low.match(/^(?:please\s+)?add\s+(.+?)\s+to\s+(?:the\s+)?team\b(.*)$/);
