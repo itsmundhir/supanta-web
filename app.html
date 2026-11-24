@@ -1729,7 +1729,7 @@ async function addTeamMember(){
   const btn=document.querySelector('#modal-add-member .btn-acc');
   if(btn){btn.disabled=true;btn.textContent='Creating account…';}
   try{
-    const data=await authFetch('/team/invite',{method:'POST',body:JSON.stringify({target:'client_team',email,full_name:name,job_title:role})});
+    const data=await authFetch('/team/invite',{method:'POST',body:JSON.stringify({target:'client_team',email,full_name:name,job_title:role,client_id:activeClientId()})});
     closeModal('modal-add-member');
     ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
     STATE.team.push({id:++_teamId,name,email,role,type:'human',color:colors[STATE.team.length%colors.length]});

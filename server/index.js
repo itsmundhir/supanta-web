@@ -308,13 +308,25 @@ app.post('/team/invite', requireAuth, async (req, res) => {
     company = null;
     assignedClients = JSON.stringify(Array.isArray(req.body.assigned_clients) ? req.body.assigned_clients.map(String) : []);
   } else if (target === 'client_team') {
-    if (inviter.role !== 'client_admin' || !inviter.client_id) {
-      return res.status(403).json({ error: 'Only a business admin can invite teammates' });
-    }
     role = 'client';
-    clientId = inviter.client_id;
-    company = inviter.company_name || null;
     assignedClients = null;
+    if (inviter.role === 'client_admin' && inviter.client_id) {
+      // A business admin inviting into their own team.
+      clientId = inviter.client_id;
+      company = inviter.company_name || null;
+    } else if (await isInternalUser(req.auth.sub)) {
+      // Supanta staff acting on behalf of whichever client's dashboard
+      // they're currently viewing (app.html's activeClientId()) — staff
+      // accounts have no client_id of their own, so the target client
+      // has to come from the request instead.
+      clientId = String(req.body.client_id || '').trim();
+      if (!clientId) return res.status(400).json({ error: 'Missing client_id' });
+      const { rows: clientRows } = await pool.query('select company_name from public.clients where id = $1', [clientId]);
+      if (!clientRows[0]) return res.status(404).json({ error: 'Client not found' });
+      company = clientRows[0].company_name || null;
+    } else {
+      return res.status(403).json({ error: 'Only a business admin or Supanta staff can invite teammates' });
+    }
   } else {
     return res.status(400).json({ error: 'Unknown invite target' });
   }
