@@ -306,7 +306,7 @@ app.post('/team/invite', requireAuth, async (req, res) => {
     role = 'admin';
     clientId = null;
     company = null;
-    assignedClients = JSON.stringify(Array.isArray(req.body.assigned_clients) ? req.body.assigned_clients.map(String) : []);
+    assignedClients = Array.isArray(req.body.assigned_clients) ? req.body.assigned_clients.map(String) : [];
   } else if (target === 'client_team') {
     role = 'client';
     assignedClients = null;
@@ -354,7 +354,7 @@ app.post('/team/invite', requireAuth, async (req, res) => {
     );
     await client.query(
       `insert into public.user_profiles (id, full_name, email, role, client_id, job_title, company, status, assigned_clients)
-       values ($1, $2, $3, $4, $5, $6, $7, 'active', $8::jsonb)`,
+       values ($1, $2, $3, $4, $5, $6, $7, 'active', $8::uuid[])`,
       [userId, full_name, email, role, clientId, job_title, company, assignedClients]
     );
 
