@@ -1725,21 +1725,30 @@ async function addTeamMember(){
     return;
   }
   if(!email){toast('Email is required to invite a teammate','var(--danger)');return;}
-  if(!activeClientId()||!_sb){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
+  if(!activeClientId()){toast('Your account isn\'t linked to a business yet','var(--danger)');return;}
   const btn=document.querySelector('#modal-add-member .btn-acc');
-  if(btn){btn.disabled=true;btn.textContent='Sending invite…';}
+  if(btn){btn.disabled=true;btn.textContent='Creating account…';}
   try{
-    const redirectTo=window.location.origin+'/home';
-    const {data,error}=await _sb.functions.invoke('invite-team-member',{body:{email,full_name:name,job_title:role,redirect_to:redirectTo}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const data=await authFetch('/team/invite',{method:'POST',body:JSON.stringify({target:'client_team',email,full_name:name,job_title:role})});
     closeModal('modal-add-member');
     ['am-name','am-email','am-role'].forEach(id=>document.getElementById(id).value='');
-    toast(`Invite sent to ${email}`,'var(--green)');
     STATE.team.push({id:++_teamId,name,email,role,type:'human',color:colors[STATE.team.length%colors.length]});
     saveState();renderSection();
     logActivity('Invited team member',`${name} (${email})`);
+    document.getElementById('ci-title').textContent='Team Member Added';
+    document.getElementById('ci-body').innerHTML=`
+      <p style="font-size:.85rem;line-height:1.65;margin-bottom:1rem">Account created for <strong>${escapeHtml(email)}</strong>. Share this temporary password with them securely, they should change it on first login.</p>
+      <div class="form-group"><label>Temporary password</label>
+        <div style="display:flex;gap:.5rem">
+          <input class="rb-input" id="am-temp-pwd" readonly value="${escapeHtml(data.temp_password)}" style="font-family:monospace"/>
+          <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard?.writeText('${escapeHtml(data.temp_password)}').then(()=>toast('Password copied','var(--green)')).catch(()=>toast('Could not copy, select and copy manually','var(--danger)'))">Copy</button>
+        </div>
+      </div>
+      <button class="btn btn-acc" style="width:100%" onclick="closeModal('modal-connect-int')">Done</button>
+    `;
+    openModal('modal-connect-int');
   }catch(e){
-    toast('Could not send invite: '+e.message,'var(--danger)');
+    toast('Could not create account: '+e.message,'var(--danger)');
   }
   if(btn){btn.disabled=false;btn.textContent='Add Member';}
 }
@@ -4426,11 +4435,9 @@ async function submitInviteStaff(){
   if(!full_name){toast('Full name is required','var(--danger)');return;}
   if(!email){toast('Email is required','var(--danger)');return;}
   if(!/^[^\s@]+@supanta\.com$/i.test(email)){emailErr.style.display='block';return;}
-  if(!_sb){toast('Connection unavailable right now','var(--danger)');return;}
   btn.disabled=true;btn.textContent='Sending invite…';
   try{
-    const {data,error}=await _sb.functions.invoke('admin-users',{body:{action:'invite',email,full_name,role:'admin',job_title:job_title||undefined,assigned_clients}});
-    if(error||data?.error)throw new Error((data&&data.error)||error.message);
+    const data=await authFetch('/team/invite',{method:'POST',body:JSON.stringify({target:'staff',email,full_name,job_title:job_title||undefined,assigned_clients})});
     _teamAccessLoaded=false;
     await loadTeamAccessData();
     const bodyEl=document.getElementById('team-access-body');

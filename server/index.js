@@ -272,6 +272,91 @@ app.post('/onboarding/complete', requireAuth, async (req, res) => {
   }
 });
 
+// ─── TEAM INVITES ─────────────────────────────────────────────────────────
+// Replaces two dead Supabase Edge Functions (admin-users / invite-team-member)
+// with one endpoint behind a target flag. Mirrors their old contract: the
+// account is created immediately with a temp password, returned to the
+// inviter to share manually — no invite email is sent.
+function genTempPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+  let pwd = '';
+  for (let i = 0; i < 14; i++) pwd += chars[crypto.randomInt(chars.length)];
+  return pwd;
+}
+
+app.post('/team/invite', requireAuth, async (req, res) => {
+  const inviter = await getProfile(req.auth.sub);
+  if (!inviter) return res.status(403).json({ error: 'Account not found' });
+
+  const target = String(req.body.target || '');
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const full_name = String(req.body.full_name || '').trim();
+  const job_title = req.body.job_title ? String(req.body.job_title).trim() : null;
+  if (!email || !full_name) return res.status(400).json({ error: 'Full name and email are required' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address' });
+
+  let role, clientId, company, assignedClients;
+  if (target === 'staff') {
+    if (inviter.role !== 'admin' && inviter.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only Supanta staff admins can invite staff accounts' });
+    }
+    if (!/^[^\s@]+@supanta\.com$/i.test(email)) {
+      return res.status(400).json({ error: 'Staff accounts must use a @supanta.com address' });
+    }
+    role = 'admin';
+    clientId = null;
+    company = null;
+    assignedClients = JSON.stringify(Array.isArray(req.body.assigned_clients) ? req.body.assigned_clients.map(String) : []);
+  } else if (target === 'client_team') {
+    if (inviter.role !== 'client_admin' || !inviter.client_id) {
+      return res.status(403).json({ error: 'Only a business admin can invite teammates' });
+    }
+    role = 'client';
+    clientId = inviter.client_id;
+    company = inviter.company_name || null;
+    assignedClients = null;
+  } else {
+    return res.status(400).json({ error: 'Unknown invite target' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: existing } = await client.query(
+      'select id from auth.users where lower(email) = $1 and deleted_at is null',
+      [email]
+    );
+    if (existing[0]) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'An account with that email already exists' });
+    }
+
+    const userId = crypto.randomUUID();
+    const tempPassword = genTempPassword();
+    const hash = await bcrypt.hash(tempPassword, 10);
+
+    await client.query(
+      `insert into auth.users (id, email, encrypted_password, created_at, updated_at)
+       values ($1, $2, $3, now(), now())`,
+      [userId, email, hash]
+    );
+    await client.query(
+      `insert into public.user_profiles (id, full_name, email, role, client_id, job_title, company, status, assigned_clients)
+       values ($1, $2, $3, $4, $5, $6, $7, 'active', $8::jsonb)`,
+      [userId, full_name, email, role, clientId, job_title, company, assignedClients]
+    );
+
+    await client.query('COMMIT');
+    res.json({ success: true, temp_password: tempPassword, user_id: userId });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('team invite error', e);
+    res.status(500).json({ error: e.message || 'Could not create account' });
+  } finally {
+    client.release();
+  }
+});
+
 // ─── INVOICE NOTIFY (email) ──────────────────────────────────────────────
 app.post('/invoices/notify', requireAuth, async (req, res) => {
   if (!(await isInternalUser(req.auth.sub))) {
